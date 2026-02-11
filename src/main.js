@@ -130,9 +130,9 @@ This web site is using ${"`"}markedjs/marked${"`"}.
         inherit: true,
         rules: [],
         colors: {
-            'editor.background': '#211d25',
+            'editor.background': '#1A1A1A',
             'editor.selectionBackground': '#add6ff',
-            'editor.lineHighlightBackground': '#211d25'
+            'editor.lineHighlightBackground': '#1A1A1A'
         }
     });
 
@@ -800,11 +800,13 @@ This web site is using ${"`"}markedjs/marked${"`"}.
         body {
             margin: 0;
             padding: 20px;
-            background-color: ${isDark ? '#0d1117' : '#ffffff'};
+            background-color: ${isDark ? '#1E1E1E' : '#ffffff'};
+            color: ${isDark ? '#e6edf3' : '#24292f'};
         }
         .markdown-body {
             max-width: 900px;
             margin: 0 auto;
+            color: ${isDark ? '#e6edf3' : '#24292f'};
         }
         ${css}
     </style>
@@ -821,7 +823,12 @@ This web site is using ${"`"}markedjs/marked${"`"}.
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `markdown-export-${Date.now()}.html`;
+        
+        // Generate filename with style and timestamp
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+        const styleName = currentStyle.charAt(0).toUpperCase() + currentStyle.slice(1);
+        a.download = `Marco_${styleName}_${timestamp}.html`;
+        
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
@@ -1605,8 +1612,10 @@ This web site is using ${"`"}markedjs/marked${"`"}.
                 parseElement(child);
             });
 
-            // Save the PDF
-            doc.save('markdown-preview.pdf');
+            // Save the PDF with style and timestamp
+            const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+            const styleName = currentStyle.charAt(0).toUpperCase() + currentStyle.slice(1);
+            doc.save(`Marco_${styleName}_${timestamp}.pdf`);
         } catch (error) {
             console.error('Failed to export PDF:', error);
             window.alert('Failed to export PDF. Please try again.');
@@ -2251,21 +2260,11 @@ This web site is using ${"`"}markedjs/marked${"`"}.
         const mofu = document.getElementById('mofu-nav-trigger');
         const canvas = document.getElementById('mofu-canvas');
         const features = document.getElementById('mofu-features');
-        const speech = document.getElementById('mofu-speech');
         const mouth = document.getElementById('mofu-mouth');
         
-        if (!mofu || !canvas || !features || !speech || !mouth) return;
+        if (!mofu || !canvas || !features || !mouth) return;
         
         let isAnimating = false;
-
-        // Show speech bubble
-        const showSpeech = (text, duration = 2000) => {
-            speech.textContent = text;
-            speech.classList.add('show');
-            setTimeout(() => {
-                speech.classList.remove('show');
-            }, duration);
-        };
 
         // Export reaction - Double jump (party mode!)
         const exportReaction = () => {
@@ -2297,26 +2296,23 @@ This web site is using ${"`"}markedjs/marked${"`"}.
             }, 800);
         };
 
-        // Copy reaction - Deep breath with blue border and "Got it! 📝"
+        // Copy reaction - Spin around with blue border
         const copyReaction = () => {
             if (isAnimating) return;
             isAnimating = true;
             
-            // Deep breath animation
-            canvas.classList.add('mofu-breathing');
+            // Spin animation
+            canvas.classList.add('mofu-spinning');
             canvas.classList.add('mofu-copied');
-            
-            // Show speech
-            showSpeech('Got it! 📝', 1800);
 
             setTimeout(() => {
-                canvas.classList.remove('mofu-breathing');
+                canvas.classList.remove('mofu-spinning');
             }, 600);
 
             setTimeout(() => {
                 canvas.classList.remove('mofu-copied');
                 isAnimating = false;
-            }, 2000);
+            }, 1500);
         };
 
         // Mouse tracking for 3D effect
