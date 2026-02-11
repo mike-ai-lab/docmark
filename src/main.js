@@ -215,34 +215,48 @@ This web site is using ${"`"}markedjs/marked${"`"}.
         let html = marked.parse(markdown, options);
         let sanitized = DOMPurify.sanitize(html);
         
-        // Add line number data attributes to elements for cursor sync
+        // Split markdown into lines and wrap rendered HTML with line numbers
         const lines = markdown.split('\n');
-        let currentLine = 0;
         const tempDiv = document.createElement('div');
         tempDiv.innerHTML = sanitized;
         
-        // Add data-source-line attributes to top-level elements
-        const elements = tempDiv.children;
-        for (let i = 0; i < elements.length; i++) {
-            const element = elements[i];
-            // Find which line this element corresponds to
+        // Get all rendered elements
+        const renderedElements = Array.from(tempDiv.children);
+        let currentLineIndex = 0;
+        
+        // Map each rendered element to its source line
+        renderedElements.forEach(element => {
             const elementText = element.textContent.trim();
-            if (elementText) {
-                for (let lineNum = currentLine; lineNum < lines.length; lineNum++) {
-                    if (lines[lineNum].includes(elementText.substring(0, 20))) {
-                        element.setAttribute('data-source-line', lineNum + 1);
-                        currentLine = lineNum + 1;
-                        break;
-                    }
+            
+            // Find the line in markdown that matches this element
+            for (let i = currentLineIndex; i < lines.length; i++) {
+                const lineText = lines[i].trim();
+                
+                // Check if this line starts the element
+                if (lineText && elementText.startsWith(lineText.substring(0, Math.min(20, lineText.length)))) {
+                    element.setAttribute('data-source-line', i + 1);
+                    currentLineIndex = i + 1;
+                    break;
+                } else if (elementText.includes(lineText) && lineText.length > 3) {
+                    element.setAttribute('data-source-line', i + 1);
+                    currentLineIndex = i + 1;
+                    break;
                 }
             }
-        }
+            
+            // If no match found, use current line
+            if (!element.hasAttribute('data-source-line')) {
+                element.setAttribute('data-source-line', currentLineIndex + 1);
+            }
+        });
         
         document.querySelector('#output').innerHTML = tempDiv.innerHTML;
     };
 
     // Cursor synchronization: highlight preview element based on editor cursor
     let syncCursorToPreview = (lineNumber) => {
+        if (!cursorSync) return; // Only sync if enabled
+        
         const outputElement = document.querySelector('#output');
         if (!outputElement) return;
         
@@ -252,29 +266,37 @@ This web site is using ${"`"}markedjs/marked${"`"}.
             previousHighlight.classList.remove('cursor-highlight');
         }
         
-        // Find the element closest to the cursor line
+        // Find the element that corresponds to this exact line or closest
         const elements = outputElement.querySelectorAll('[data-source-line]');
-        let closestElement = null;
+        let targetElement = null;
         let closestDistance = Infinity;
         
         elements.forEach(element => {
             const sourceLine = parseInt(element.getAttribute('data-source-line'));
             const distance = Math.abs(sourceLine - lineNumber);
-            if (distance < closestDistance) {
+            
+            // Prefer exact match, otherwise closest
+            if (sourceLine === lineNumber) {
+                targetElement = element;
+                closestDistance = 0;
+            } else if (distance < closestDistance && !targetElement) {
                 closestDistance = distance;
-                closestElement = element;
+                targetElement = element;
             }
         });
         
-        if (closestElement) {
-            closestElement.classList.add('cursor-highlight');
-            // Scroll the element into view if needed (only if not already visible)
-            const rect = closestElement.getBoundingClientRect();
+        if (targetElement) {
+            targetElement.classList.add('cursor-highlight');
+            
+            // Scroll into view only if not visible
+            const rect = targetElement.getBoundingClientRect();
             const previewElement = document.querySelector('#preview');
             if (previewElement) {
                 const previewRect = previewElement.getBoundingClientRect();
-                if (rect.top < previewRect.top || rect.bottom > previewRect.bottom) {
-                    closestElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                const isVisible = rect.top >= previewRect.top && rect.bottom <= previewRect.bottom;
+                
+                if (!isVisible) {
+                    targetElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 }
             }
         }
@@ -282,6 +304,8 @@ This web site is using ${"`"}markedjs/marked${"`"}.
 
     // Cursor synchronization: move editor cursor based on preview click
     let syncCursorToEditor = (element) => {
+        if (!cursorSync) return; // Only sync if enabled
+        
         // Find the closest element with data-source-line
         let targetElement = element;
         while (targetElement && !targetElement.hasAttribute('data-source-line')) {
@@ -294,9 +318,13 @@ This web site is using ${"`"}markedjs/marked${"`"}.
         if (targetElement && targetElement.hasAttribute('data-source-line')) {
             const lineNumber = parseInt(targetElement.getAttribute('data-source-line'));
             if (editor && lineNumber) {
+                // Move cursor to the beginning of the line
                 editor.setPosition({ lineNumber: lineNumber, column: 1 });
                 editor.revealLineInCenter(lineNumber);
                 editor.focus();
+                
+                // Update highlight
+                syncCursorToPreview(lineNumber);
             }
         }
     };
@@ -338,6 +366,31 @@ This web site is using ${"`"}markedjs/marked${"`"}.
             let checked = event.currentTarget.checked;
             scrollBarSync = checked;
             saveScrollBarSettings(checked);
+        });
+    };
+
+    // ----- sync cursor position -----
+
+    let initCursorSync = (settings) => {
+        let checkbox = document.querySelector('#sync-cursor-checkbox');
+        checkbox.checked = settings;
+        cursorSync = settings;
+
+        checkbox.addEventListener('change', (event) => {
+            let checked = event.currentTarget.checked;
+            cursorSync = checked;
+            saveCursorSyncSettings(checked);
+            
+            // Remove highlight if disabling
+            if (!checked) {
+                const outputElement = document.querySelector('#output');
+                if (outputElement) {
+                    const previousHighlight = outputElement.querySelector('.cursor-highlight');
+                    if (previousHighlight) {
+                        previousHighlight.classList.remove('cursor-highlight');
+                    }
+                }
+            }
         });
     };
 
@@ -1033,6 +1086,16 @@ This web site is using ${"`"}markedjs/marked${"`"}.
         Storehouse.setItem(localStorageNamespace, localStorageScrollBarKey, settings, expiredAt);
     };
 
+    let loadCursorSyncSettings = () => {
+        let lastContent = Storehouse.getItem(localStorageNamespace, localStorageCursorSyncKey);
+        return lastContent;
+    };
+
+    let saveCursorSyncSettings = (settings) => {
+        let expiredAt = new Date(2099, 1, 1);
+        Storehouse.setItem(localStorageNamespace, localStorageCursorSyncKey, settings, expiredAt);
+    };
+
     let saveThemeSettings = (settings) => {
         let expiredAt = new Date(2099, 1, 1);
         Storehouse.setItem(localStorageNamespace, localStorageThemeKey, settings, expiredAt);
@@ -1134,6 +1197,13 @@ This web site is using ${"`"}markedjs/marked${"`"}.
     let scrollBarSettings = loadScrollBarSettings() || false;
     initScrollBarSync(scrollBarSettings);
 
+    let cursorSyncSettings = loadCursorSyncSettings();
+    // Default to true if not set
+    if (cursorSyncSettings === null || cursorSyncSettings === undefined) {
+        cursorSyncSettings = true;
+    }
+    initCursorSync(cursorSyncSettings);
+
     // initialize theme (dark/light)
     let themeSettings = loadThemeSettings();
     // normalize to boolean (Storehouse may return string or boolean)
@@ -1158,6 +1228,59 @@ This web site is using ${"`"}markedjs/marked${"`"}.
     if (previewElement) {
         previewElement.addEventListener('click', (e) => {
             syncCursorToEditor(e.target);
+        });
+        
+        // Bidirectional scroll sync with debouncing
+        let isEditorScrolling = false;
+        let isPreviewScrolling = false;
+        let editorScrollTimeout = null;
+        let previewScrollTimeout = null;
+        
+        // Editor scroll → Preview scroll
+        editor.onDidScrollChange((e) => {
+            if (isPreviewScrolling || !scrollBarSync) return;
+            
+            isEditorScrolling = true;
+            clearTimeout(editorScrollTimeout);
+            
+            const scrollTop = e.scrollTop;
+            const scrollHeight = e.scrollHeight;
+            const height = editor.getLayoutInfo().height;
+            const maxScrollTop = scrollHeight - height;
+            const scrollRatio = maxScrollTop > 0 ? scrollTop / maxScrollTop : 0;
+            
+            const targetY = (previewElement.scrollHeight - previewElement.clientHeight) * scrollRatio;
+            previewElement.scrollTo({ top: targetY, behavior: 'auto' });
+            
+            editorScrollTimeout = setTimeout(() => {
+                isEditorScrolling = false;
+            }, 150);
+        });
+        
+        // Preview scroll → Editor scroll
+        previewElement.addEventListener('scroll', () => {
+            if (isEditorScrolling || !scrollBarSync) return;
+            
+            isPreviewScrolling = true;
+            clearTimeout(previewScrollTimeout);
+            
+            const scrollTop = previewElement.scrollTop;
+            const scrollHeight = previewElement.scrollHeight;
+            const clientHeight = previewElement.clientHeight;
+            const maxScrollTop = scrollHeight - clientHeight;
+            const scrollRatio = maxScrollTop > 0 ? scrollTop / maxScrollTop : 0;
+            
+            // Calculate target scroll position in editor
+            const editorScrollHeight = editor.getScrollHeight();
+            const editorHeight = editor.getLayoutInfo().height;
+            const editorMaxScroll = editorScrollHeight - editorHeight;
+            const targetScroll = editorMaxScroll * scrollRatio;
+            
+            editor.setScrollTop(targetScroll);
+            
+            previewScrollTimeout = setTimeout(() => {
+                isPreviewScrolling = false;
+            }, 150);
         });
     }
 };

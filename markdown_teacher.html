@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Markdown Renderer</title>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      overflow: hidden;
+    }
+
+    .container {
+      width: 100vw;
+      height: 100vh;
+      background: #18181b;
+      color: #fafafa;
+      display: flex;
+      position: relative;
+    }
+
+    .preview-panel {
+      overflow: auto;
+      scroll-behavior: smooth;
+    }
+
+    .preview-content {
+      padding: 2rem;
+      cursor: pointer;
+    }
+
+    .divider {
+      width: 4px;
+      background: #3f3f46;
+      cursor: col-resize;
+      transition: background-color 0.2s;
+      position: relative;
+      z-index: 10;
+    }
+
+    .divider:hover {
+      background: #71717a;
+    }
+
+    .editor-panel {
+      position: relative;
+    }
+
+    .editor-wrapper {
+      width: 100%;
+      height: 100%;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .editor {
+      width: 100%;
+      height: 100%;
+      background: transparent;
+      color: transparent;
+      padding: 2rem;
+      font-family: 'Courier New', monospace;
+      font-size: 14px;
+      resize: none;
+      border: none;
+      outline: none;
+      line-height: 1.5em;
+      position: absolute;
+      top: 0;
+      left: 0;
+      z-index: 1;
+      caret-color: #fafafa;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      overflow-wrap: break-word;
+      overflow: auto;
+    }
+
+    .editor::selection {
+      background: rgba(59, 130, 246, 0.3);
+    }
+
+    .editor-highlight {
+      width: 100%;
+      height: 100%;
+      background: #27272a;
+      padding: 2rem;
+      font-family: 'Courier New', monospace;
+      font-size: 14px;
+      line-height: 1.5em;
+      position: absolute;
+      top: 0;
+      left: 0;
+      z-index: 0;
+      pointer-events: none;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      overflow-wrap: break-word;
+      overflow: auto;
+    }
+
+    .editor::placeholder {
+      color: #71717a;
+    }
+
+    /* Syntax highlighting colors */
+    .hl-header { color: #60a5fa; font-weight: bold; }
+    .hl-bold { color: #fbbf24; font-weight: bold; }
+    .hl-italic { color: #a78bfa; font-style: italic; }
+    .hl-code { color: #34d399; background: #18181b; padding: 2px 4px; border-radius: 3px; }
+    .hl-code-block { color: #86efac; background: #18181b; display: block; }
+    .hl-link { color: #60a5fa; text-decoration: underline; }
+    .hl-quote { color: #a1a1aa; border-left: 3px solid #52525b; padding-left: 0.5em; }
+    .hl-list { color: #fb923c; }
+    .hl-comment { color: #71717a; }
+
+    .drag-overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(24, 24, 27, 0.9);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      border: 2px dashed #71717a;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .drag-overlay.active {
+      display: flex;
+    }
+
+    .drag-overlay-icon {
+      color: #a1a1aa;
+    }
+
+    .drag-overlay-text {
+      color: #d4d4d8;
+    }
+
+    .toolbar {
+      position: fixed;
+      bottom: 1.5rem;
+      right: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      z-index: 1000;
+    }
+
+    .toolbar-btn {
+      background: #27272a;
+      border: none;
+      padding: 0.75rem;
+      border-radius: 9999px;
+      cursor: pointer;
+      transition: background-color 0.2s;
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+      color: #fafafa;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .toolbar-btn:hover {
+      background: #3f3f46;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    /* Markdown Styles */
+    .prose h1 { font-size: 2em; font-weight: bold; margin: 1em 0 0.5em; color: #fafafa; }
+    .prose h2 { font-size: 1.5em; font-weight: bold; margin: 1em 0 0.5em; color: #fafafa; }
+    .prose h3 { font-size: 1.25em; font-weight: bold; margin: 1em 0 0.5em; color: #fafafa; }
+    .prose code { 
+      background: #18181b; 
+      padding: 2px 6px; 
+      border-radius: 4px; 
+      color: #fbbf24;
+      font-family: 'Courier New', monospace;
+    }
+    .prose pre { 
+      background: #18181b; 
+      padding: 1em; 
+      border-radius: 8px; 
+      overflow-x: auto;
+      margin: 1em 0;
+    }
+    .prose pre code { 
+      background: transparent; 
+      padding: 0;
+      color: #86efac;
+    }
+    .prose blockquote { 
+      border-left: 4px solid #52525b; 
+      padding-left: 1em; 
+      color: #a1a1aa;
+      margin: 1em 0;
+    }
+    .prose ul { 
+      list-style-type: disc; 
+      padding-left: 2em;
+      margin: 1em 0;
+    }
+    .prose ol { 
+      list-style-type: decimal; 
+      padding-left: 2em;
+      margin: 1em 0;
+    }
+    .prose li { margin: 0.5em 0; }
+    .prose a { color: #60a5fa; text-decoration: underline; }
+    .prose strong { font-weight: bold; color: #fafafa; }
+    .prose em { font-style: italic; color: #e4e4e7; }
+    
+    .md-line {
+      min-height: 1.5em;
+      line-height: 1.5em;
+      transition: background-color 0.15s ease;
+    }
+    
+    .md-line:hover {
+      background-color: rgba(255, 255, 255, 0.03);
+      cursor: pointer;
+    }
+    
+    .md-line.active {
+      background-color: rgba(59, 130, 246, 0.1);
+      border-left: 3px solid #3b82f6;
+      padding-left: 5px;
+      margin-left: -5px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container" id="container">
+    <div class="preview-panel" id="previewPanel">
+      <div class="preview-content prose" id="previewContent"></div>
+    </div>
+
+    <div class="divider" id="divider"></div>
+
+    <div class="editor-panel" id="editorPanel">
+      <div class="editor-wrapper">
+        <div class="editor-highlight" id="editorHighlight"></div>
+        <textarea 
+          class="editor" 
+          id="editor" 
+          placeholder="Type your markdown here..."
+          spellcheck="false"
+        ></textarea>
+      </div>
+      <div class="drag-overlay" id="dragOverlay">
+        <i data-lucide="file-text" class="drag-overlay-icon" style="width: 48px; height: 48px;"></i>
+        <p class="drag-overlay-text">Drop .md file here</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="toolbar">
+    <button class="toolbar-btn" id="uploadBtn" title="Upload .md file">
+      <i data-lucide="upload" style="width: 20px; height: 20px;"></i>
+    </button>
+    <button class="toolbar-btn" id="pasteBtn" title="Paste from clipboard">
+      <i data-lucide="clipboard" style="width: 20px; height: 20px;"></i>
+    </button>
+    <button class="toolbar-btn" id="copyBtn" title="Copy to clipboard">
+      <i data-lucide="copy" style="width: 20px; height: 20px;"></i>
+    </button>
+    <button class="toolbar-btn" id="clearBtn" title="Clear editor">
+      <i data-lucide="trash-2" style="width: 20px; height: 20px;"></i>
+    </button>
+    <button class="toolbar-btn" id="resetBtn" title="Load default content">
+      <i data-lucide="refresh-cw" style="width: 20px; height: 20px;"></i>
+    </button>
+    <button class="toolbar-btn" id="downloadBtn" title="Download as .md">
+      <i data-lucide="download" style="width: 20px; height: 20px;"></i>
+    </button>
+  </div>
+
+  <input type="file" id="fileInput" accept=".md" class="hidden">
+
+  <script>
+    // Initialize Lucide icons
+    lucide.createIcons();
+
+    // State
+    let leftWidth = 50;
+    let isDragging = false;
+    let currentLine = 0;
+    const defaultMarkdown = `# Welcome to Markdown Renderer
+
+Start typing or upload a \`.md\` file...
+
+## Features
+- Live preview
+- Syntax highlighting
+- Drag & drop support
+- Resizable panels
+- **Synchronized scrolling**
+- **Click to locate line**
+
+\`\`\`javascript
+const hello = "world";
+console.log(hello);
+\`\`\`
+
+> This is a blockquote
+
+**Bold text** and *italic text*
+
+- List item 1
+- List item 2
+- List item 3
+
+## Learning Markdown
+
+Try these syntax examples:
+
+### Text Formatting
+*Italic* with single asterisks
+**Bold** with double asterisks
+***Bold and Italic*** with triple asterisks
+
+### Links and Images
+[Link text](https://example.com)
+
+### Code
+Inline \`code\` with backticks
+
+\`\`\`python
+# Code block with language
+def hello():
+    print("Hello, World!")
+\`\`\`
+
+### Lists
+1. Numbered item
+2. Another item
+
+- Bullet point
+- Another bullet
+
+### Blockquotes
+> Quote something important
+> Continue the quote`;
+
+    let markdown = defaultMarkdown;
+
+    // Elements
+    const container = document.getElementById('container');
+    const previewPanel = document.getElementById('previewPanel');
+    const editorPanel = document.getElementById('editorPanel');
+    const divider = document.getElementById('divider');
+    const editor = document.getElementById('editor');
+    const editorHighlight = document.getElementById('editorHighlight');
+    const previewContent = document.getElementById('previewContent');
+    const dragOverlay = document.getElementById('dragOverlay');
+    const fileInput = document.getElementById('fileInput');
+    const uploadBtn = document.getElementById('uploadBtn');
+    const pasteBtn = document.getElementById('pasteBtn');
+    const copyBtn = document.getElementById('copyBtn');
+    const clearBtn = document.getElementById('clearBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const downloadBtn = document.getElementById('downloadBtn');
+
+    // Utility functions
+    function escapeHtml(text) {
+      const map = {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;'
+      };
+      return text.replace(/[&<>"']/g, m => map[m]);
+    }
+
+    function parseMarkdown(md) {
+      let html = md;
+
+      // Code blocks with syntax highlighting
+      html = html.replace(/```(\w+)?\n([\s\S]*?)```/g, (match, lang, code) => {
+        return `<pre><code class="language-${lang || 'plaintext'}">${escapeHtml(code.trim())}</code></pre>`;
+      });
+
+      // Split by lines and wrap each with line number
+      const processedLines = html.split('\n').map((line, index) => {
+        let processedLine = line;
+        
+        // Inline code
+        processedLine = processedLine.replace(/`([^`]+)`/g, '<code>$1</code>');
+
+        // Headers
+        processedLine = processedLine.replace(/^### (.*$)/gim, '<h3>$1</h3>');
+        processedLine = processedLine.replace(/^## (.*$)/gim, '<h2>$1</h2>');
+        processedLine = processedLine.replace(/^# (.*$)/gim, '<h1>$1</h1>');
+
+        // Bold and Italic
+        processedLine = processedLine.replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>');
+        processedLine = processedLine.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+        processedLine = processedLine.replace(/\*(.+?)\*/g, '<em>$1</em>');
+
+        // Blockquotes
+        processedLine = processedLine.replace(/^\> (.*$)/gim, '<blockquote>$1</blockquote>');
+
+        // Links
+        processedLine = processedLine.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>');
+
+        // Lists
+        processedLine = processedLine.replace(/^\d+\.\s+(.*$)/gim, '<li class="numbered">$1</li>');
+        processedLine = processedLine.replace(/^\-\s+(.*$)/gim, '<li>$1</li>');
+
+        return `<div class="md-line" data-line="${index}">${processedLine || '<br>'}</div>`;
+      });
+
+      html = processedLines.join('');
+
+      // Wrap consecutive list items
+      html = html.replace(/(<li class="numbered">.*<\/li>\s*)+/gs, '<ol>$&</ol>');
+      html = html.replace(/(<li>.*<\/li>\s*)+/gs, '<ul>$&</ul>');
+
+      return html;
+    }
+
+    function highlightMarkdown(text) {
+      let highlighted = escapeHtml(text);
+
+      // Code blocks (must be first to avoid conflicts)
+      highlighted = highlighted.replace(/```[\s\S]*?```/g, (match) => {
+        return `<span class="hl-code-block">${match}</span>`;
+      });
+
+      // Inline code (after code blocks)
+      highlighted = highlighted.replace(/`([^`]+)`/g, (match, code) => {
+        return `<span class="hl-code">\`${code}\`</span>`;
+      });
+
+      // Headers
+      highlighted = highlighted.replace(/^(#{1,6})\s+(.*)$/gm, (match, hashes, content) => {
+        return `<span class="hl-header">${hashes} ${content}</span>`;
+      });
+
+      // Bold and Italic
+      highlighted = highlighted.replace(/\*\*\*(.+?)\*\*\*/g, '<span class="hl-bold hl-italic">***$1***</span>');
+      highlighted = highlighted.replace(/\*\*(.+?)\*\*/g, '<span class="hl-bold">**$1**</span>');
+      highlighted = highlighted.replace(/\*(.+?)\*/g, '<span class="hl-italic">*$1*</span>');
+
+      // Links
+      highlighted = highlighted.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<span class="hl-link">[$1]($2)</span>');
+
+      // Blockquotes
+      highlighted = highlighted.replace(/^&gt;\s+(.*)$/gm, '<span class="hl-quote">&gt; $1</span>');
+
+      // Lists
+      highlighted = highlighted.replace(/^(\s*)([-*+]|\d+\.)\s+/gm, '$1<span class="hl-list">$2</span> ');
+
+      return highlighted;
+    }
+
+    function updatePreview() {
+      previewContent.innerHTML = parseMarkdown(markdown);
+      updateActiveLine();
+    }
+
+    function updateEditorHighlight() {
+      editorHighlight.innerHTML = highlightMarkdown(markdown);
+      syncScroll();
+    }
+
+    function syncScroll() {
+      editorHighlight.scrollTop = editor.scrollTop;
+      editorHighlight.scrollLeft = editor.scrollLeft;
+    }
+
+    function updateActiveLine() {
+      document.querySelectorAll('.md-line').forEach(el => el.classList.remove('active'));
+      const activeLine = document.querySelector(`.md-line[data-line="${currentLine}"]`);
+      if (activeLine) {
+        activeLine.classList.add('active');
+      }
+    }
+
+    // Resizable panels
+    divider.addEventListener('mousedown', (e) => {
+      isDragging = true;
+      e.preventDefault();
+    });
+
+    document.addEventListener('mousemove', (e) => {
+      if (!isDragging) return;
+      
+      const containerRect = container.getBoundingClientRect();
+      const newWidth = ((e.clientX - containerRect.left) / containerRect.width) * 100;
+      
+      if (newWidth > 20 && newWidth < 80) {
+        leftWidth = newWidth;
+        previewPanel.style.width = `${leftWidth}%`;
+        editorPanel.style.width = `${100 - leftWidth}%`;
+      }
+    });
+
+    document.addEventListener('mouseup', () => {
+      isDragging = false;
+    });
+
+    // Editor events
+    editor.addEventListener('input', (e) => {
+      markdown = e.target.value;
+      updatePreview();
+      updateEditorHighlight();
+    });
+
+    editor.addEventListener('scroll', () => {
+      syncScroll();
+    });
+
+    editor.addEventListener('click', handleEditorClick);
+    editor.addEventListener('keyup', handleEditorClick);
+
+    function handleEditorClick() {
+      const cursorPosition = editor.selectionStart;
+      const textBeforeCursor = markdown.substring(0, cursorPosition);
+      const lineNumber = textBeforeCursor.split('\n').length - 1;
+      
+      currentLine = lineNumber;
+      updateActiveLine();
+      
+      const lineElements = previewPanel.querySelectorAll('.md-line');
+      if (lineElements[lineNumber]) {
+        lineElements[lineNumber].scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }
+
+    // Preview click
+    previewContent.addEventListener('click', (e) => {
+      const target = e.target.closest('.md-line');
+      if (!target) return;
+      
+      const lineNumber = parseInt(target.getAttribute('data-line'));
+      if (isNaN(lineNumber)) return;
+      
+      currentLine = lineNumber;
+      updateActiveLine();
+      
+      const lines = markdown.split('\n');
+      let cursorPosition = 0;
+      for (let i = 0; i < lineNumber; i++) {
+        cursorPosition += lines[i].length + 1;
+      }
+      
+      editor.focus();
+      editor.setSelectionRange(cursorPosition, cursorPosition);
+      
+      const lineHeight = 24;
+      editor.scrollTop = lineNumber * lineHeight - (editor.clientHeight / 2);
+    });
+
+    // Synchronized scrolling
+    let isPreviewScrolling = false;
+    let isEditorScrolling = false;
+
+    editor.addEventListener('scroll', () => {
+      syncScroll();
+      
+      if (isPreviewScrolling) return;
+      isEditorScrolling = true;
+      
+      const scrollPercentage = editor.scrollTop / (editor.scrollHeight - editor.clientHeight);
+      previewPanel.scrollTop = scrollPercentage * (previewPanel.scrollHeight - previewPanel.clientHeight);
+      
+      setTimeout(() => { isEditorScrolling = false; }, 100);
+    });
+
+    previewPanel.addEventListener('scroll', () => {
+      if (isEditorScrolling) return;
+      isPreviewScrolling = true;
+      
+      const scrollPercentage = previewPanel.scrollTop / (previewPanel.scrollHeight - previewPanel.clientHeight);
+      editor.scrollTop = scrollPercentage * (editor.scrollHeight - editor.clientHeight);
+      
+      setTimeout(() => { isPreviewScrolling = false; }, 100);
+    });
+
+    // File upload
+    function handleFileUpload(file) {
+      if (file && file.name.endsWith('.md')) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          markdown = e.target.result;
+          editor.value = markdown;
+          updatePreview();
+        };
+        reader.readAsText(file);
+      }
+    }
+
+    uploadBtn.addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', (e) => handleFileUpload(e.target.files[0]));
+
+    // Drag and drop
+    editorPanel.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dragOverlay.classList.remove('active');
+      handleFileUpload(e.dataTransfer.files[0]);
+    });
+
+    editorPanel.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      dragOverlay.classList.add('active');
+    });
+
+    editorPanel.addEventListener('dragleave', () => {
+      dragOverlay.classList.remove('active');
+    });
+
+    // Paste from clipboard
+    pasteBtn.addEventListener('click', async () => {
+      try {
+        const text = await navigator.clipboard.readText();
+        markdown = text;
+        editor.value = markdown;
+        updatePreview();
+        updateEditorHighlight();
+        
+        const originalIcon = pasteBtn.innerHTML;
+        pasteBtn.innerHTML = '<i data-lucide="check" style="width: 20px; height: 20px;"></i>';
+        lucide.createIcons();
+        setTimeout(() => {
+          pasteBtn.innerHTML = originalIcon;
+          lucide.createIcons();
+        }, 1000);
+      } catch (err) {
+        console.error('Failed to read clipboard:', err);
+      }
+    });
+
+    // Copy to clipboard
+    copyBtn.addEventListener('click', () => {
+      navigator.clipboard.writeText(markdown).then(() => {
+        const originalIcon = copyBtn.innerHTML;
+        copyBtn.innerHTML = '<i data-lucide="check" style="width: 20px; height: 20px;"></i>';
+        lucide.createIcons();
+        setTimeout(() => {
+          copyBtn.innerHTML = originalIcon;
+          lucide.createIcons();
+        }, 1000);
+      });
+    });
+
+    // Clear editor
+    clearBtn.addEventListener('click', () => {
+      if (confirm('Are you sure you want to clear all content?')) {
+        markdown = '';
+        editor.value = markdown;
+        updatePreview();
+        updateEditorHighlight();
+      }
+    });
+
+    // Reset to default
+    resetBtn.addEventListener('click', () => {
+      if (confirm('Load default content? Current content will be lost.')) {
+        markdown = defaultMarkdown;
+        editor.value = markdown;
+        updatePreview();
+        updateEditorHighlight();
+      }
+    });
+
+    // Download
+    downloadBtn.addEventListener('click', () => {
+      const blob = new Blob([markdown], { type: 'text/markdown' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'document.md';
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+
+    // Initialize
+    editor.value = markdown;
+    previewPanel.style.width = `${leftWidth}%`;
+    editorPanel.style.width = `${100 - leftWidth}%`;
+    updatePreview();
+    updateEditorHighlight();
+  </script>
+</body>
+</html>

@@ -1,6 +1,16 @@
 # Markdown Live Preview
 
-[Markdown Live Preview](https://markdownlivepreview.com/) is a tiny web tool to preview Markdown formatted text.
+A powerful markdown editor with live preview, syntax highlighting, and advanced features.
+
+## Features
+
+- 🎨 Live preview with syntax highlighting
+- 🔄 Bidirectional cursor and scroll synchronization
+- 📄 PDF export with proper text formatting
+- 🌓 Dark mode support
+- 💾 Auto-save to localStorage
+- 📋 Copy/paste support
+- 🎯 Click-to-navigate between editor and preview
 
 ## Setup
 
@@ -21,4 +31,4 @@ $ make dev
 ```
 
 ## License
-See the [LICENSE](https://github.com/tanabe/markdown-live-preview/blob/master/LICENSE) file in this repo.
+MIT License - See the [LICENSE](LICENSE) file for details.

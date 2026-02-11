@@ -213,13 +213,13 @@ footer {
 
 /* Cursor synchronization highlight */
 .cursor-highlight {
-  background-color: rgba(255, 255, 0, 0.4) !important;
-  border-left: 4px solid #ffeb3b;
+  background-color: rgba(251, 247, 25, 0.4) !important;
+  border-left: 4px solid #FBF719;
   padding-left: 8px !important;
   transition: background-color 0.2s ease, border-left 0.2s ease;
 }
 
 [data-theme="dark"] .cursor-highlight {
-  background-color: rgba(255, 255, 0, 0.25) !important;
-  border-left: 4px solid #ffeb3b;
+  background-color: rgba(251, 247, 25, 0.3) !important;
+  border-left: 4px solid #FBF719;
 }
