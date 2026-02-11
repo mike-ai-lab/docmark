@@ -42,11 +42,12 @@ header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 8px 16px;
+  padding: 10px 20px;
   width: 100%;
-  background-color: #444;
-  font-size: 12px;
+  background-color: #2c2c2c;
+  font-size: 13px;
   color: #fff;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
 header a:link, header a:hover, header a:visited, header a:active {
@@ -54,51 +55,110 @@ header a:link, header a:hover, header a:visited, header a:active {
 }
 
 header a:hover {
-  text-decoration: underline;
+  text-decoration: none;
+  opacity: 0.8;
 }
 
-#menu-items {
-    display: flex;
+.header-left {
+  display: flex;
+  align-items: center;
+  min-width: 200px;
 }
 
-#reset-button {
-    margin-left: 16px;
+.brand {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
 }
 
-#copy-button {
-    margin-left: 16px;
+.header-center {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+  flex: 1;
+  justify-content: center;
 }
 
-#export-button {
-    margin-left: 16px;
+.button-group {
+  display: flex;
+  gap: 4px;
+  background: rgba(255,255,255,0.08);
+  padding: 4px;
+  border-radius: 6px;
 }
 
-#sync-button {
-    margin-left: 16px;
-    -webkit-user-select: none;
-    -moz-user-select: none;
-    -ms-user-select: none;
-    user-select: none;
+.btn-item {
+  padding: 6px 14px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+  white-space: nowrap;
 }
 
-header input[type="checkbox"] {
-    vertical-align: middle;
-    margin-right: 4px;
-    margin-top: 0px;
+.btn-item:hover {
+  background: rgba(255,255,255,0.15);
+}
+
+.btn-item a {
+  display: block;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-width: 200px;
+  justify-content: flex-end;
+}
+
+.controls-group {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.control-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  white-space: nowrap;
+  font-size: 12px;
+}
+
+.control-item input[type="checkbox"] {
+  cursor: pointer;
+  margin: 0;
+}
+
+.control-item select {
+  background: rgba(255,255,255,0.1);
+  color: #fff;
+  border: 1px solid rgba(255,255,255,0.2);
+  padding: 3px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.control-item select:hover {
+  background: rgba(255,255,255,0.15);
 }
 
 #github {
-    padding-right: 32px;
+  padding: 0;
 }
 
 #github img {
   display: block;
-  width: 16px;
+  width: 20px;
+  height: 20px;
+  opacity: 0.9;
+  transition: opacity 0.2s ease;
 }
 
-#github a {
-  display: block;
-  width: 16px;
+#github a:hover img {
+  opacity: 1;
 }
 
 footer {
@@ -133,6 +193,11 @@ footer {
 
 #preview-wrapper {
   padding: 8px 16px 16px 16px;
+  background-color: #fdfdfd;
+}
+
+[data-theme="dark"] #preview-wrapper {
+  background-color: #212830;
 }
 
 .column {
@@ -181,7 +246,7 @@ footer {
 }
 
 [data-theme="dark"] header {
-  background-color: #333;
+  background-color: #1a1a1a;
   color: #e6edf3;
 }
 
@@ -213,13 +278,13 @@ footer {
 
 /* Cursor synchronization highlight */
 .cursor-highlight {
-  background-color: rgba(251, 247, 25, 0.4) !important;
-  border-left: 4px solid #FBF719;
+  background-color: rgba(236, 239, 241, 0.8) !important;
+  border-left: 4px solid #eceff1;
   padding-left: 8px !important;
   transition: background-color 0.2s ease, border-left 0.2s ease;
 }
 
 [data-theme="dark"] .cursor-highlight {
-  background-color: rgba(251, 247, 25, 0.3) !important;
-  border-left: 4px solid #FBF719;
+  background-color: rgba(236, 239, 241, 0.6) !important;
+  border-left: 4px solid #eceff1;
 }

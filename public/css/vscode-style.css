@@ -14,7 +14,7 @@
     padding-bottom: 0.3em;
     border-bottom: 1px solid #e5e5e5;
     margin-top: 24px;
-    margin-bottom: 16px;
+    margin-bottom: 12px;
 }
 
 .markdown-body h2 {
@@ -23,28 +23,28 @@
     padding-bottom: 0.3em;
     border-bottom: 1px solid #e5e5e5;
     margin-top: 24px;
-    margin-bottom: 16px;
+    margin-bottom: 12px;
 }
 
 .markdown-body h3 {
     font-size: 1.25em;
     font-weight: 600;
     margin-top: 24px;
-    margin-bottom: 16px;
+    margin-bottom: 12px;
 }
 
 .markdown-body h4 {
     font-size: 1em;
     font-weight: 600;
     margin-top: 24px;
-    margin-bottom: 16px;
+    margin-bottom: 12px;
 }
 
 .markdown-body h5 {
     font-size: 0.875em;
     font-weight: 600;
     margin-top: 24px;
-    margin-bottom: 16px;
+    margin-bottom: 12px;
 }
 
 .markdown-body h6 {
@@ -52,7 +52,7 @@
     font-weight: 600;
     color: #6a737d;
     margin-top: 24px;
-    margin-bottom: 16px;
+    margin-bottom: 12px;
 }
 
 /* Paragraphs */
@@ -119,8 +119,8 @@
 .markdown-body table {
     border-spacing: 0;
     border-collapse: collapse;
-    margin-top: 0;
-    margin-bottom: 16px;
+    margin-top: 8px;
+    margin-bottom: 24px;
     display: block;
     width: max-content;
     max-width: 100%;

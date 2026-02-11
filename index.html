@@ -11,13 +11,27 @@
       (function(){
         try {
           var BOOT_THEME_KEY = 'com.markdownlivepreview_theme';
+          var BOOT_STYLE_KEY = 'com.markdownlivepreview.style_settings';
           var raw = localStorage.getItem(BOOT_THEME_KEY);
           var useDark = raw === 'dark';
           document.documentElement.setAttribute('data-theme', useDark ? 'dark' : 'light');
 
-          var PREVIEW_CSS_LIGHT = 'css/github-markdown-light.css?v=1.11.0';
-          var PREVIEW_CSS_DARK = 'css/github-markdown-dark_dimmed.css?v=1.11.0';
-          var href = useDark ? PREVIEW_CSS_DARK : PREVIEW_CSS_LIGHT;
+          var PREVIEW_CSS_LIGHT = 'css/github-markdown-light.css?v=1.12.0';
+          var PREVIEW_CSS_DARK = 'css/github-markdown-dark_dimmed.css?v=1.12.0';
+          var PREVIEW_CSS_GITBOOK = 'css/gitbook-style.css?v=1.12.0';
+          var PREVIEW_CSS_VSCODE = 'css/vscode-style.css?v=1.12.0';
+          
+          var styleRaw = localStorage.getItem(BOOT_STYLE_KEY);
+          var style = styleRaw || 'github';
+          
+          var href;
+          if (style === 'gitbook') {
+            href = PREVIEW_CSS_GITBOOK;
+          } else if (style === 'vscode') {
+            href = PREVIEW_CSS_VSCODE;
+          } else {
+            href = useDark ? PREVIEW_CSS_DARK : PREVIEW_CSS_LIGHT;
+          }
 
           var link = document.createElement('link');
           link.id = 'gh-markdown-link';
@@ -30,8 +44,8 @@
         }
       })();
     </script>
-    <link rel="stylesheet" type="text/css" href="css/style.css?v=1.11.0">
-    <link rel="stylesheet" type="text/css" href="css/vscode-style.css?v=1.11.0">
+    <link rel="stylesheet" type="text/css" href="css/style.css?v=1.12.0">
+    <link rel="stylesheet" type="text/css" href="css/vscode-style.css?v=1.12.0">
     <link rel="icon" type="image/png" href="favicon.png">
     <script defer src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" integrity="sha512-qZvrmS2ekKPF2mSznTQsxqPgnpkI4DNTlrdUmTzrDgektczlKNRRhy5X5AAOnx5S09ydFYWWNSfcEqDTTHgtNA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script type="module" src="/src/main.js?v=1.11.0"></script>
@@ -41,19 +55,50 @@
   <body>
 
     <header>
-        <div id="menu-items">
-            <div><a href="/">Markdown Live Preview</a></div>
-            <div id="reset-button"><a href="#">Reset</a></div>
-            <div id="copy-button"><a href="#">Copy</a></div>
-            <div id="export-button"><a href="#">Export PDF</a></div>
-            <div id="pdf-settings-button"><a href="#">PDF Settings</a></div>
-            <div id="sync-button">
-              <input type="checkbox" id="sync-scroll-checkbox"><label for="sync-scroll-checkbox">Sync scroll</label>
-              <span style="margin-left:12px;"><input type="checkbox" id="sync-cursor-checkbox"><label for="sync-cursor-checkbox">Sync cursor</label></span>
-              <span style="margin-left:12px;"><input type="checkbox" id="theme-checkbox"><label for="theme-checkbox">Dark mode</label></span>
+        <div class="header-left">
+            <div class="brand"><a href="/">Markdown Live Preview</a></div>
+        </div>
+        
+        <div class="header-center">
+            <div class="button-group">
+                <div class="btn-item" id="reset-button"><a href="#">Reset</a></div>
+                <div class="btn-item" id="clear-button"><a href="#">Clear</a></div>
+                <div class="btn-item" id="paste-button"><a href="#">Paste</a></div>
+                <div class="btn-item" id="copy-button"><a href="#">Copy</a></div>
+            </div>
+            
+            <div class="button-group">
+                <div class="btn-item" id="export-button"><a href="#">Export PDF</a></div>
+                <div class="btn-item" id="export-html-button"><a href="#">Export HTML</a></div>
+                <div class="btn-item" id="pdf-settings-button"><a href="#">PDF Settings</a></div>
             </div>
         </div>
-        <div id="github"><a href="https://github.com/mike-ai-lab/docmark"><img src="image/GitHub-Mark-Light-32px.webp"></a></div>
+        
+        <div class="header-right">
+            <div class="controls-group">
+                <label class="control-item">
+                    <input type="checkbox" id="sync-scroll-checkbox">
+                    <span>Sync Scroll</span>
+                </label>
+                <label class="control-item">
+                    <input type="checkbox" id="sync-cursor-checkbox">
+                    <span>Sync Cursor</span>
+                </label>
+                <label class="control-item">
+                    <input type="checkbox" id="theme-checkbox">
+                    <span>Dark Mode</span>
+                </label>
+                <label class="control-item">
+                    <span>Style:</span>
+                    <select id="style-selector">
+                        <option value="github">GitHub</option>
+                        <option value="gitbook">GitBook</option>
+                        <option value="vscode">VSCode</option>
+                    </select>
+                </label>
+            </div>
+            <div id="github"><a href="https://github.com/mike-ai-lab/docmark"><img src="image/GitHub-Mark-Light-32px.webp"></a></div>
+        </div>
     </header>
 
     <div id="container" class="split-container">

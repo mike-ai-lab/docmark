@@ -13,6 +13,7 @@ const init = () => {
     const localStorageScrollBarKey = 'scroll_bar_settings';
     const localStorageCursorSyncKey = 'cursor_sync_settings';
     const localStorageThemeKey = 'theme_settings';
+    const localStorageStyleKey = 'style_settings';
     const localStoragePdfSettingsKey = 'pdf_font_settings';
     const confirmationMessage = 'Are you sure you want to reset? Your changes will be lost.';
     
@@ -111,6 +112,29 @@ This web site is using ${"`"}markedjs/marked${"`"}.
             return new Proxy({}, { get: () => () => { } });
         }
     }
+
+    // Define custom themes with specified colors
+    monaco.editor.defineTheme('custom-light', {
+        base: 'vs',
+        inherit: true,
+        rules: [],
+        colors: {
+            'editor.background': '#f7f7f7',
+            'editor.selectionBackground': '#add6ff',
+            'editor.lineHighlightBackground': '#f7f7f7'
+        }
+    });
+
+    monaco.editor.defineTheme('custom-dark', {
+        base: 'vs-dark',
+        inherit: true,
+        rules: [],
+        colors: {
+            'editor.background': '#211d25',
+            'editor.selectionBackground': '#add6ff',
+            'editor.lineHighlightBackground': '#211d25'
+        }
+    });
 
     let setupEditor = () => {
         let editor = monaco.editor.create(document.querySelector('#editor'), {
@@ -453,6 +477,36 @@ This web site is using ${"`"}markedjs/marked${"`"}.
         });
     };
 
+    // Clear editor content
+    let clearEditor = () => {
+        if (editor.getValue().trim() !== '') {
+            var confirmed = window.confirm('Are you sure you want to clear all content?');
+            if (!confirmed) {
+                return;
+            }
+        }
+        editor.setValue('');
+        editor.focus();
+        hasEdited = false;
+    };
+
+    // Paste from clipboard
+    let pasteFromClipboard = async () => {
+        try {
+            const text = await navigator.clipboard.readText();
+            if (text) {
+                const position = editor.getPosition();
+                editor.executeEdits('', [{
+                    range: new monaco.Range(position.lineNumber, position.column, position.lineNumber, position.column),
+                    text: text
+                }]);
+                editor.focus();
+            }
+        } catch (err) {
+            window.alert('Failed to read clipboard. Please make sure you have granted clipboard permissions.');
+        }
+    };
+
     let presetValue = (value) => {
         editor.setValue(value);
         editor.revealPosition({ lineNumber: 1, column: 1 });
@@ -500,25 +554,40 @@ This web site is using ${"`"}markedjs/marked${"`"}.
     };
 
     // ----- preview CSS loader (switch github-markdown css) -----
-    const PREVIEW_CSS_LIGHT = 'css/github-markdown-light.css?v=1.11.0';
-    const PREVIEW_CSS_DARK = 'css/github-markdown-dark_dimmed.css?v=1.11.0';
+    const PREVIEW_CSS_LIGHT = 'css/github-markdown-light.css?v=1.12.0';
+    const PREVIEW_CSS_DARK = 'css/github-markdown-dark_dimmed.css?v=1.12.0';
+    const PREVIEW_CSS_GITBOOK = 'css/gitbook-style.css?v=1.12.0';
+    const PREVIEW_CSS_VSCODE = 'css/vscode-style.css?v=1.12.0';
 
-    let setPreviewCss = (useDark) => {
+    let currentStyle = 'github'; // default style
+
+    let setPreviewCss = (useDark, style = currentStyle) => {
         const link = document.getElementById('gh-markdown-link');
         if (!link) {
             // fallback: create link element
             const newLink = document.createElement('link');
             newLink.id = 'gh-markdown-link';
             newLink.rel = 'stylesheet';
-            newLink.href = useDark ? PREVIEW_CSS_DARK : PREVIEW_CSS_LIGHT;
+            newLink.href = getStyleHref(useDark, style);
             document.head.appendChild(newLink);
             return;
         }
 
         // Only update if href differs to avoid unnecessary reload
-        const desired = useDark ? PREVIEW_CSS_DARK : PREVIEW_CSS_LIGHT;
+        const desired = getStyleHref(useDark, style);
         if (link.getAttribute('href') !== desired) {
             link.setAttribute('href', desired);
+        }
+    };
+
+    let getStyleHref = (useDark, style) => {
+        if (style === 'gitbook') {
+            return PREVIEW_CSS_GITBOOK;
+        } else if (style === 'vscode') {
+            return PREVIEW_CSS_VSCODE;
+        } else {
+            // github style
+            return useDark ? PREVIEW_CSS_DARK : PREVIEW_CSS_LIGHT;
         }
     };
 
@@ -535,19 +604,39 @@ This web site is using ${"`"}markedjs/marked${"`"}.
 
         // set Monaco editor theme to match page theme
         if (monaco && monaco.editor && typeof monaco.editor.setTheme === 'function') {
-            monaco.editor.setTheme(settings ? 'vs-dark' : 'vs');
+            monaco.editor.setTheme(settings ? 'custom-dark' : 'custom-light');
         }
         // set preview css to match theme
-        setPreviewCss(settings);
+        setPreviewCss(settings, currentStyle);
 
         checkbox.addEventListener('change', (event) => {
             let checked = event.currentTarget.checked;
             setTheme(checked);
             saveThemeSettings(checked);
-            setPreviewCss(checked);
+            setPreviewCss(checked, currentStyle);
             if (monaco && monaco.editor && typeof monaco.editor.setTheme === 'function') {
-                monaco.editor.setTheme(checked ? 'vs-dark' : 'vs');
+                monaco.editor.setTheme(checked ? 'custom-dark' : 'custom-light');
             }
+        });
+    };
+
+    // ----- style selector (github/gitbook/vscode) -----
+    let initStyleSelector = (settings) => {
+        let selector = document.querySelector('#style-selector');
+        if (!selector) return;
+        
+        currentStyle = settings || 'github';
+        selector.value = currentStyle;
+        
+        // Apply initial style
+        const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+        setPreviewCss(isDark, currentStyle);
+
+        selector.addEventListener('change', (event) => {
+            currentStyle = event.target.value;
+            saveStyleSettings(currentStyle);
+            const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+            setPreviewCss(isDark, currentStyle);
         });
     };
     
@@ -584,6 +673,160 @@ This web site is using ${"`"}markedjs/marked${"`"}.
     // ----- export preview -----
 
     let exportLightCssPromise = null;
+
+    // Get style-specific PDF settings
+    let getStylePdfSettings = (style) => {
+        const baseSettings = {
+            margin: 15,
+            lineSpacing: 1.5,
+            headingSpacing: 1.2
+        };
+
+        if (style === 'gitbook') {
+            return {
+                ...baseSettings,
+                margin: 20,
+                h1: 12,
+                h2: 11,
+                h3: 10,
+                h4: 9,
+                paragraph: 9,
+                list: 9,
+                blockquote: 9,
+                code: 8,
+                table: 8,
+                fontFamily: 'helvetica',
+                lineSpacing: 1.7,
+                headingSpacing: 1.4,
+                tableBorders: 'all',
+                tableBorderWeight: 0.2,
+                tableBorderColor: '#d0d7de',
+                tableHeaderBg: '#f6f8fa',
+                tableHeaderColor: '#000000',
+                linkColor: [0, 102, 218], // Blue for links
+                codeBackground: true
+            };
+        } else if (style === 'vscode') {
+            return {
+                ...baseSettings,
+                margin: 15,
+                h1: 11,
+                h2: 10,
+                h3: 9,
+                h4: 9,
+                paragraph: 8,
+                list: 8,
+                blockquote: 8,
+                code: 8,
+                table: 8,
+                fontFamily: 'helvetica',
+                lineSpacing: 1.6,
+                headingSpacing: 1.3,
+                tableBorders: 'horizontal',
+                tableBorderWeight: 0.1,
+                tableBorderColor: '#cccccc',
+                tableHeaderBg: '#f0f0f0',
+                tableHeaderColor: '#000000',
+                linkColor: [0, 102, 204],
+                codeBackground: true
+            };
+        } else {
+            // GitHub style (default)
+            return {
+                ...baseSettings,
+                margin: 15,
+                h1: 10,
+                h2: 10,
+                h3: 10,
+                h4: 10,
+                paragraph: 8,
+                list: 8,
+                blockquote: 8,
+                code: 8,
+                table: 8,
+                fontFamily: 'helvetica',
+                lineSpacing: 1.5,
+                headingSpacing: 1.2,
+                tableBorders: 'horizontal',
+                tableBorderWeight: 0.1,
+                tableBorderColor: '#cccccc',
+                tableHeaderBg: '#f0f0f0',
+                tableHeaderColor: '#000000',
+                linkColor: [0, 102, 204],
+                codeBackground: false
+            };
+        }
+    };
+
+    let getStyleCss = async (style, isDark) => {
+        let cssUrl;
+        if (style === 'gitbook') {
+            cssUrl = PREVIEW_CSS_GITBOOK;
+        } else if (style === 'vscode') {
+            cssUrl = PREVIEW_CSS_VSCODE;
+        } else {
+            cssUrl = isDark ? PREVIEW_CSS_DARK : PREVIEW_CSS_LIGHT;
+        }
+
+        try {
+            const response = await fetch(cssUrl);
+            if (!response.ok) {
+                throw new Error(`Failed to load CSS: ${response.status}`);
+            }
+            return await response.text();
+        } catch (error) {
+            console.error('Failed to load CSS for export', error);
+            return '';
+        }
+    };
+
+    let exportPreviewToHtml = async () => {
+        const outputElement = document.querySelector('#output');
+        if (!outputElement) {
+            console.log('No output element found');
+            return;
+        }
+
+        const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+        const css = await getStyleCss(currentStyle, isDark);
+        
+        const htmlContent = `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Exported Markdown</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background-color: ${isDark ? '#0d1117' : '#ffffff'};
+        }
+        .markdown-body {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        ${css}
+    </style>
+</head>
+<body>
+    <div class="markdown-body">
+        ${outputElement.innerHTML}
+    </div>
+</body>
+</html>`;
+
+        // Create a blob and download
+        const blob = new Blob([htmlContent], { type: 'text/html' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `markdown-export-${Date.now()}.html`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    };
 
     let getLightMarkdownCss = () => {
         if (exportLightCssPromise) {
@@ -631,8 +874,11 @@ This web site is using ${"`"}markedjs/marked${"`"}.
         }
 
         try {
-            // Use current font settings
-            const fontSizes = pdfFontSettings;
+            // Get style-specific settings
+            const styleSettings = getStylePdfSettings(currentStyle);
+            
+            // Use current font settings merged with style-specific settings
+            const fontSizes = { ...pdfFontSettings, ...styleSettings };
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF({
                 orientation: 'portrait',
@@ -642,7 +888,7 @@ This web site is using ${"`"}markedjs/marked${"`"}.
 
             const pageWidth = doc.internal.pageSize.getWidth();
             const pageHeight = doc.internal.pageSize.getHeight();
-            const margin = 15;
+            const margin = styleSettings.margin || 15;
             const maxWidth = pageWidth - (margin * 2);
             let yPosition = margin;
 
@@ -799,9 +1045,10 @@ This web site is using ${"`"}markedjs/marked${"`"}.
                     
                     // Set font style and color
                     if (seg.isLink) {
-                        // Links: blue color, underlined
+                        // Links: use style-specific color, underlined
                         doc.setFont('helvetica', 'normal');
-                        doc.setTextColor(0, 102, 204); // Blue color
+                        const linkColor = fontSizes.linkColor || [0, 102, 204];
+                        doc.setTextColor(linkColor[0], linkColor[1], linkColor[2]);
                     } else if (seg.code) {
                         doc.setFont('courier', 'normal');
                         doc.setTextColor(0, 0, 0);
@@ -911,19 +1158,19 @@ This web site is using ${"`"}markedjs/marked${"`"}.
 
                 switch (tagName) {
                     case 'h1':
-                        addSpacing(3);
+                        addSpacing(5); // More space before h1 to separate sections
                         addText(element.textContent, fontSizes.h1, true);
-                        addSpacing(2);
+                        addSpacing(0.2); // Very tight to content below
                         break;
                     case 'h2':
-                        addSpacing(3);
+                        addSpacing(5); // More space before h2 to separate sections
                         addText(element.textContent, fontSizes.h2, true);
-                        addSpacing(2);
+                        addSpacing(0.2); // Very tight to content below
                         break;
                     case 'h3':
-                        addSpacing(2);
+                        addSpacing(4); // More space before h3 to separate sections
                         addText(element.textContent, fontSizes.h3, true);
-                        addSpacing(1.5);
+                        addSpacing(0.2); // Very tight to content below
                         break;
                     case 'h4':
                     case 'h5':
@@ -1146,7 +1393,7 @@ This web site is using ${"`"}markedjs/marked${"`"}.
                         break;
                     case 'table':
                         // Minimal spacing before table - keep tight to heading
-                        addSpacing(2);
+                        addSpacing(0.1); // Almost no space - very close to heading above
                         
                         // Enhanced table rendering with proper Unicode support
                         const thead = element.querySelector('thead');
@@ -1282,8 +1529,9 @@ This web site is using ${"`"}markedjs/marked${"`"}.
                                     const textY = tableY + 4 + (lineIdx * 4);
                                     
                                     if (isLinkCell && linkUrl) {
-                                        // Render as clickable link
-                                        doc.setTextColor(0, 102, 204); // Blue color
+                                        // Render as clickable link with style-specific color
+                                        const linkColor = fontSizes.linkColor || [0, 102, 204];
+                                        doc.setTextColor(linkColor[0], linkColor[1], linkColor[2]);
                                         doc.text(line, xPos + 1, textY, { 
                                             maxWidth: colWidth - 2,
                                             align: 'left'
@@ -1324,8 +1572,8 @@ This web site is using ${"`"}markedjs/marked${"`"}.
                         });
                         
                         yPosition = tableY;
-                        // Small spacing after table before notes
-                        addSpacing(3);
+                        // Large spacing after table to separate sections
+                        addSpacing(8); // Very large gap - clear visual separation between sections
                         break;
                     case 'hr':
                         // Render HR as visual separator between sections
@@ -1396,6 +1644,26 @@ This web site is using ${"`"}markedjs/marked${"`"}.
             document.getElementById('pdf-settings-panel').remove();
             return;
         }
+        
+        // Load saved templates from localStorage
+        const loadTemplates = () => {
+            try {
+                const saved = localStorage.getItem(localStorageNamespace + '.pdf_templates');
+                return saved ? JSON.parse(saved) : {};
+            } catch (e) {
+                return {};
+            }
+        };
+        
+        const saveTemplates = (templates) => {
+            try {
+                localStorage.setItem(localStorageNamespace + '.pdf_templates', JSON.stringify(templates));
+            } catch (e) {
+                console.error('Failed to save templates', e);
+            }
+        };
+        
+        const templates = loadTemplates();
         
         // Create floating panel
         const panel = document.createElement('div');
@@ -1606,6 +1874,20 @@ This web site is using ${"`"}markedjs/marked${"`"}.
         });
     };
 
+    let setupClearButton = () => {
+        document.querySelector("#clear-button").addEventListener('click', (event) => {
+            event.preventDefault();
+            clearEditor();
+        });
+    };
+
+    let setupPasteButton = () => {
+        document.querySelector("#paste-button").addEventListener('click', (event) => {
+            event.preventDefault();
+            pasteFromClipboard();
+        });
+    };
+
     let setupCopyButton = (editor) => {
         document.querySelector("#copy-button").addEventListener('click', (event) => {
             event.preventDefault();
@@ -1627,6 +1909,17 @@ This web site is using ${"`"}markedjs/marked${"`"}.
         exportButton.addEventListener('click', (event) => {
             event.preventDefault();
             exportPreviewToPdf();
+        });
+    };
+
+    let setupExportHtmlButton = () => {
+        const exportHtmlButton = document.querySelector('#export-html-button');
+        if (!exportHtmlButton) {
+            return;
+        }
+        exportHtmlButton.addEventListener('click', (event) => {
+            event.preventDefault();
+            exportPreviewToHtml();
         });
     };
     
@@ -1696,6 +1989,21 @@ This web site is using ${"`"}markedjs/marked${"`"}.
         Storehouse.setItem(localStorageNamespace, localStorageThemeKey, settings, expiredAt);
         try {
             localStorage.setItem('com.markdownlivepreview_theme', settings ? 'dark' : 'light');
+        } catch (e) {
+            // ignore storage errors
+        }
+    };
+
+    let loadStyleSettings = () => {
+        let last = Storehouse.getItem(localStorageNamespace, localStorageStyleKey);
+        return last || 'github'; // default to github style
+    };
+
+    let saveStyleSettings = (settings) => {
+        let expiredAt = new Date(2099, 1, 1);
+        Storehouse.setItem(localStorageNamespace, localStorageStyleKey, settings, expiredAt);
+        try {
+            localStorage.setItem('com.markdownlivepreview.style_settings', settings);
         } catch (e) {
             // ignore storage errors
         }
@@ -1786,8 +2094,11 @@ This web site is using ${"`"}markedjs/marked${"`"}.
         presetValue(defaultInput);
     }
     setupResetButton();
+    setupClearButton();
+    setupPasteButton();
     setupCopyButton(editor);
     setupExportButton();
+    setupExportHtmlButton();
     setupPdfSettingsButton();
     
     // Load PDF settings
@@ -1811,6 +2122,11 @@ This web site is using ${"`"}markedjs/marked${"`"}.
     } else {
         themeSettings = false;
     }
+    
+    // initialize style selector
+    let styleSettings = loadStyleSettings();
+    initStyleSelector(styleSettings);
+    
     initThemeToggle(themeSettings);
 
     setupDivider();

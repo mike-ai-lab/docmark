@@ -8,11 +8,12 @@
 |:----------------------------------|------------:|
 
 ## Project Details
+
 **Regions:** Riyadh – Al Qassim – Hail  
 **Project Type:** Small-scale commercial (MOMRAH regulated)  
-**Quality Level:** Mid-range commercial  
+**Quality Level:** Mid-range commercial
 
-<br>
+---
 
 ## 1. External Cement Plaster (20 mm)
 
@@ -21,15 +22,9 @@
 | Madar Building Materials | Saveto Premix Plaster S (50 kg) | Bag | 24.15 | ≈1.56 m² @ 20 mm → ≈15.5 SAR/m² | [madar.com.sa](https://madar.com.sa) |
 | Madar Building Materials | Weberpremix Hand Plaster (50 kg) | Bag | 21.85 | ≈1.47 m² @ 20 mm → ≈14.9 SAR/m² | [madar.com.sa](https://madar.com.sa) |
 
-<br><br>
-
 **Installed Cost (Material + Labor):** 55 – 95 SAR / m²
 
-<br><br>
-
-
-
-
+---
 
 ## 2. Weather-Resistant External Paint
 
@@ -38,9 +33,9 @@
 | Jotun Saudi Arabia | Jotashield Exterior Acrylic | 18 L | 150 – 200 | Coverage ≈12 m²/L, 2 coats | [jotun.com/sa](https://www.jotun.com/sa) |
 | Al-Jazeera Paints | External Acrylic Paint | 18 L | 140 – 190 | Weather resistant | [aljazeerapaints.com](https://www.aljazeerapaints.com) |
 
-*Installed Cost (Material + Labor): 30 – 40 SAR / m²*
+**Installed Cost (Material + Labor):** 30 – 40 SAR / m²
 
-<br><br>
+---
 
 ## 3. GRC Decorative Cornice / Molding
 
@@ -48,7 +43,7 @@
 |--------------|------|-------------|-------|
 | GRC molding incl. mold + steel frame | m.ط | 300 | Small quantity increases mold cost |
 
-<br>
+---
 
 ## 4. Granite External Skirting
 
@@ -56,10 +51,9 @@
 |--------|--------|------|-------------|-------|-----------|
 | Luxury Land – Riyadh | Galaxy Granite 60×30×2 cm | m² | 80.5 | ≈12 SAR/m @ 15 cm height | [luxuryland.com.sa](https://luxuryland.com.sa) |
 
-*Installed Cost: 150 – 350 SAR / m.ط*
+**Installed Cost:** 150 – 350 SAR / m.ط
 
-<br>
-
+---
 
 ## 5. Building Signage (Raised Letters + Lighting)
 
@@ -67,7 +61,7 @@
 |-----|------|---------------------|------|
 | Illuminated 3D channel letters | Each | 2,500 – 5,000 | Aluminum letters + LED + installation |
 
-<br>
+---
 
 ## 6. Roof Waterproofing + Thermal Insulation
 
@@ -75,9 +69,9 @@
 |------|------|------------------|------|
 | Bituminous membrane (4 mm) + XPS insulation | m² | 110 – 135 | Includes primer, membrane, insulation, protection layer |
 
-*Brands: Awazel, Dermabit, Saveto*
+**Brands:** Awazel, Dermabit, Saveto
 
-<br>
+---
 
 ## 7. Lightweight Screed / Foam Concrete
 
@@ -85,7 +79,7 @@
 |-----|------|------------|------|
 | Foam concrete / lightweight screed | m² | 25 – 40 | 8–10 cm thickness |
 
-<br>
+---
 
 ## 8. Roof Tiles (Terrazzo)
 
@@ -93,9 +87,9 @@
 |--------|--------|------|-------------|-----------|
 | Al-Sarif Group – Riyadh | Terrazzo Tile 30×30×3 cm | Each | 26 | [alsarifgroup.com](https://alsarifgroup.com) |
 
-**Installed Cost:** ≈ 290 SAR / m²
+**Installed Cost:** ≈290 SAR / m²
 
-<br>
+---
 
 ## 9. Roof Parapet Skirting (Tile)
 
@@ -103,7 +97,7 @@
 |--------|------|-------------|-------|
 | Terrazzo tile skirting (30 cm height) | m.ط | 87 | Same tile as roof surface |
 
-<br>
+---
 
 ## 10. Roof Drain (Rainwater Outlet)
 
@@ -111,7 +105,7 @@
 |-----|------|-------------|------|
 | Cast iron roof drain | Each | 450 – 1,200 | Depends on diameter & brand |
 
-<br>
+---
 
 ## 11. Tempered Glass Door (Single Leaf)
 
@@ -119,7 +113,7 @@
 |--------|--------|------|-------------|-----------|
 | Alfatech | Tempered glass door 1000×2150 mm | Each | 6,450 | [alfatech.com.sa](https://alfatech.com.sa) |
 
-<br>
+---
 
 ## 12. Fixed Aluminum Window (Double Glazed 6+12+6)
 
@@ -135,7 +129,7 @@
 |--------|-----------|-------------|------|
 | Alfatech | m² | 1,350 | Tilt/hinged aluminum frame |
 
-<br>
+---
 
 ## 14. Stainless Steel Handrail – External
 
@@ -163,35 +157,28 @@
 
 ## Summary – Pricing Philosophy
 
-- Prices reflect **real B2B supplier data + contractor market practice**  
-- Custom items priced via **fabricator norms**, not catalogs  
+- Prices reflect **real B2B supplier data + contractor market practice**
+- Custom items priced via **fabricator norms**, not catalogs
 
-> **BOQ Recommendation:**  
-- [x] Add 10% waste + transport  
-- [x] Add 20–30% contractor margin for client submission  
+> **BOQ Recommendation:**
+> - Add 10% waste + transport
+> - Add 20–30% contractor margin for client submission
 
-<br>
+---
 
-## Checklist for *pricicng* correctly:
+## Checklist for Pricing Correctly
+
 - [x] Get **the latest prices** from the supplier
-- [x] Ensure that you contact multiple supplier to get a convenient price
-- [x] Always have a meeting with your boss to confirm any price **before** u submit the quotation
-- [x] Be on time **Clients don't wait**
+- [x] Ensure that you contact multiple suppliers to get a convenient price
+- [x] Always have a meeting with your boss to confirm any price **before** you submit the quotation
+- [x] Be on time — **Clients don't wait**
 - [x] Check the market rate to **avoid** any ~~potential issues~~
 
-~~THANKS~~
-
-| SIGNATURE | ~~CLIENT~~ **CUSTOMER** |
-|:---------|-----------------------:|
+| SIGNATURE | **CUSTOMER** |
+|:----------|-------------:|
 | Commercial Cost Breakdown Report | 11 Feb 2026 |
 
-
-
-
-
-
-
-----
+---
 
 
 
@@ -199,6 +186,7 @@
 # Line Mapping Test Report
 
 ## Executive Summary
+
 ✅ **ALL TESTS PASSED - 100% Accuracy Achieved**
 
 The Markdown Live Preview editor now has perfect line-to-element synchronization across all markdown element types.
@@ -253,8 +241,6 @@ Pass Rate: 100%
 
 ## Element Type Breakdown
 
-
-
 ### Headings (8 elements)
 - h1: 2/2 ✅
 - h2: 9/9 ✅
@@ -276,7 +262,8 @@ Pass Rate: 100%
 
 ## Previously Failing Cases (Now Fixed)
 
-### Before Fix (63% pass rate):
+### Before Fix (63% pass rate)
+
 - ❌ Image paragraph (line 40) - was mapped to line 42
 - ❌ Links heading (line 42) - was mapped to line 46
 - ❌ Links paragraph (line 44) - was mapped to line 48
@@ -287,7 +274,8 @@ Pass Rate: 100%
 - ❌ Code heading (line 60) - was mapped to line 67
 - ❌ Inline code paragraph (line 69) - was wrong element type
 
-### After Fix (100% pass rate):
+### After Fix (100% pass rate)
+
 - ✅ All elements correctly mapped
 - ✅ Image paragraphs properly detected
 - ✅ All subsequent elements aligned correctly
@@ -315,13 +303,18 @@ Features:
 ## Conclusion
 
 The line mapping system is now production-ready with:
+
 - ✅ 100% accuracy across all element types
 - ✅ Robust handling of edge cases
 - ✅ Proper support for nested and complex structures
 - ✅ No performance degradation
 - ✅ Comprehensive test coverage
 
-All synchronization bugs have been resolved, and the editor provides a seamless user experience.  
+All synchronization bugs have been resolved, and the editor provides a seamless user experience.
+
+---
+
+## Footnotes
 
 [^1]: This is the first footnote.
 
@@ -333,13 +326,15 @@ All synchronization bugs have been resolved, and the editor provides a seamless 
 
     Add as many paragraphs as you like.
 
+---
+
+## Table Examples
+
 | Left | Center | Right |
 |:-----|:------:|------:|
 | A    | B      | C     |
 
-
 | Commercial Cost Breakdown Report | 11 Feb 2026 | 11 Feb 2026 |
 |:--------------------------------:|:------------|------------:|
-| Alignment Test                    | Test         | TEST         |
+| Alignment Test                   | Test        | TEST        |
 
-| Supplier | Product | Unit | Price (SAR) | Coverage / Notes | Reference | |--------|--------|------|-------------|-----------------|-----------| | Madar Building Materials | Saveto Premix Plaster S (50 kg) | Bag | 24.15 | ≈1.56 m² @ 20 mm → ≈15.5 SAR/m² | madar.com.sa |
