@@ -466,8 +466,29 @@ footer {
 }
 
 #preview.column {
-  overflow-y: scroll;
+  overflow-y: auto;
   white-space: normal;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 0, 0, 0.3) transparent;
+}
+
+#preview.column::-webkit-scrollbar {
+  width: 10px;
+}
+
+#preview.column::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+#preview.column::-webkit-scrollbar-thumb {
+  background-color: rgba(0, 0, 0, 0.3);
+  border-radius: 5px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+#preview.column::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(0, 0, 0, 0.5);
 }
 
 .split-container {
@@ -476,9 +497,57 @@ footer {
   width: 100%;
 }
 
+/* Flipped panels - editor on right, preview on left */
+/* Only flip the main content area, not the cheatsheet */
+.split-container.flipped #edit {
+  order: 3;
+}
+
+.split-container.flipped #split-divider {
+  order: 2;
+}
+
+.split-container.flipped #preview {
+  order: 1;
+}
+
+/* Keep cheatsheet always on the right */
+.split-container #cheatsheet-divider {
+  order: 4;
+}
+
+.split-container #cheatsheet-panel {
+  order: 5;
+}
+
+/* Vertical layout - editor on top, preview on bottom */
+.split-container.vertical {
+  flex-direction: column;
+}
+
+/* Vertical layout with flipped panels - preview on top, editor on bottom */
+.split-container.vertical.flipped #edit {
+  order: 3;
+}
+
+.split-container.vertical.flipped #split-divider {
+  order: 2;
+}
+
+.split-container.vertical.flipped #preview {
+  order: 1;
+}
+
 .editor-pane,
 .preview-pane {
   height: 100%;
+}
+
+/* Vertical layout adjustments */
+.split-container.vertical .editor-pane,
+.split-container.vertical .preview-pane {
+  width: 100% !important;
+  height: 50%;
 }
 
 .split-divider {
@@ -486,6 +555,13 @@ footer {
   background: #ccc;
   cursor: col-resize;
   z-index: 1;
+}
+
+/* Vertical layout divider */
+.split-container.vertical .split-divider {
+  width: 100%;
+  height: 5px;
+  cursor: row-resize;
 }
 
 .split-divider.hover {
@@ -545,4 +621,425 @@ footer {
   background-color: rgba(100, 120, 140, 0.15) !important;
   border-left: 4px solid rgba(100, 150, 200, 0.5);
   margin-left: -4px !important;
+}
+
+/* Helper tooltip for insert buttons - Side panel */
+.helper-panel {
+  position: relative;
+  width: 0;
+  background: #4CAF50;
+  color: white;
+  overflow: hidden;
+  transition: width 0.3s ease-out;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.helper-panel.hidden {
+  width: 0;
+}
+
+.helper-panel:not(.hidden) {
+  width: 300px;
+  border-left: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.helper-panel-header {
+  display: flex;
+  align-items: center;
+  padding: 16px 20px;
+  background: rgba(0, 0, 0, 0.1);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  gap: 10px;
+}
+
+.helper-icon {
+  font-size: 20px;
+}
+
+.helper-title {
+  flex: 1;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.helper-close {
+  background: none;
+  border: none;
+  color: white;
+  font-size: 24px;
+  cursor: pointer;
+  padding: 0;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: background 0.2s ease;
+}
+
+.helper-close:hover {
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.helper-panel-content {
+  padding: 20px;
+  font-size: 14px;
+  line-height: 1.6;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.5) transparent;
+}
+
+.helper-panel-content::-webkit-scrollbar {
+  width: 10px;
+}
+
+.helper-panel-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.helper-panel-content::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.5);
+  border-radius: 5px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.helper-panel-content::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(255, 255, 255, 0.7);
+}
+
+[data-theme="dark"] .helper-panel {
+  background: #66BB6A;
+}
+
+/* Adjust container to accommodate helper panel */
+.split-container {
+  display: flex;
+  height: 100%;
+  width: 100%;
+}
+
+.split-container .column {
+  transition: width 0.3s ease-out;
+}
+
+/* Cheat Sheet Panel - Third Panel Integration */
+.cheatsheet-pane {
+  width: 320px;
+  min-width: 250px;
+  max-width: 600px; /* Increased by 20% from 500px */
+  background: var(--bg-color, white);
+  color: var(--text-color, black);
+  border-left: 1px solid #ccc;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  transition: width 0.3s ease, opacity 0.3s ease;
+  resize: horizontal;
+  position: relative;
+}
+
+/* Hide cheatsheet in vertical layout */
+.split-container.vertical .cheatsheet-pane {
+  display: none;
+}
+
+.split-container.vertical .cheatsheet-divider {
+  display: none;
+}
+
+/* Hide helper panel in vertical layout for cleaner UI */
+.split-container.vertical .helper-panel {
+  display: none;
+}
+
+.cheatsheet-pane::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: transparent;
+  cursor: ew-resize;
+  z-index: 10;
+}
+
+.cheatsheet-pane:hover::after {
+  background: rgba(0, 0, 0, 0.1);
+}
+
+[data-theme="dark"] .cheatsheet-pane:hover::after {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.cheatsheet-pane.hidden {
+  width: 0 !important;
+  min-width: 0 !important;
+  opacity: 0;
+  border: none;
+}
+
+.cheatsheet-divider {
+  transition: opacity 0.3s ease;
+}
+
+.cheatsheet-divider.hidden {
+  width: 0 !important;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.cheatsheet-panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 20px;
+  border-bottom: 1px solid #ddd;
+  background: var(--bg-color, white);
+  flex-shrink: 0;
+}
+
+.cheatsheet-panel-header h3 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: #333;
+}
+
+.cheatsheet-close {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  padding: 0;
+  width: 28px;
+  height: 28px;
+  line-height: 24px;
+  border-radius: 4px;
+  transition: background 0.2s;
+  color: #666;
+}
+
+.cheatsheet-close:hover {
+  background: rgba(0,0,0,0.1);
+  color: #333;
+}
+
+.cheatsheet-panel-content {
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 15px 20px;
+  flex: 1;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 0, 0, 0.3) transparent;
+}
+
+.cheatsheet-panel-content::-webkit-scrollbar {
+  width: 10px;
+}
+
+.cheatsheet-panel-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.cheatsheet-panel-content::-webkit-scrollbar-thumb {
+  background-color: rgba(0, 0, 0, 0.3);
+  border-radius: 5px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.cheatsheet-panel-content::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(0, 0, 0, 0.5);
+}
+
+.cheatsheet-section {
+  margin-bottom: 24px;
+}
+
+.cheatsheet-section h4 {
+  margin: 0 0 12px 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: #666;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.cheatsheet-item {
+  margin-bottom: 12px;
+  background: rgba(0,0,0,0.03);
+  border-radius: 6px;
+  padding: 10px;
+  border: 1px solid rgba(0,0,0,0.05);
+}
+
+.cheatsheet-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  gap: 8px;
+}
+
+.cheatsheet-item-title {
+  font-size: 12px;
+  font-weight: 500;
+  color: #555;
+  flex: 1;
+}
+
+.cheatsheet-copy-btn {
+  background: #2196F3;
+  color: white;
+  border: none;
+  padding: 4px 12px;
+  border-radius: 4px;
+  font-size: 11px;
+  cursor: pointer;
+  transition: background 0.2s;
+  white-space: nowrap;
+  font-weight: 500;
+}
+
+.cheatsheet-copy-btn:hover {
+  background: #1976D2;
+}
+
+.cheatsheet-copy-btn.copied {
+  background: #4CAF50;
+}
+
+.cheatsheet-code {
+  font-family: 'Courier New', 'Consolas', monospace;
+  font-size: 11px;
+  background: rgba(0,0,0,0.05);
+  padding: 8px 10px;
+  border-radius: 4px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  border: 1px solid rgba(0,0,0,0.08);
+  line-height: 1.5;
+  color: #333;
+}
+
+/* Dark theme for cheatsheet panel */
+[data-theme="dark"] .cheatsheet-pane {
+  background: #1E1E1E;
+  color: #e6edf3;
+  border-left-color: #30363d;
+}
+
+[data-theme="dark"] .cheatsheet-panel-header {
+  background: #1E1E1E;
+  border-bottom-color: #30363d;
+}
+
+[data-theme="dark"] .cheatsheet-panel-header h3 {
+  color: #e6edf3;
+}
+
+[data-theme="dark"] .cheatsheet-close {
+  color: #aaa;
+}
+
+[data-theme="dark"] .cheatsheet-close:hover {
+  background: rgba(255,255,255,0.1);
+  color: #e6edf3;
+}
+
+[data-theme="dark"] .cheatsheet-section h4 {
+  color: #aaa;
+  border-bottom-color: #30363d;
+}
+
+[data-theme="dark"] .cheatsheet-item {
+  background: rgba(255,255,255,0.05);
+  border-color: rgba(255,255,255,0.08);
+}
+
+[data-theme="dark"] .cheatsheet-item-title {
+  color: #ccc;
+}
+
+[data-theme="dark"] .cheatsheet-code {
+  background: rgba(255,255,255,0.08);
+  border-color: rgba(255,255,255,0.1);
+  color: #e6edf3;
+}
+
+/* Dark mode scrollbar styles */
+[data-theme="dark"] #preview.column {
+  scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
+}
+
+[data-theme="dark"] #preview.column::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.3);
+}
+
+[data-theme="dark"] #preview.column::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(255, 255, 255, 0.5);
+}
+
+[data-theme="dark"] .cheatsheet-panel-content {
+  scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
+}
+
+[data-theme="dark"] .cheatsheet-panel-content::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.3);
+}
+
+[data-theme="dark"] .cheatsheet-panel-content::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(255, 255, 255, 0.5);
+}
+
+/* Adjust container layout when cheatsheet is visible */
+.split-container.cheatsheet-visible .editor-pane {
+  width: 35%;
+}
+
+.split-container.cheatsheet-visible .preview-pane {
+  width: calc(65% - 320px);
+}
+
+/* Remove old overlay cheatsheet styles */
+.cheatsheet-panel {
+  display: none !important;
+}
+
+/* Monaco Editor scrollbar customization */
+.monaco-scrollable-element > .scrollbar > .slider {
+  background: rgba(0, 0, 0, 0.3) !important;
+  border-radius: 5px !important;
+}
+
+.monaco-scrollable-element > .scrollbar > .slider:hover {
+  background: rgba(0, 0, 0, 0.5) !important;
+}
+
+[data-theme="dark"] .monaco-scrollable-element > .scrollbar > .slider {
+  background: rgba(255, 255, 255, 0.3) !important;
+}
+
+[data-theme="dark"] .monaco-scrollable-element > .scrollbar > .slider:hover {
+  background: rgba(255, 255, 255, 0.5) !important;
+}
+
+.monaco-scrollable-element > .scrollbar {
+  background: transparent !important;
+}
+
+.monaco-scrollable-element > .scrollbar.vertical {
+  width: 10px !important;
+}
+
+.monaco-scrollable-element > .scrollbar.horizontal {
+  height: 10px !important;
 }

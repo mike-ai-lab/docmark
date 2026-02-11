@@ -14,6 +14,8 @@ const init = () => {
     const localStorageCursorSyncKey = 'cursor_sync_settings';
     const localStorageThemeKey = 'theme_settings';
     const localStorageStyleKey = 'style_settings';
+    const localStorageFlipPanelsKey = 'flip_panels_settings';
+    const localStorageVerticalLayoutKey = 'vertical_layout_settings';
     const localStoragePdfSettingsKey = 'pdf_font_settings';
     const confirmationMessage = 'Are you sure you want to reset? Your changes will be lost.';
     
@@ -145,7 +147,10 @@ This web site is using ${"`"}markedjs/marked${"`"}.
             automaticLayout: true,
             scrollbar: {
                 vertical: 'visible',
-                horizontal: 'visible'
+                horizontal: 'visible',
+                verticalScrollbarSize: 10,
+                horizontalScrollbarSize: 10,
+                useShadows: false
             },
             wordWrap: 'on',
             hover: { enabled: false },
@@ -713,6 +718,65 @@ This web site is using ${"`"}markedjs/marked${"`"}.
             const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
             setPreviewCss(isDark, currentStyle);
         });
+    };
+
+    // ----- flip panels (editor <-> preview) -----
+    let initFlipPanels = (settings) => {
+        let checkbox = document.querySelector('#flip-panels-checkbox');
+        if (!checkbox) return;
+        
+        checkbox.checked = settings;
+        applyFlipPanels(settings);
+
+        checkbox.addEventListener('change', (event) => {
+            let checked = event.currentTarget.checked;
+            applyFlipPanels(checked);
+            saveFlipPanelsSettings(checked);
+        });
+    };
+
+    let applyFlipPanels = (enabled) => {
+        const container = document.querySelector('#container');
+        if (enabled) {
+            container.classList.add('flipped');
+        } else {
+            container.classList.remove('flipped');
+        }
+    };
+
+    // ----- vertical layout -----
+    let initVerticalLayout = (settings) => {
+        let checkbox = document.querySelector('#vertical-layout-checkbox');
+        if (!checkbox) return;
+        
+        checkbox.checked = settings;
+        applyVerticalLayout(settings);
+
+        checkbox.addEventListener('change', (event) => {
+            let checked = event.currentTarget.checked;
+            applyVerticalLayout(checked);
+            saveVerticalLayoutSettings(checked);
+            
+            // Trigger editor resize after layout change
+            if (editor) {
+                setTimeout(() => {
+                    editor.layout();
+                }, 350);
+            }
+        });
+    };
+
+    let applyVerticalLayout = (enabled) => {
+        const container = document.querySelector('#container');
+        if (enabled) {
+            container.classList.add('vertical');
+            // Close cheatsheet panel in vertical mode
+            if (cheatSheetVisible) {
+                toggleCheatSheet();
+            }
+        } else {
+            container.classList.remove('vertical');
+        }
     };
     
     let enableScrollBarSync = () => {
@@ -2227,11 +2291,28 @@ This web site is using ${"`"}markedjs/marked${"`"}.
 `;
         
         const position = editor.getPosition();
+        const startLine = position.lineNumber;
+        
         editor.executeEdits('', [{
             range: new monaco.Range(position.lineNumber, position.column, position.lineNumber, position.column),
             text: template
         }]);
-        editor.focus();
+        
+        // Select "Document Title" text for easy replacement
+        setTimeout(() => {
+            const titleStartCol = 3; // After "# "
+            const titleEndCol = 3 + "Document Title".length;
+            
+            editor.setSelection(new monaco.Selection(
+                startLine, titleStartCol,
+                startLine, titleEndCol
+            ));
+            
+            editor.focus();
+            
+            // Show helper message
+            showHelperMessage('Replace with your document title, then press Enter');
+        }, 50);
     };
 
     let insertFooterTemplate = () => {
@@ -2257,11 +2338,235 @@ This web site is using ${"`"}markedjs/marked${"`"}.
 `;
         
         const position = editor.getPosition();
+        const startLine = position.lineNumber + 5; // Line with "SIGNATURE"
+        
         editor.executeEdits('', [{
             range: new monaco.Range(position.lineNumber, position.column, position.lineNumber, position.column),
             text: template
         }]);
-        editor.focus();
+        
+        // Select "SIGNATURE" text for easy replacement
+        setTimeout(() => {
+            const sigStartCol = 13; // After "    <strong>"
+            const sigEndCol = 13 + "SIGNATURE".length;
+            
+            editor.setSelection(new monaco.Selection(
+                startLine, sigStartCol,
+                startLine, sigEndCol
+            ));
+            
+            editor.focus();
+            
+            // Show helper message
+            showHelperMessage('Replace SIGNATURE and CLIENT labels, then edit Document Name');
+        }, 50);
+    };
+
+    // Helper message display
+    let showHelperMessage = (message) => {
+        const helperPanel = document.querySelector('#helper-panel');
+        const helperContent = document.querySelector('#helper-panel-content');
+        
+        if (!helperPanel || !helperContent) return;
+        
+        // Set message
+        helperContent.textContent = message;
+        
+        // Show panel
+        helperPanel.classList.remove('hidden');
+        
+        // Auto-hide after 6 seconds
+        setTimeout(() => {
+            helperPanel.classList.add('hidden');
+        }, 6000);
+    };
+
+    // Setup helper panel close button
+    let setupHelperPanel = () => {
+        const closeBtn = document.querySelector('#helper-close-btn');
+        const helperPanel = document.querySelector('#helper-panel');
+        
+        if (closeBtn && helperPanel) {
+            closeBtn.addEventListener('click', () => {
+                helperPanel.classList.add('hidden');
+            });
+        }
+    };
+
+    // ----- Cheat Sheet Panel (Third Panel) -----
+    let cheatSheetVisible = false;
+    
+    let setupCheatSheetButton = () => {
+        const button = document.querySelector('#cheatsheet-button');
+        if (!button) return;
+        
+        button.addEventListener('click', (event) => {
+            event.preventDefault();
+            toggleCheatSheet();
+        });
+        
+        // Setup close button
+        const closeBtn = document.querySelector('#cheatsheet-close-btn');
+        if (closeBtn) {
+            closeBtn.addEventListener('click', () => {
+                toggleCheatSheet();
+            });
+        }
+        
+        // Populate cheatsheet content
+        populateCheatSheetContent();
+    };
+
+    let toggleCheatSheet = () => {
+        // Don't allow opening cheatsheet in vertical mode
+        const container = document.querySelector('#container');
+        if (!cheatSheetVisible && container.classList.contains('vertical')) {
+            return;
+        }
+        
+        cheatSheetVisible = !cheatSheetVisible;
+        
+        const panel = document.querySelector('#cheatsheet-panel');
+        const divider = document.querySelector('#cheatsheet-divider');
+        
+        if (cheatSheetVisible) {
+            panel.classList.remove('hidden');
+            divider.classList.remove('hidden');
+            container.classList.add('cheatsheet-visible');
+        } else {
+            panel.classList.add('hidden');
+            divider.classList.add('hidden');
+            container.classList.remove('cheatsheet-visible');
+        }
+        
+        // Trigger Monaco editor resize
+        if (editor) {
+            setTimeout(() => {
+                editor.layout();
+            }, 350); // Wait for transition to complete
+        }
+    };
+
+    let populateCheatSheetContent = () => {
+        const contentContainer = document.querySelector('#cheatsheet-content');
+        if (!contentContainer) return;
+        
+        const cheatSheetData = [
+            {
+                section: 'Headers',
+                items: [
+                    { title: 'H1 Header', code: '# Header 1' },
+                    { title: 'H2 Header', code: '## Header 2' },
+                    { title: 'H3 Header', code: '### Header 3' }
+                ]
+            },
+            {
+                section: 'Text Formatting',
+                items: [
+                    { title: 'Bold', code: '**bold text**' },
+                    { title: 'Italic', code: '*italic text*' },
+                    { title: 'Bold + Italic', code: '***bold and italic***' },
+                    { title: 'Strikethrough', code: '~~strikethrough~~' },
+                    { title: 'Inline Code', code: '`code`' }
+                ]
+            },
+            {
+                section: 'Lists',
+                items: [
+                    { title: 'Unordered List', code: '* Item 1\n* Item 2\n  * Nested item' },
+                    { title: 'Ordered List', code: '1. First item\n2. Second item\n3. Third item' },
+                    { title: 'Task List', code: '- [ ] Unchecked\n- [x] Checked' }
+                ]
+            },
+            {
+                section: 'Links & Images',
+                items: [
+                    { title: 'Link', code: '[Link Text](https://example.com)' },
+                    { title: 'Image', code: '![Alt Text](image.jpg)' },
+                    { title: 'Link with Title', code: '[Link](https://example.com "Title")' }
+                ]
+            },
+            {
+                section: 'Tables',
+                items: [
+                    { title: 'Basic Table', code: '| Header 1 | Header 2 |\n| --- | --- |\n| Cell 1 | Cell 2 |\n| Cell 3 | Cell 4 |' },
+                    { title: 'Aligned Table', code: '| Left | Center | Right |\n| :--- | :---: | ---: |\n| L | C | R |' }
+                ]
+            },
+            {
+                section: 'Code Blocks',
+                items: [
+                    { title: 'Code Block', code: '```\ncode here\n```' },
+                    { title: 'Code with Language', code: '```javascript\nconst x = 10;\n```' }
+                ]
+            },
+            {
+                section: 'Quotes & Breaks',
+                items: [
+                    { title: 'Blockquote', code: '> This is a quote\n> Multiple lines' },
+                    { title: 'Horizontal Rule', code: '---' },
+                    { title: 'Line Break', code: 'Line 1  \nLine 2' }
+                ]
+            },
+            {
+                section: 'Document Structure',
+                items: [
+                    { title: 'Header with Date', code: '# Document Title\n\n<div style="text-align: right; margin-top: -40px; margin-bottom: 20px; color: #666; font-size: 0.9em;">11 Feb 2026</div>\n\n---' },
+                    { title: 'Footer', code: '---\n\n<div style="display: flex; justify-content: space-between; margin-top: 20px;">\n  <div>\n    <strong>SIGNATURE</strong><br>\n    <span style="color: #666;">Document Name</span>\n  </div>\n  <div style="text-align: right;">\n    <strong>CLIENT</strong><br>\n    <span style="color: #666;">11 Feb 2026</span>\n  </div>\n</div>' }
+                ]
+            },
+            {
+                section: 'YAML Metadata',
+                items: [
+                    { title: 'Document Metadata', code: '---\ntitle: Document Title\ndate: 11 Feb 2026\nfooter-left: SIGNATURE\nfooter-right: CLIENT\n---' }
+                ]
+            }
+        ];
+        
+        let contentHtml = '';
+        cheatSheetData.forEach(section => {
+            contentHtml += `<div class="cheatsheet-section">
+                <h4>${section.section}</h4>`;
+            
+            section.items.forEach((item, idx) => {
+                const itemId = `cheat-${section.section.replace(/\s/g, '-')}-${idx}`;
+                contentHtml += `
+                <div class="cheatsheet-item">
+                    <div class="cheatsheet-item-header">
+                        <span class="cheatsheet-item-title">${item.title}</span>
+                        <button class="cheatsheet-copy-btn" data-code="${itemId}">Copy</button>
+                    </div>
+                    <div class="cheatsheet-code" id="${itemId}">${item.code.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>
+                </div>`;
+            });
+            
+            contentHtml += '</div>';
+        });
+        
+        contentContainer.innerHTML = contentHtml;
+        
+        // Add copy button handlers
+        contentContainer.querySelectorAll('.cheatsheet-copy-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const codeId = e.target.getAttribute('data-code');
+                const codeElement = document.getElementById(codeId);
+                const code = codeElement.textContent;
+                
+                navigator.clipboard.writeText(code).then(() => {
+                    e.target.textContent = 'Copied!';
+                    e.target.classList.add('copied');
+                    setTimeout(() => {
+                        e.target.textContent = 'Copy';
+                        e.target.classList.remove('copied');
+                    }, 2000);
+                }).catch(() => {
+                    e.target.textContent = 'Failed';
+                    setTimeout(() => {
+                        e.target.textContent = 'Copy';
+                    }, 2000);
+                });
+            });
+        });
     };
 
     let insertLineBreak = () => {
@@ -2345,14 +2650,55 @@ This web site is using ${"`"}markedjs/marked${"`"}.
         }
     };
 
+    let loadFlipPanelsSettings = () => {
+        let last = Storehouse.getItem(localStorageNamespace, localStorageFlipPanelsKey);
+        return last || false;
+    };
+
+    let saveFlipPanelsSettings = (settings) => {
+        let expiredAt = new Date(2099, 1, 1);
+        Storehouse.setItem(localStorageNamespace, localStorageFlipPanelsKey, settings, expiredAt);
+    };
+
+    let loadVerticalLayoutSettings = () => {
+        let last = Storehouse.getItem(localStorageNamespace, localStorageVerticalLayoutKey);
+        return last || false;
+    };
+
+    let saveVerticalLayoutSettings = (settings) => {
+        let expiredAt = new Date(2099, 1, 1);
+        Storehouse.setItem(localStorageNamespace, localStorageVerticalLayoutKey, settings, expiredAt);
+    };
+
     let setupDivider = () => {
         let lastLeftRatio = 0.5;
+        let lastTopRatio = 0.5;
         const divider = document.getElementById('split-divider');
-        const leftPane = document.getElementById('edit');
-        const rightPane = document.getElementById('preview');
+        const editorPane = document.getElementById('edit');
+        const previewPane = document.getElementById('preview');
         const container = document.getElementById('container');
+        const helperPanel = document.getElementById('helper-panel');
 
         let isDragging = false;
+
+        const isVerticalLayout = () => {
+            return container.classList.contains('vertical');
+        };
+
+        const isFlipped = () => {
+            return container.classList.contains('flipped');
+        };
+
+        const getAvailableWidth = () => {
+            const containerRect = container.getBoundingClientRect();
+            const helperWidth = helperPanel && !helperPanel.classList.contains('hidden') ? 300 : 0;
+            return containerRect.width - helperWidth;
+        };
+
+        const getAvailableHeight = () => {
+            const containerRect = container.getBoundingClientRect();
+            return containerRect.height;
+        };
 
         divider.addEventListener('mouseenter', () => {
             divider.classList.add('hover');
@@ -2367,34 +2713,95 @@ This web site is using ${"`"}markedjs/marked${"`"}.
         divider.addEventListener('mousedown', () => {
             isDragging = true;
             divider.classList.add('active');
-            document.body.style.cursor = 'col-resize';
+            if (isVerticalLayout()) {
+                document.body.style.cursor = 'row-resize';
+            } else {
+                document.body.style.cursor = 'col-resize';
+            }
         });
 
         divider.addEventListener('dblclick', () => {
-            const containerRect = container.getBoundingClientRect();
-            const totalWidth = containerRect.width;
-            const dividerWidth = divider.offsetWidth;
-            const halfWidth = (totalWidth - dividerWidth) / 2;
+            if (isVerticalLayout()) {
+                // Vertical layout - split height equally
+                const totalHeight = getAvailableHeight();
+                const dividerHeight = divider.offsetHeight;
+                const halfHeight = (totalHeight - dividerHeight) / 2;
 
-            leftPane.style.width = halfWidth + 'px';
-            rightPane.style.width = halfWidth + 'px';
+                editorPane.style.height = halfHeight + 'px';
+                previewPane.style.height = halfHeight + 'px';
+                editorPane.style.width = '';
+                previewPane.style.width = '';
+            } else {
+                // Horizontal layout - split width equally
+                const totalWidth = getAvailableWidth();
+                const dividerWidth = divider.offsetWidth;
+                const halfWidth = (totalWidth - dividerWidth) / 2;
+
+                editorPane.style.width = halfWidth + 'px';
+                previewPane.style.width = halfWidth + 'px';
+                editorPane.style.height = '';
+                previewPane.style.height = '';
+            }
         });
 
         document.addEventListener('mousemove', (e) => {
             if (!isDragging) return;
             document.body.style.userSelect = 'none';
             const containerRect = container.getBoundingClientRect();
-            const totalWidth = containerRect.width;
-            const offsetX = e.clientX - containerRect.left;
-            const dividerWidth = divider.offsetWidth;
 
-            // Prevent overlap or out-of-bounds
-            const minWidth = 100;
-            const maxWidth = totalWidth - minWidth - dividerWidth;
-            const leftWidth = Math.max(minWidth, Math.min(offsetX, maxWidth));
-            leftPane.style.width = leftWidth + 'px';
-            rightPane.style.width = (totalWidth - leftWidth - dividerWidth) + 'px';
-            lastLeftRatio = leftWidth / (totalWidth - dividerWidth);
+            if (isVerticalLayout()) {
+                // Vertical layout - resize by height
+                const totalHeight = getAvailableHeight();
+                const offsetY = e.clientY - containerRect.top;
+                const dividerHeight = divider.offsetHeight;
+
+                const minHeight = 100;
+                const maxHeight = totalHeight - minHeight - dividerHeight;
+                
+                let topHeight;
+                if (isFlipped()) {
+                    // When flipped in vertical: preview is on top, editor on bottom
+                    topHeight = Math.max(minHeight, Math.min(offsetY, maxHeight));
+                    previewPane.style.height = topHeight + 'px';
+                    editorPane.style.height = (totalHeight - topHeight - dividerHeight) + 'px';
+                } else {
+                    // Normal vertical: editor on top, preview on bottom
+                    topHeight = Math.max(minHeight, Math.min(offsetY, maxHeight));
+                    editorPane.style.height = topHeight + 'px';
+                    previewPane.style.height = (totalHeight - topHeight - dividerHeight) + 'px';
+                }
+                
+                editorPane.style.width = '';
+                previewPane.style.width = '';
+                lastTopRatio = topHeight / (totalHeight - dividerHeight);
+            } else {
+                // Horizontal layout - resize by width
+                const totalWidth = getAvailableWidth();
+                const dividerWidth = divider.offsetWidth;
+                const minWidth = 100;
+                const maxWidth = totalWidth - minWidth - dividerWidth;
+
+                let leftWidth;
+                if (isFlipped()) {
+                    // When flipped: preview is on left, editor on right
+                    // offsetX from left edge represents preview width
+                    const offsetX = e.clientX - containerRect.left;
+                    leftWidth = Math.max(minWidth, Math.min(offsetX, maxWidth));
+                    previewPane.style.width = leftWidth + 'px';
+                    editorPane.style.width = (totalWidth - leftWidth - dividerWidth) + 'px';
+                } else {
+                    // Normal: editor on left, preview on right
+                    // offsetX from left edge represents editor width
+                    const offsetX = e.clientX - containerRect.left;
+                    leftWidth = Math.max(minWidth, Math.min(offsetX, maxWidth));
+                    editorPane.style.width = leftWidth + 'px';
+                    previewPane.style.width = (totalWidth - leftWidth - dividerWidth) + 'px';
+                }
+                
+                editorPane.style.height = '';
+                previewPane.style.height = '';
+                lastLeftRatio = leftWidth / (totalWidth - dividerWidth);
+            }
         });
 
         document.addEventListener('mouseup', () => {
@@ -2407,18 +2814,63 @@ This web site is using ${"`"}markedjs/marked${"`"}.
             }
         });
 
-        window.addEventListener('resize', () => {
-            const containerRect = container.getBoundingClientRect();
-            const totalWidth = containerRect.width;
-            const dividerWidth = divider.offsetWidth;
-            const availableWidth = totalWidth - dividerWidth;
+        const updatePaneSizes = () => {
+            if (isVerticalLayout()) {
+                // Vertical layout
+                const totalHeight = getAvailableHeight();
+                const dividerHeight = divider.offsetHeight;
+                const availableHeight = totalHeight - dividerHeight;
 
-            const newLeft = availableWidth * lastLeftRatio;
-            const newRight = availableWidth * (1 - lastLeftRatio);
+                const topSize = availableHeight * lastTopRatio;
+                const bottomSize = availableHeight * (1 - lastTopRatio);
 
-            leftPane.style.width = newLeft + 'px';
-            rightPane.style.width = newRight + 'px';
+                if (isFlipped()) {
+                    previewPane.style.height = topSize + 'px';
+                    editorPane.style.height = bottomSize + 'px';
+                } else {
+                    editorPane.style.height = topSize + 'px';
+                    previewPane.style.height = bottomSize + 'px';
+                }
+                
+                editorPane.style.width = '';
+                previewPane.style.width = '';
+            } else {
+                // Horizontal layout
+                const totalWidth = getAvailableWidth();
+                const dividerWidth = divider.offsetWidth;
+                const availableWidth = totalWidth - dividerWidth;
+
+                const leftSize = availableWidth * lastLeftRatio;
+                const rightSize = availableWidth * (1 - lastLeftRatio);
+
+                if (isFlipped()) {
+                    previewPane.style.width = leftSize + 'px';
+                    editorPane.style.width = rightSize + 'px';
+                } else {
+                    editorPane.style.width = leftSize + 'px';
+                    previewPane.style.width = rightSize + 'px';
+                }
+                
+                editorPane.style.height = '';
+                previewPane.style.height = '';
+            }
+        };
+
+        window.addEventListener('resize', updatePaneSizes);
+        
+        // Watch for helper panel changes
+        if (helperPanel) {
+            const observer = new MutationObserver(() => {
+                updatePaneSizes();
+            });
+            observer.observe(helperPanel, { attributes: true, attributeFilter: ['class'] });
+        }
+
+        // Watch for layout changes (vertical/horizontal toggle)
+        const layoutObserver = new MutationObserver(() => {
+            updatePaneSizes();
         });
+        layoutObserver.observe(container, { attributes: true, attributeFilter: ['class'] });
     };
 
     // ----- entry point -----
@@ -2440,6 +2892,8 @@ This web site is using ${"`"}markedjs/marked${"`"}.
     setupInsertHeaderButton();
     setupInsertFooterButton();
     setupInsertBreakButton();
+    setupHelperPanel();
+    setupCheatSheetButton();
     
     // Load PDF settings
     loadPdfSettings();
@@ -2466,6 +2920,14 @@ This web site is using ${"`"}markedjs/marked${"`"}.
     // initialize style selector
     let styleSettings = loadStyleSettings();
     initStyleSelector(styleSettings);
+    
+    // initialize flip panels
+    let flipPanelsSettings = loadFlipPanelsSettings();
+    initFlipPanels(flipPanelsSettings);
+    
+    // initialize vertical layout
+    let verticalLayoutSettings = loadVerticalLayoutSettings();
+    initVerticalLayout(verticalLayoutSettings);
     
     initThemeToggle(themeSettings);
 

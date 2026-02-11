@@ -108,6 +108,14 @@
                             <input type="checkbox" id="theme-checkbox">
                             <span>Dark Mode</span>
                         </label>
+                        <label class="dropdown-item">
+                            <input type="checkbox" id="flip-panels-checkbox">
+                            <span>Flip Panels</span>
+                        </label>
+                        <label class="dropdown-item">
+                            <input type="checkbox" id="vertical-layout-checkbox">
+                            <span>Vertical Layout</span>
+                        </label>
                         <div class="dropdown-item">
                             <label>
                                 <span>Style:</span>
@@ -120,6 +128,9 @@
                         </div>
                         <a href="#" id="pdf-settings-link">PDF Settings</a>
                     </div>
+                </div>
+                <div class="btn-item" id="cheatsheet-button">
+                    <a href="#">Syntax Guide</a>
                 </div>
             </div>
         </div>
@@ -142,6 +153,29 @@
         <div id="preview" class="column preview-pane">
             <div id="preview-wrapper">
                 <div id="output" class="content markdown-body"></div>
+            </div>
+        </div>
+
+        <div id="cheatsheet-divider" class="split-divider cheatsheet-divider hidden"></div>
+
+        <div id="cheatsheet-panel" class="column cheatsheet-pane hidden">
+            <div class="cheatsheet-panel-header">
+                <h3>Markdown Syntax Guide</h3>
+                <button class="cheatsheet-close" id="cheatsheet-close-btn">×</button>
+            </div>
+            <div class="cheatsheet-panel-content" id="cheatsheet-content">
+                <!-- Cheatsheet content will be inserted here -->
+            </div>
+        </div>
+
+        <div id="helper-panel" class="helper-panel hidden">
+            <div class="helper-panel-header">
+                <span class="helper-icon">💡</span>
+                <span class="helper-title">Quick Tip</span>
+                <button class="helper-close" id="helper-close-btn">×</button>
+            </div>
+            <div class="helper-panel-content" id="helper-panel-content">
+                <!-- Helper message will be inserted here -->
             </div>
         </div>
     </div>
