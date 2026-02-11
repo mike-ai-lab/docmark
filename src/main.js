@@ -186,70 +186,148 @@ This web site is using ${"`"}markedjs/marked${"`"}.
             saveLastContent(value);
         });
 
-        editor.onDidScrollChange((e) => {
-            if (!scrollBarSync) {
-                return;
-            }
-
-            const scrollTop = e.scrollTop;
-            const scrollHeight = e.scrollHeight;
-            const height = editor.getLayoutInfo().height;
-
-            const maxScrollTop = scrollHeight - height;
-            const scrollRatio = scrollTop / maxScrollTop;
-
-            let previewElement = document.querySelector('#preview');
-            let targetY = (previewElement.scrollHeight - previewElement.clientHeight) * scrollRatio;
-            previewElement.scrollTo(0, targetY);
-        });
+        // Scroll sync is now handled in the consolidated section at the bottom
 
         return editor;
     };
 
-    // Render markdown text as html
+    // Render markdown text as html with accurate line mapping
     let convert = (markdown) => {
         let options = {
             headerIds: false,
             mangle: false
         };
+        
+        // First, render the HTML
         let html = marked.parse(markdown, options);
         let sanitized = DOMPurify.sanitize(html);
         
-        // Split markdown into lines and wrap rendered HTML with line numbers
-        const lines = markdown.split('\n');
+        // Create a temporary container
         const tempDiv = document.createElement('div');
         tempDiv.innerHTML = sanitized;
         
-        // Get all rendered elements
-        const renderedElements = Array.from(tempDiv.children);
-        let currentLineIndex = 0;
+        // Split markdown into lines
+        const lines = markdown.split('\n');
         
-        // Map each rendered element to its source line
-        renderedElements.forEach(element => {
+        // Get all block-level elements
+        const elements = Array.from(tempDiv.children);
+        
+        // Map each element to its source line
+        let currentSearchLine = 0;
+        
+        elements.forEach(element => {
+            const tag = element.tagName.toLowerCase();
+            let lineNumber = null;
+            
+            // Get the text content for matching
             const elementText = element.textContent.trim();
             
-            // Find the line in markdown that matches this element
-            for (let i = currentLineIndex; i < lines.length; i++) {
-                const lineText = lines[i].trim();
+            // Search for this element in the markdown starting from currentSearchLine
+            for (let i = currentSearchLine; i < lines.length; i++) {
+                const line = lines[i].trim();
                 
-                // Check if this line starts the element
-                if (lineText && elementText.startsWith(lineText.substring(0, Math.min(20, lineText.length)))) {
-                    element.setAttribute('data-source-line', i + 1);
-                    currentLineIndex = i + 1;
+                // Skip empty lines
+                if (!line) continue;
+                
+                // Match based on element type
+                if (tag === 'h1' && line.startsWith('# ') && !line.startsWith('##')) {
+                    const headerText = line.substring(2).trim();
+                    if (elementText === headerText) {
+                        lineNumber = i + 1;
+                        currentSearchLine = i + 1;
+                        break;
+                    }
+                } else if (tag === 'h2' && line.startsWith('## ') && !line.startsWith('###')) {
+                    const headerText = line.substring(3).trim();
+                    if (elementText === headerText) {
+                        lineNumber = i + 1;
+                        currentSearchLine = i + 1;
+                        break;
+                    }
+                } else if (tag === 'h3' && line.startsWith('### ') && !line.startsWith('####')) {
+                    const headerText = line.substring(4).trim();
+                    if (elementText === headerText) {
+                        lineNumber = i + 1;
+                        currentSearchLine = i + 1;
+                        break;
+                    }
+                } else if (tag === 'h4' && line.startsWith('#### ') && !line.startsWith('#####')) {
+                    const headerText = line.substring(5).trim();
+                    if (elementText === headerText) {
+                        lineNumber = i + 1;
+                        currentSearchLine = i + 1;
+                        break;
+                    }
+                } else if (tag === 'h5' && line.startsWith('##### ') && !line.startsWith('######')) {
+                    const headerText = line.substring(6).trim();
+                    if (elementText === headerText) {
+                        lineNumber = i + 1;
+                        currentSearchLine = i + 1;
+                        break;
+                    }
+                } else if (tag === 'h6' && line.startsWith('###### ')) {
+                    const headerText = line.substring(7).trim();
+                    if (elementText === headerText) {
+                        lineNumber = i + 1;
+                        currentSearchLine = i + 1;
+                        break;
+                    }
+                } else if (tag === 'ul' && (line.startsWith('* ') || line.startsWith('- ') || line.startsWith('+ '))) {
+                    lineNumber = i + 1;
+                    currentSearchLine = i + 1;
                     break;
-                } else if (elementText.includes(lineText) && lineText.length > 3) {
-                    element.setAttribute('data-source-line', i + 1);
-                    currentLineIndex = i + 1;
+                } else if (tag === 'ol' && /^\d+\.\s/.test(line)) {
+                    lineNumber = i + 1;
+                    currentSearchLine = i + 1;
                     break;
+                } else if (tag === 'blockquote' && line.startsWith('>')) {
+                    lineNumber = i + 1;
+                    currentSearchLine = i + 1;
+                    break;
+                } else if (tag === 'pre' && line.startsWith('```')) {
+                    lineNumber = i + 1;
+                    currentSearchLine = i + 1;
+                    break;
+                } else if (tag === 'table' && line.includes('|')) {
+                    lineNumber = i + 1;
+                    currentSearchLine = i + 1;
+                    break;
+                } else if (tag === 'hr' && (line === '---' || line === '***' || line === '___')) {
+                    lineNumber = i + 1;
+                    currentSearchLine = i + 1;
+                    break;
+                } else if (tag === 'p') {
+                    // Check if paragraph contains an image
+                    const hasImage = element.querySelector('img');
+                    if (hasImage) {
+                        // Look for image markdown syntax
+                        if (line.startsWith('![')) {
+                            lineNumber = i + 1;
+                            currentSearchLine = i + 1;
+                            break;
+                        }
+                    } else {
+                        // For text paragraphs, match the first few words
+                        // Remove markdown formatting characters for comparison
+                        const cleanElementText = elementText.replace(/[*_`[\]()]/g, '').substring(0, 20).trim();
+                        const cleanLineText = line.replace(/[*_`[\]()]/g, '').substring(0, 20).trim();
+                        
+                        if (cleanLineText && cleanElementText.toLowerCase().startsWith(cleanLineText.toLowerCase())) {
+                            lineNumber = i + 1;
+                            currentSearchLine = i + 1;
+                            break;
+                        }
+                    }
                 }
             }
             
-            // If no match found, use current line
-            if (!element.hasAttribute('data-source-line')) {
-                element.setAttribute('data-source-line', currentLineIndex + 1);
+            // Set the line number attribute
+            if (lineNumber) {
+                element.setAttribute('data-source-line', lineNumber);
             }
         });
         
+        // Update the output
         document.querySelector('#output').innerHTML = tempDiv.innerHTML;
     };
 
@@ -270,22 +348,24 @@ This web site is using ${"`"}markedjs/marked${"`"}.
         const elements = outputElement.querySelectorAll('[data-source-line]');
         let targetElement = null;
         let closestDistance = Infinity;
+        const MAX_DISTANCE = 5; // Don't highlight if too far away
         
         elements.forEach(element => {
             const sourceLine = parseInt(element.getAttribute('data-source-line'));
             const distance = Math.abs(sourceLine - lineNumber);
             
-            // Prefer exact match, otherwise closest
+            // Prefer exact match, otherwise closest within threshold
             if (sourceLine === lineNumber) {
                 targetElement = element;
                 closestDistance = 0;
-            } else if (distance < closestDistance && !targetElement) {
+            } else if (distance < closestDistance && distance <= MAX_DISTANCE) {
                 closestDistance = distance;
                 targetElement = element;
             }
         });
         
-        if (targetElement) {
+        // Only highlight if we found a reasonably close element
+        if (targetElement && closestDistance <= MAX_DISTANCE) {
             targetElement.classList.add('cursor-highlight');
             
             // Scroll into view only if not visible
@@ -530,7 +610,7 @@ This web site is using ${"`"}markedjs/marked${"`"}.
             const maxWidth = pageWidth - (margin * 2);
             let yPosition = margin;
 
-            // Helper function to add text with word wrapping and inline formatting
+            // Helper function to add text with word wrapping and inline formatting - Unicode safe
             const addText = (text, fontSize, isBold = false, isItalic = false) => {
                 if (!text || text.trim() === '') return;
                 
@@ -545,17 +625,38 @@ This web site is using ${"`"}markedjs/marked${"`"}.
                     doc.setFont('helvetica', 'normal');
                 }
 
-                const lines = doc.splitTextToSize(text, maxWidth);
+                // Split text into words and wrap properly
+                const words = text.split(' ');
                 const lineHeight = fontSize * 0.5;
-
-                lines.forEach(line => {
+                let currentLine = '';
+                
+                words.forEach((word, index) => {
+                    const testLine = currentLine ? currentLine + ' ' + word : word;
+                    const testWidth = doc.getStringUnitWidth(testLine) * fontSize / doc.internal.scaleFactor;
+                    
+                    if (testWidth > maxWidth && currentLine) {
+                        // Line is too long, output current line
+                        if (yPosition + lineHeight > pageHeight - margin) {
+                            doc.addPage();
+                            yPosition = margin;
+                        }
+                        doc.text(currentLine, margin, yPosition);
+                        yPosition += lineHeight;
+                        currentLine = word;
+                    } else {
+                        currentLine = testLine;
+                    }
+                });
+                
+                // Output remaining text
+                if (currentLine) {
                     if (yPosition + lineHeight > pageHeight - margin) {
                         doc.addPage();
                         yPosition = margin;
                     }
-                    doc.text(line, margin, yPosition);
+                    doc.text(currentLine, margin, yPosition);
                     yPosition += lineHeight;
-                });
+                }
             };
 
             // Helper to extract formatted text from element with inline styles
@@ -598,16 +699,15 @@ This web site is using ${"`"}markedjs/marked${"`"}.
                 return result;
             };
 
-            // Helper to render formatted text segments
+            // Helper to render formatted text segments - Unicode safe
             const addFormattedText = (segments, fontSize) => {
                 if (!segments || segments.length === 0) return;
                 
                 doc.setFontSize(fontSize);
                 const lineHeight = fontSize * 0.5;
-                let currentLine = '';
                 let currentX = margin;
                 
-                segments.forEach((seg, idx) => {
+                segments.forEach((seg) => {
                     const text = seg.text;
                     
                     // Set font style
@@ -637,13 +737,16 @@ This web site is using ${"`"}markedjs/marked${"`"}.
                         }
                         
                         if (part) {
-                            // Word wrap
+                            // Word wrap using proper Unicode width calculation
                             const words = part.split(' ');
-                            words.forEach((word, wordIdx) => {
-                                const testText = wordIdx === 0 ? word : ' ' + word;
-                                const textWidth = doc.getTextWidth(testText);
+                            words.forEach((word) => {
+                                if (!word) return;
                                 
-                                if (currentX + textWidth > pageWidth - margin && currentX > margin) {
+                                const spaceWidth = currentX === margin ? 0 : doc.getStringUnitWidth(' ') * fontSize / doc.internal.scaleFactor;
+                                const wordWidth = doc.getStringUnitWidth(word) * fontSize / doc.internal.scaleFactor;
+                                const totalWidth = spaceWidth + wordWidth;
+                                
+                                if (currentX + totalWidth > pageWidth - margin && currentX > margin) {
                                     // Need to wrap
                                     yPosition += lineHeight;
                                     currentX = margin;
@@ -652,10 +755,15 @@ This web site is using ${"`"}markedjs/marked${"`"}.
                                         yPosition = margin;
                                     }
                                     doc.text(word, currentX, yPosition);
-                                    currentX += doc.getTextWidth(word);
+                                    currentX += wordWidth;
                                 } else {
-                                    doc.text(testText, currentX, yPosition);
-                                    currentX += textWidth;
+                                    if (currentX > margin) {
+                                        doc.text(' ' + word, currentX, yPosition);
+                                        currentX += totalWidth;
+                                    } else {
+                                        doc.text(word, currentX, yPosition);
+                                        currentX += wordWidth;
+                                    }
                                 }
                             });
                         }
@@ -914,68 +1022,153 @@ This web site is using ${"`"}markedjs/marked${"`"}.
                         addSpacing(2);
                         break;
                     case 'table':
-                        // Proper table rendering with borders
+                        // Enhanced table rendering with proper Unicode support
                         const thead = element.querySelector('thead');
                         const tbody = element.querySelector('tbody');
                         
                         if (!thead && !tbody) break;
                         
-                        // Calculate column widths
+                        // Get all rows
                         const allRows = element.querySelectorAll('tr');
+                        if (allRows.length === 0) break;
+                        
+                        // Calculate column widths based on content
                         let maxCols = 0;
+                        const columnData = [];
+                        
                         allRows.forEach(row => {
                             const cells = row.querySelectorAll('td, th');
                             maxCols = Math.max(maxCols, cells.length);
+                            
+                            cells.forEach((cell, colIndex) => {
+                                if (!columnData[colIndex]) {
+                                    columnData[colIndex] = { maxWidth: 0, texts: [] };
+                                }
+                                
+                                // Extract text properly handling Unicode
+                                let cellText = cell.textContent.trim();
+                                columnData[colIndex].texts.push(cellText);
+                                
+                                // Measure text width
+                                doc.setFontSize(8);
+                                doc.setFont('helvetica', 'normal');
+                                const textWidth = doc.getStringUnitWidth(cellText) * 8 / doc.internal.scaleFactor;
+                                columnData[colIndex].maxWidth = Math.max(columnData[colIndex].maxWidth, textWidth);
+                            });
                         });
                         
-                        const colWidth = maxWidth / maxCols;
-                        const rowHeight = 7;
+                        // Calculate proportional column widths
+                        const totalContentWidth = columnData.reduce((sum, col) => sum + col.maxWidth, 0);
+                        const availableWidth = maxWidth - 4; // Leave some margin
                         
-                        // Draw table
+                        const colWidths = columnData.map(col => {
+                            const proportionalWidth = (col.maxWidth / totalContentWidth) * availableWidth;
+                            return Math.max(proportionalWidth, 20); // Minimum 20mm per column
+                        });
+                        
+                        // Adjust if total width exceeds available width
+                        const totalWidth = colWidths.reduce((sum, w) => sum + w, 0);
+                        if (totalWidth > availableWidth) {
+                            const scale = availableWidth / totalWidth;
+                            colWidths.forEach((w, i) => colWidths[i] = w * scale);
+                        }
+                        
+                        // Check if we need a new page
+                        if (yPosition + 10 > pageHeight - margin) {
+                            doc.addPage();
+                            yPosition = margin;
+                        }
+                        
                         let tableY = yPosition;
                         
                         allRows.forEach((row, rowIndex) => {
                             const cells = row.querySelectorAll('td, th');
                             const isHeader = row.parentElement.tagName.toLowerCase() === 'thead';
                             
-                            // Check if we need a new page
-                            if (tableY + rowHeight > pageHeight - margin) {
+                            // Calculate row height based on content
+                            let maxRowHeight = 7;
+                            const cellLines = [];
+                            
+                            cells.forEach((cell, colIndex) => {
+                                const cellText = cell.textContent.trim();
+                                const colWidth = colWidths[colIndex] || 30;
+                                
+                                doc.setFontSize(8);
+                                doc.setFont('helvetica', isHeader ? 'bold' : 'normal');
+                                
+                                // Split text to fit column width - handle Unicode properly
+                                const words = cellText.split(' ');
+                                const lines = [];
+                                let currentLine = '';
+                                
+                                words.forEach(word => {
+                                    const testLine = currentLine ? currentLine + ' ' + word : word;
+                                    const testWidth = doc.getStringUnitWidth(testLine) * 8 / doc.internal.scaleFactor;
+                                    
+                                    if (testWidth > colWidth - 2) {
+                                        if (currentLine) {
+                                            lines.push(currentLine);
+                                            currentLine = word;
+                                        } else {
+                                            // Word is too long, force break
+                                            lines.push(word);
+                                            currentLine = '';
+                                        }
+                                    } else {
+                                        currentLine = testLine;
+                                    }
+                                });
+                                
+                                if (currentLine) {
+                                    lines.push(currentLine);
+                                }
+                                
+                                cellLines[colIndex] = lines;
+                                maxRowHeight = Math.max(maxRowHeight, lines.length * 4 + 3);
+                            });
+                            
+                            // Check if row fits on current page
+                            if (tableY + maxRowHeight > pageHeight - margin) {
                                 doc.addPage();
                                 tableY = margin;
                             }
                             
                             // Draw cells
+                            let xPos = margin;
                             cells.forEach((cell, colIndex) => {
-                                const x = margin + (colIndex * colWidth);
-                                const y = tableY;
+                                const colWidth = colWidths[colIndex] || 30;
                                 
                                 // Draw cell border
-                                doc.rect(x, y, colWidth, rowHeight);
+                                doc.setDrawColor(200, 200, 200);
+                                doc.setLineWidth(0.1);
+                                doc.rect(xPos, tableY, colWidth, maxRowHeight);
                                 
-                                // Draw cell text
-                                doc.setFontSize(9);
+                                // Fill header background
                                 if (isHeader) {
-                                    doc.setFont('helvetica', 'bold');
-                                } else {
-                                    doc.setFont('helvetica', 'normal');
+                                    doc.setFillColor(240, 240, 240);
+                                    doc.rect(xPos, tableY, colWidth, maxRowHeight, 'F');
+                                    doc.rect(xPos, tableY, colWidth, maxRowHeight); // Redraw border
                                 }
                                 
-                                // Get formatted text from cell
-                                const cellFormatted = getFormattedText(cell);
-                                let cellText = '';
-                                cellFormatted.forEach(seg => {
-                                    cellText += seg.text;
+                                // Draw text
+                                doc.setFontSize(8);
+                                doc.setFont('helvetica', isHeader ? 'bold' : 'normal');
+                                doc.setTextColor(0, 0, 0);
+                                
+                                const lines = cellLines[colIndex] || [];
+                                lines.forEach((line, lineIdx) => {
+                                    const textY = tableY + 4 + (lineIdx * 4);
+                                    // Use text() with proper encoding
+                                    doc.text(line, xPos + 1, textY, { 
+                                        maxWidth: colWidth - 2,
+                                        align: 'left'
+                                    });
                                 });
                                 
-                                // Wrap text if needed
-                                const lines = doc.splitTextToSize(cellText, colWidth - 2);
-                                const textY = y + 5;
-                                lines.forEach((line, lineIdx) => {
-                                    doc.text(line, x + 1, textY + (lineIdx * 4));
-                                });
+                                xPos += colWidth;
                             });
                             
-                            tableY += rowHeight;
+                            tableY += maxRowHeight;
                         });
                         
                         yPosition = tableY;
@@ -1230,31 +1423,67 @@ This web site is using ${"`"}markedjs/marked${"`"}.
             syncCursorToEditor(e.target);
         });
         
-        // Bidirectional scroll sync with debouncing
+        // Consolidated bidirectional scroll sync with improved debouncing
         let isEditorScrolling = false;
         let isPreviewScrolling = false;
         let editorScrollTimeout = null;
         let previewScrollTimeout = null;
+        let editorScrollFrame = null;
+        let previewScrollFrame = null;
         
-        // Editor scroll → Preview scroll
+        // Editor scroll → Preview scroll (Element-based sync)
         editor.onDidScrollChange((e) => {
             if (isPreviewScrolling || !scrollBarSync) return;
             
             isEditorScrolling = true;
             clearTimeout(editorScrollTimeout);
             
-            const scrollTop = e.scrollTop;
-            const scrollHeight = e.scrollHeight;
-            const height = editor.getLayoutInfo().height;
-            const maxScrollTop = scrollHeight - height;
-            const scrollRatio = maxScrollTop > 0 ? scrollTop / maxScrollTop : 0;
+            // Cancel any pending animation frame
+            if (editorScrollFrame) {
+                cancelAnimationFrame(editorScrollFrame);
+            }
             
-            const targetY = (previewElement.scrollHeight - previewElement.clientHeight) * scrollRatio;
-            previewElement.scrollTo({ top: targetY, behavior: 'auto' });
+            // Use requestAnimationFrame for smoother scrolling
+            editorScrollFrame = requestAnimationFrame(() => {
+                try {
+                    // Get the top visible line in the editor
+                    const visibleRanges = editor.getVisibleRanges();
+                    if (visibleRanges && visibleRanges.length > 0) {
+                        const topVisibleLine = visibleRanges[0].startLineNumber;
+                        
+                        // Find the corresponding element in preview
+                        const targetElement = document.querySelector(`[data-source-line="${topVisibleLine}"]`);
+                        
+                        if (targetElement) {
+                            // Element-based sync: scroll to the specific element
+                            const previewRect = previewElement.getBoundingClientRect();
+                            const targetRect = targetElement.getBoundingClientRect();
+                            const offset = targetRect.top - previewRect.top + previewElement.scrollTop;
+                            
+                            previewElement.scrollTo({ top: offset, behavior: 'auto' });
+                        } else {
+                            // Fallback to proportional sync if element not found
+                            const scrollTop = e.scrollTop;
+                            const scrollHeight = e.scrollHeight;
+                            const height = editor.getLayoutInfo().height;
+                            const maxScrollTop = scrollHeight - height;
+                            const scrollRatio = maxScrollTop > 0 ? scrollTop / maxScrollTop : 0;
+                            
+                            const targetY = (previewElement.scrollHeight - previewElement.clientHeight) * scrollRatio;
+                            previewElement.scrollTo({ top: targetY, behavior: 'auto' });
+                        }
+                    }
+                } catch (error) {
+                    console.error('Scroll sync error:', error);
+                }
+                
+                editorScrollFrame = null;
+            });
             
+            // Use longer timeout to prevent jitter
             editorScrollTimeout = setTimeout(() => {
                 isEditorScrolling = false;
-            }, 150);
+            }, 200);
         });
         
         // Preview scroll → Editor scroll
@@ -1264,23 +1493,34 @@ This web site is using ${"`"}markedjs/marked${"`"}.
             isPreviewScrolling = true;
             clearTimeout(previewScrollTimeout);
             
-            const scrollTop = previewElement.scrollTop;
-            const scrollHeight = previewElement.scrollHeight;
-            const clientHeight = previewElement.clientHeight;
-            const maxScrollTop = scrollHeight - clientHeight;
-            const scrollRatio = maxScrollTop > 0 ? scrollTop / maxScrollTop : 0;
+            // Cancel any pending animation frame
+            if (previewScrollFrame) {
+                cancelAnimationFrame(previewScrollFrame);
+            }
             
-            // Calculate target scroll position in editor
-            const editorScrollHeight = editor.getScrollHeight();
-            const editorHeight = editor.getLayoutInfo().height;
-            const editorMaxScroll = editorScrollHeight - editorHeight;
-            const targetScroll = editorMaxScroll * scrollRatio;
+            // Use requestAnimationFrame for smoother scrolling
+            previewScrollFrame = requestAnimationFrame(() => {
+                const scrollTop = previewElement.scrollTop;
+                const scrollHeight = previewElement.scrollHeight;
+                const clientHeight = previewElement.clientHeight;
+                const maxScrollTop = scrollHeight - clientHeight;
+                const scrollRatio = maxScrollTop > 0 ? scrollTop / maxScrollTop : 0;
+                
+                // Calculate target scroll position in editor
+                const editorScrollHeight = editor.getScrollHeight();
+                const editorHeight = editor.getLayoutInfo().height;
+                const editorMaxScroll = editorScrollHeight - editorHeight;
+                const targetScroll = editorMaxScroll * scrollRatio;
+                
+                editor.setScrollTop(targetScroll);
+                
+                previewScrollFrame = null;
+            });
             
-            editor.setScrollTop(targetScroll);
-            
+            // Use longer timeout to prevent jitter
             previewScrollTimeout = setTimeout(() => {
                 isPreviewScrolling = false;
-            }, 150);
+            }, 200);
         });
     }
 };
