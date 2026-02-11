@@ -2245,6 +2245,151 @@ This web site is using ${"`"}markedjs/marked${"`"}.
             }, 200);
         });
     }
+    
+    // ----- Mofu Blob Interactive Widget -----
+    let initMofuBlob = () => {
+        const mofu = document.getElementById('mofu-nav-trigger');
+        const canvas = document.getElementById('mofu-canvas');
+        const features = document.getElementById('mofu-features');
+        const speech = document.getElementById('mofu-speech');
+        const mouth = document.getElementById('mofu-mouth');
+        
+        if (!mofu || !canvas || !features || !speech || !mouth) return;
+        
+        let isAnimating = false;
+
+        // Show speech bubble
+        const showSpeech = (text, duration = 2000) => {
+            speech.textContent = text;
+            speech.classList.add('show');
+            setTimeout(() => {
+                speech.classList.remove('show');
+            }, duration);
+        };
+
+        // Export reaction - Double jump (party mode!)
+        const exportReaction = () => {
+            if (isAnimating) return;
+            isAnimating = true;
+            
+            canvas.style.transform = '';
+            features.style.transform = '';
+            
+            // Change mouth to O shape
+            mouth.classList.add('mofu-mouth-o');
+            
+            // First jump
+            canvas.classList.add('mofu-jumping');
+
+            setTimeout(() => {
+                canvas.classList.remove('mofu-jumping');
+                
+                // Second jump after a brief pause
+                setTimeout(() => {
+                    canvas.classList.add('mofu-jumping');
+                    
+                    setTimeout(() => {
+                        canvas.classList.remove('mofu-jumping');
+                        mouth.classList.remove('mofu-mouth-o');
+                        isAnimating = false;
+                    }, 800);
+                }, 100);
+            }, 800);
+        };
+
+        // Copy reaction - Deep breath with blue border and "Got it! 📝"
+        const copyReaction = () => {
+            if (isAnimating) return;
+            isAnimating = true;
+            
+            // Deep breath animation
+            canvas.classList.add('mofu-breathing');
+            canvas.classList.add('mofu-copied');
+            
+            // Show speech
+            showSpeech('Got it! 📝', 1800);
+
+            setTimeout(() => {
+                canvas.classList.remove('mofu-breathing');
+            }, 600);
+
+            setTimeout(() => {
+                canvas.classList.remove('mofu-copied');
+                isAnimating = false;
+            }, 2000);
+        };
+
+        // Mouse tracking for 3D effect
+        document.addEventListener('mousemove', (e) => {
+            if (isAnimating) return;
+            
+            const rect = canvas.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
+            
+            const dx = (e.clientX - centerX) / (window.innerWidth / 2);
+            const dy = (e.clientY - centerY) / (window.innerHeight / 2);
+            
+            const xMove = dx * 8; 
+            const yMove = dy * 5;
+            const xRot = dx * 15; 
+            const yRot = dy * -10;
+            
+            canvas.style.transform = `rotateX(${yRot}deg) rotateY(${xRot}deg)`;
+            features.style.transform = `translate3d(${xMove}px, ${yMove}px, 0)`;
+        });
+
+        // Click for basic jump
+        mofu.addEventListener('click', () => {
+            if (isAnimating) return;
+            isAnimating = true;
+            
+            canvas.style.transform = '';
+            features.style.transform = '';
+            
+            canvas.classList.add('mofu-jumping');
+
+            setTimeout(() => {
+                canvas.classList.remove('mofu-jumping');
+                isAnimating = false;
+            }, 800);
+        });
+
+        // Listen for export button clicks
+        const exportButton = document.querySelector('#export-button');
+        const exportHtmlButton = document.querySelector('#export-html-button');
+        
+        if (exportButton) {
+            exportButton.addEventListener('click', () => {
+                setTimeout(exportReaction, 100);
+            });
+        }
+        
+        if (exportHtmlButton) {
+            exportHtmlButton.addEventListener('click', () => {
+                setTimeout(exportReaction, 100);
+            });
+        }
+
+        // Listen for copy events (Ctrl+C or copy button)
+        const copyButton = document.querySelector('#copy-button');
+        
+        if (copyButton) {
+            copyButton.addEventListener('click', () => {
+                setTimeout(copyReaction, 100);
+            });
+        }
+
+        // Also listen for keyboard copy
+        document.addEventListener('copy', (e) => {
+            // Only trigger if copying from editor
+            if (document.activeElement && document.activeElement.closest('#editor')) {
+                setTimeout(copyReaction, 100);
+            }
+        });
+    };
+    
+    initMofuBlob();
 };
 
 window.addEventListener("load", () => {
