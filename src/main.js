@@ -581,23 +581,32 @@ This web site is using ${"`"}markedjs/marked${"`"}.
         return exportLightCssPromise;
     };
 
-    let exportPreviewToPdf = () => {
+    let exportPreviewToPdf = async () => {
         const outputElement = document.querySelector('#output');
         if (!outputElement) {
             console.log('No output element found');
             return;
         }
 
-        console.log('Checking for jsPDF...', typeof window.jspdf, window.jspdf);
-        
+        // Wait for jsPDF to load if not available yet
         if (typeof window.jspdf === 'undefined') {
-            window.alert('PDF export is not available yet. Please try again in a moment.');
-            return;
+            console.log('Waiting for jsPDF to load...');
+            
+            // Wait up to 5 seconds for jsPDF to load
+            let attempts = 0;
+            while (typeof window.jspdf === 'undefined' && attempts < 50) {
+                await new Promise(resolve => setTimeout(resolve, 100));
+                attempts++;
+            }
+            
+            if (typeof window.jspdf === 'undefined') {
+                window.alert('PDF export library failed to load. Please refresh the page and try again.');
+                return;
+            }
         }
 
         try {
             const { jsPDF } = window.jspdf;
-            console.log('jsPDF constructor:', jsPDF);
             const doc = new jsPDF({
                 orientation: 'portrait',
                 unit: 'mm',
@@ -610,9 +619,57 @@ This web site is using ${"`"}markedjs/marked${"`"}.
             const maxWidth = pageWidth - (margin * 2);
             let yPosition = margin;
 
+            // Helper to sanitize text for PDF - replace Unicode with ASCII equivalents
+            const sanitizeForPdf = (text) => {
+                if (!text) return '';
+                
+                // Map of Unicode characters to ASCII equivalents
+                const charMap = {
+                    '≈': '~',           // approximately equal
+                    '→': '->',          // right arrow
+                    '←': '<-',          // left arrow
+                    '↔': '<->',         // left-right arrow
+                    '²': '2',           // superscript 2
+                    '³': '3',           // superscript 3
+                    '×': 'x',           // multiplication
+                    '÷': '/',           // division
+                    'Ø': 'O',           // diameter
+                    'ø': 'o',           // diameter lowercase
+                    '°': ' deg',        // degree
+                    '±': '+/-',         // plus-minus
+                    '–': '-',           // en dash
+                    '—': '--',          // em dash
+                    '\u2018': "'",      // left single quote
+                    '\u2019': "'",      // right single quote
+                    '\u201C': '"',      // left double quote
+                    '\u201D': '"',      // right double quote
+                    '…': '...',         // ellipsis
+                    '•': '*',           // bullet
+                    '€': 'EUR',         // euro
+                    '£': 'GBP',         // pound
+                    '¥': 'JPY',         // yen
+                    'ط': 'm.l',         // Arabic letter (linear meter)
+                    'م': 'm',           // Arabic letter
+                    // Add more as needed
+                };
+                
+                let result = text;
+                for (const [unicode, ascii] of Object.entries(charMap)) {
+                    result = result.split(unicode).join(ascii);
+                }
+                
+                // Remove any remaining non-ASCII characters
+                result = result.replace(/[^\x00-\x7F]/g, '?');
+                
+                return result;
+            };
+
             // Helper function to add text with word wrapping and inline formatting - Unicode safe
             const addText = (text, fontSize, isBold = false, isItalic = false) => {
                 if (!text || text.trim() === '') return;
+                
+                // Sanitize text for PDF
+                text = sanitizeForPdf(text);
                 
                 doc.setFontSize(fontSize);
                 if (isBold && isItalic) {
@@ -677,14 +734,16 @@ This web site is using ${"`"}markedjs/marked${"`"}.
                         if (tag === 'br') {
                             result.push({ text: '\n', bold: false, italic: false });
                         } else if (tag === 'a') {
-                            // For links, show the text with the URL in parentheses
+                            // For links, store the URL separately for clickable links
                             const linkText = node.textContent;
                             const href = node.getAttribute('href');
-                            if (href && href !== linkText) {
-                                result.push({ text: `${linkText} (${href})`, bold: isBold, italic: isItalic });
-                            } else {
-                                result.push({ text: linkText, bold: isBold, italic: isItalic });
-                            }
+                            result.push({ 
+                                text: linkText, 
+                                bold: isBold, 
+                                italic: isItalic,
+                                link: href || null,
+                                isLink: true
+                            });
                         } else if (tag === 'code' && node.parentElement.tagName.toLowerCase() !== 'pre') {
                             // Inline code
                             result.push({ text: node.textContent, bold: false, italic: false, code: true });
@@ -699,7 +758,7 @@ This web site is using ${"`"}markedjs/marked${"`"}.
                 return result;
             };
 
-            // Helper to render formatted text segments - Unicode safe
+            // Helper to render formatted text segments - Unicode safe with clickable links
             const addFormattedText = (segments, fontSize) => {
                 if (!segments || segments.length === 0) return;
                 
@@ -708,19 +767,29 @@ This web site is using ${"`"}markedjs/marked${"`"}.
                 let currentX = margin;
                 
                 segments.forEach((seg) => {
-                    const text = seg.text;
+                    // Sanitize text for PDF
+                    let text = sanitizeForPdf(seg.text);
                     
-                    // Set font style
-                    if (seg.code) {
+                    // Set font style and color
+                    if (seg.isLink) {
+                        // Links: blue color, underlined
+                        doc.setFont('helvetica', 'normal');
+                        doc.setTextColor(0, 102, 204); // Blue color
+                    } else if (seg.code) {
                         doc.setFont('courier', 'normal');
+                        doc.setTextColor(0, 0, 0);
                     } else if (seg.bold && seg.italic) {
                         doc.setFont('helvetica', 'bolditalic');
+                        doc.setTextColor(0, 0, 0);
                     } else if (seg.bold) {
                         doc.setFont('helvetica', 'bold');
+                        doc.setTextColor(0, 0, 0);
                     } else if (seg.italic) {
                         doc.setFont('helvetica', 'italic');
+                        doc.setTextColor(0, 0, 0);
                     } else {
                         doc.setFont('helvetica', 'normal');
+                        doc.setTextColor(0, 0, 0);
                     }
                     
                     // Split by newlines
@@ -755,8 +824,19 @@ This web site is using ${"`"}markedjs/marked${"`"}.
                                         yPosition = margin;
                                     }
                                     doc.text(word, currentX, yPosition);
+                                    
+                                    // Add clickable link
+                                    if (seg.isLink && seg.link) {
+                                        doc.link(currentX, yPosition - fontSize * 0.8, wordWidth, fontSize, { url: seg.link });
+                                        // Add underline
+                                        doc.setDrawColor(0, 102, 204);
+                                        doc.setLineWidth(0.1);
+                                        doc.line(currentX, yPosition + 0.5, currentX + wordWidth, yPosition + 0.5);
+                                    }
+                                    
                                     currentX += wordWidth;
                                 } else {
+                                    const startX = currentX;
                                     if (currentX > margin) {
                                         doc.text(' ' + word, currentX, yPosition);
                                         currentX += totalWidth;
@@ -764,10 +844,25 @@ This web site is using ${"`"}markedjs/marked${"`"}.
                                         doc.text(word, currentX, yPosition);
                                         currentX += wordWidth;
                                     }
+                                    
+                                    // Add clickable link
+                                    if (seg.isLink && seg.link) {
+                                        const linkX = startX + (startX > margin ? spaceWidth : 0);
+                                        doc.link(linkX, yPosition - fontSize * 0.8, wordWidth, fontSize, { url: seg.link });
+                                        // Add underline
+                                        doc.setDrawColor(0, 102, 204);
+                                        doc.setLineWidth(0.1);
+                                        doc.line(linkX, yPosition + 0.5, linkX + wordWidth, yPosition + 0.5);
+                                    }
                                 }
                             });
                         }
                     });
+                    
+                    // Reset color after link
+                    if (seg.isLink) {
+                        doc.setTextColor(0, 0, 0);
+                    }
                 });
                 
                 // Move to next line after formatted text
@@ -796,12 +891,12 @@ This web site is using ${"`"}markedjs/marked${"`"}.
                     case 'h2':
                         addSpacing(4);
                         addText(element.textContent, 16, true);
-                        addSpacing(2);
+                        addSpacing(0.5);
                         break;
                     case 'h3':
                         addSpacing(3);
                         addText(element.textContent, 14, true);
-                        addSpacing(2);
+                        addSpacing(0.5);
                         break;
                     case 'h4':
                     case 'h5':
@@ -1022,6 +1117,8 @@ This web site is using ${"`"}markedjs/marked${"`"}.
                         addSpacing(2);
                         break;
                     case 'table':
+                        // NO spacing before table - keep table close to heading
+                        
                         // Enhanced table rendering with proper Unicode support
                         const thead = element.querySelector('thead');
                         const tbody = element.querySelector('tbody');
@@ -1045,8 +1142,8 @@ This web site is using ${"`"}markedjs/marked${"`"}.
                                     columnData[colIndex] = { maxWidth: 0, texts: [] };
                                 }
                                 
-                                // Extract text properly handling Unicode
-                                let cellText = cell.textContent.trim();
+                                // Extract text and sanitize for PDF
+                                let cellText = sanitizeForPdf(cell.textContent.trim());
                                 columnData[colIndex].texts.push(cellText);
                                 
                                 // Measure text width
@@ -1090,7 +1187,7 @@ This web site is using ${"`"}markedjs/marked${"`"}.
                             const cellLines = [];
                             
                             cells.forEach((cell, colIndex) => {
-                                const cellText = cell.textContent.trim();
+                                const cellText = sanitizeForPdf(cell.textContent.trim());
                                 const colWidth = colWidths[colIndex] || 30;
                                 
                                 doc.setFontSize(8);
@@ -1150,19 +1247,49 @@ This web site is using ${"`"}markedjs/marked${"`"}.
                                     doc.rect(xPos, tableY, colWidth, maxRowHeight); // Redraw border
                                 }
                                 
-                                // Draw text
+                                // Draw text and detect URLs
                                 doc.setFontSize(8);
                                 doc.setFont('helvetica', isHeader ? 'bold' : 'normal');
-                                doc.setTextColor(0, 0, 0);
                                 
                                 const lines = cellLines[colIndex] || [];
+                                
+                                // Check if cell contains a link
+                                const linkElement = cell.querySelector('a');
+                                const isLinkCell = linkElement !== null;
+                                const linkUrl = isLinkCell ? linkElement.getAttribute('href') : null;
+                                
                                 lines.forEach((line, lineIdx) => {
                                     const textY = tableY + 4 + (lineIdx * 4);
-                                    // Use text() with proper encoding
-                                    doc.text(line, xPos + 1, textY, { 
-                                        maxWidth: colWidth - 2,
-                                        align: 'left'
-                                    });
+                                    
+                                    if (isLinkCell && linkUrl) {
+                                        // Render as clickable link
+                                        doc.setTextColor(0, 102, 204); // Blue color
+                                        doc.text(line, xPos + 1, textY, { 
+                                            maxWidth: colWidth - 2,
+                                            align: 'left'
+                                        });
+                                        
+                                        // Add clickable area and underline
+                                        const textWidth = Math.min(
+                                            doc.getStringUnitWidth(line) * 8 / doc.internal.scaleFactor,
+                                            colWidth - 2
+                                        );
+                                        doc.link(xPos + 1, textY - 3, textWidth, 4, { url: linkUrl });
+                                        
+                                        // Add underline
+                                        doc.setDrawColor(0, 102, 204);
+                                        doc.setLineWidth(0.1);
+                                        doc.line(xPos + 1, textY + 0.5, xPos + 1 + textWidth, textY + 0.5);
+                                        
+                                        doc.setTextColor(0, 0, 0); // Reset color
+                                    } else {
+                                        // Regular text
+                                        doc.setTextColor(0, 0, 0);
+                                        doc.text(line, xPos + 1, textY, { 
+                                            maxWidth: colWidth - 2,
+                                            align: 'left'
+                                        });
+                                    }
                                 });
                                 
                                 xPos += colWidth;
@@ -1172,13 +1299,18 @@ This web site is using ${"`"}markedjs/marked${"`"}.
                         });
                         
                         yPosition = tableY;
+                        // Add spacing after table for visual separation
                         addSpacing(3);
                         break;
                     case 'hr':
+                        // Render HR as visual separator between sections
+                        addSpacing(2);
                         if (yPosition + 5 > pageHeight - margin) {
                             doc.addPage();
                             yPosition = margin;
                         }
+                        doc.setDrawColor(200, 200, 200);  // Light gray
+                        doc.setLineWidth(0.3);
                         doc.line(margin, yPosition, pageWidth - margin, yPosition);
                         addSpacing(3);
                         break;
