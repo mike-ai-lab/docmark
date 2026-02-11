@@ -13,7 +13,27 @@ const init = () => {
     const localStorageScrollBarKey = 'scroll_bar_settings';
     const localStorageCursorSyncKey = 'cursor_sync_settings';
     const localStorageThemeKey = 'theme_settings';
+    const localStoragePdfSettingsKey = 'pdf_font_settings';
     const confirmationMessage = 'Are you sure you want to reset? Your changes will be lost.';
+    
+    // PDF Font Settings - configurable
+    let pdfFontSettings = {
+        h1: 10,
+        h2: 10,
+        h3: 10,
+        h4: 10,
+        paragraph: 8,
+        list: 8,
+        blockquote: 8,
+        code: 8,
+        table: 8,
+        fontFamily: 'helvetica', // helvetica, times, courier
+        tableBorders: 'horizontal', // all, horizontal, none
+        tableBorderWeight: 0.1,
+        tableBorderColor: '#cccccc',
+        tableHeaderBg: '#f0f0f0',
+        tableHeaderColor: '#000000'
+    };
     // default template
     const defaultInput = `# Markdown syntax guide
 
@@ -195,7 +215,12 @@ This web site is using ${"`"}markedjs/marked${"`"}.
     let convert = (markdown) => {
         let options = {
             headerIds: false,
-            mangle: false
+            mangle: false,
+            breaks: true,        // Support line breaks like VSCode
+            gfm: true,           // GitHub Flavored Markdown
+            pedantic: false,     // Don't be overly strict
+            smartLists: true,    // Better list handling
+            smartypants: false   // Don't convert quotes/dashes
         };
         
         // First, render the HTML
@@ -525,7 +550,7 @@ This web site is using ${"`"}markedjs/marked${"`"}.
             }
         });
     };
-
+    
     let enableScrollBarSync = () => {
         scrollBarSync = true;
     };
@@ -606,6 +631,8 @@ This web site is using ${"`"}markedjs/marked${"`"}.
         }
 
         try {
+            // Use current font settings
+            const fontSizes = pdfFontSettings;
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF({
                 orientation: 'portrait',
@@ -884,25 +911,25 @@ This web site is using ${"`"}markedjs/marked${"`"}.
 
                 switch (tagName) {
                     case 'h1':
-                        addSpacing(5);
-                        addText(element.textContent, 20, true);
                         addSpacing(3);
+                        addText(element.textContent, fontSizes.h1, true);
+                        addSpacing(2);
                         break;
                     case 'h2':
-                        addSpacing(4);
-                        addText(element.textContent, 16, true);
-                        addSpacing(0.5);
+                        addSpacing(3);
+                        addText(element.textContent, fontSizes.h2, true);
+                        addSpacing(2);
                         break;
                     case 'h3':
-                        addSpacing(3);
-                        addText(element.textContent, 14, true);
-                        addSpacing(0.5);
+                        addSpacing(2);
+                        addText(element.textContent, fontSizes.h3, true);
+                        addSpacing(1.5);
                         break;
                     case 'h4':
                     case 'h5':
                     case 'h6':
                         addSpacing(2);
-                        addText(element.textContent, 12, true);
+                        addText(element.textContent, fontSizes.h4, true);
                         addSpacing(1);
                         break;
                     case 'p':
@@ -938,8 +965,8 @@ This web site is using ${"`"}markedjs/marked${"`"}.
                             // Handle inline formatting (bold, italic, links, inline code)
                             const formatted = getFormattedText(element);
                             if (formatted.length > 0) {
-                                addFormattedText(formatted, 11);
-                                addSpacing(2);
+                                addFormattedText(formatted, fontSizes.paragraph);
+                                addSpacing(1);
                             }
                         }
                         break;
@@ -972,13 +999,13 @@ This web site is using ${"`"}markedjs/marked${"`"}.
                                 
                                 // Add bullet/number
                                 doc.setFont('helvetica', 'normal');
-                                doc.setFontSize(11);
+                                doc.setFontSize(fontSizes.list);
                                 doc.text(bullet, margin, yPosition);
                                 const bulletWidth = doc.getTextWidth(bullet);
                                 
                                 // Render formatted content with indent
-                                doc.setFontSize(11);
-                                const lineHeight = 11 * 0.5;
+                                doc.setFontSize(fontSizes.list);
+                                const lineHeight = fontSizes.list * 0.5;
                                 let currentX = margin + bulletWidth;
                                 
                                 formatted.forEach(seg => {
@@ -1044,11 +1071,11 @@ This web site is using ${"`"}markedjs/marked${"`"}.
                                         }
                                         
                                         doc.setFont('helvetica', 'normal');
-                                        doc.setFontSize(11);
+                                        doc.setFontSize(fontSizes.list);
                                         doc.text(nestedBullet, oldMarginValue + indentAmount, yPosition);
                                         const nestedBulletWidth = doc.getTextWidth(nestedBullet);
                                         
-                                        const lineHeight = 11 * 0.5;
+                                        const lineHeight = fontSizes.list * 0.5;
                                         let currentX = oldMarginValue + indentAmount + nestedBulletWidth;
                                         
                                         nestedFormatted.forEach(seg => {
@@ -1096,28 +1123,30 @@ This web site is using ${"`"}markedjs/marked${"`"}.
                         break;
                     case 'blockquote':
                         doc.setTextColor(100, 100, 100);
-                        addText(element.textContent, 10, false, true);
+                        addText(element.textContent, fontSizes.blockquote, false, true);
                         doc.setTextColor(0, 0, 0);
                         addSpacing(2);
                         break;
                     case 'pre':
                     case 'code':
                         doc.setFont('courier', 'normal');
-                        doc.setFontSize(9);
+                        doc.setFontSize(fontSizes.code);
                         const codeLines = element.textContent.split('\n');
+                        const codeLineHeight = fontSizes.code * 0.5;
                         codeLines.forEach(line => {
-                            if (yPosition + 4 > pageHeight - margin) {
+                            if (yPosition + codeLineHeight > pageHeight - margin) {
                                 doc.addPage();
                                 yPosition = margin;
                             }
                             doc.text(line || ' ', margin + 5, yPosition);
-                            yPosition += 4;
+                            yPosition += codeLineHeight;
                         });
                         doc.setFont('helvetica', 'normal');
                         addSpacing(2);
                         break;
                     case 'table':
-                        // NO spacing before table - keep table close to heading
+                        // Minimal spacing before table - keep tight to heading
+                        addSpacing(2);
                         
                         // Enhanced table rendering with proper Unicode support
                         const thead = element.querySelector('thead');
@@ -1128,6 +1157,9 @@ This web site is using ${"`"}markedjs/marked${"`"}.
                         // Get all rows
                         const allRows = element.querySelectorAll('tr');
                         if (allRows.length === 0) break;
+                        
+                        // TABLE FONT SIZE - use configurable setting
+                        const TABLE_FONT_SIZE = fontSizes.table;
                         
                         // Calculate column widths based on content
                         let maxCols = 0;
@@ -1146,10 +1178,10 @@ This web site is using ${"`"}markedjs/marked${"`"}.
                                 let cellText = sanitizeForPdf(cell.textContent.trim());
                                 columnData[colIndex].texts.push(cellText);
                                 
-                                // Measure text width
-                                doc.setFontSize(8);
+                                // Measure text width with new font size
+                                doc.setFontSize(TABLE_FONT_SIZE);
                                 doc.setFont('helvetica', 'normal');
-                                const textWidth = doc.getStringUnitWidth(cellText) * 8 / doc.internal.scaleFactor;
+                                const textWidth = doc.getStringUnitWidth(cellText) * TABLE_FONT_SIZE / doc.internal.scaleFactor;
                                 columnData[colIndex].maxWidth = Math.max(columnData[colIndex].maxWidth, textWidth);
                             });
                         });
@@ -1190,7 +1222,7 @@ This web site is using ${"`"}markedjs/marked${"`"}.
                                 const cellText = sanitizeForPdf(cell.textContent.trim());
                                 const colWidth = colWidths[colIndex] || 30;
                                 
-                                doc.setFontSize(8);
+                                doc.setFontSize(TABLE_FONT_SIZE);
                                 doc.setFont('helvetica', isHeader ? 'bold' : 'normal');
                                 
                                 // Split text to fit column width - handle Unicode properly
@@ -1200,7 +1232,7 @@ This web site is using ${"`"}markedjs/marked${"`"}.
                                 
                                 words.forEach(word => {
                                     const testLine = currentLine ? currentLine + ' ' + word : word;
-                                    const testWidth = doc.getStringUnitWidth(testLine) * 8 / doc.internal.scaleFactor;
+                                    const testWidth = doc.getStringUnitWidth(testLine) * TABLE_FONT_SIZE / doc.internal.scaleFactor;
                                     
                                     if (testWidth > colWidth - 2) {
                                         if (currentLine) {
@@ -1230,25 +1262,13 @@ This web site is using ${"`"}markedjs/marked${"`"}.
                                 tableY = margin;
                             }
                             
-                            // Draw cells
+                            // Draw cells with horizontal lines only
                             let xPos = margin;
                             cells.forEach((cell, colIndex) => {
                                 const colWidth = colWidths[colIndex] || 30;
                                 
-                                // Draw cell border
-                                doc.setDrawColor(200, 200, 200);
-                                doc.setLineWidth(0.1);
-                                doc.rect(xPos, tableY, colWidth, maxRowHeight);
-                                
-                                // Fill header background
-                                if (isHeader) {
-                                    doc.setFillColor(240, 240, 240);
-                                    doc.rect(xPos, tableY, colWidth, maxRowHeight, 'F');
-                                    doc.rect(xPos, tableY, colWidth, maxRowHeight); // Redraw border
-                                }
-                                
                                 // Draw text and detect URLs
-                                doc.setFontSize(8);
+                                doc.setFontSize(TABLE_FONT_SIZE);
                                 doc.setFont('helvetica', isHeader ? 'bold' : 'normal');
                                 
                                 const lines = cellLines[colIndex] || [];
@@ -1271,7 +1291,7 @@ This web site is using ${"`"}markedjs/marked${"`"}.
                                         
                                         // Add clickable area and underline
                                         const textWidth = Math.min(
-                                            doc.getStringUnitWidth(line) * 8 / doc.internal.scaleFactor,
+                                            doc.getStringUnitWidth(line) * TABLE_FONT_SIZE / doc.internal.scaleFactor,
                                             colWidth - 2
                                         );
                                         doc.link(xPos + 1, textY - 3, textWidth, 4, { url: linkUrl });
@@ -1295,11 +1315,16 @@ This web site is using ${"`"}markedjs/marked${"`"}.
                                 xPos += colWidth;
                             });
                             
+                            // Draw horizontal line after row
+                            doc.setDrawColor(200, 200, 200);
+                            doc.setLineWidth(0.1);
+                            doc.line(margin, tableY + maxRowHeight, margin + colWidths.reduce((a, b) => a + b, 0), tableY + maxRowHeight);
+                            
                             tableY += maxRowHeight;
                         });
                         
                         yPosition = tableY;
-                        // Add spacing after table for visual separation
+                        // Small spacing after table before notes
                         addSpacing(3);
                         break;
                     case 'hr':
@@ -1319,7 +1344,7 @@ This web site is using ${"`"}markedjs/marked${"`"}.
                         if (element.textContent && element.textContent.trim()) {
                             const children = element.children;
                             if (children.length === 0) {
-                                addText(element.textContent, 11);
+                                addText(element.textContent, fontSizes.paragraph);
                             } else {
                                 Array.from(children).forEach(child => parseElement(child));
                             }
@@ -1338,6 +1363,237 @@ This web site is using ${"`"}markedjs/marked${"`"}.
             console.error('Failed to export PDF:', error);
             window.alert('Failed to export PDF. Please try again.');
         }
+    };
+
+    // ----- PDF font settings -----
+    
+    let loadPdfSettings = () => {
+        try {
+            let raw = localStorage.getItem(localStorageNamespace + '.' + localStoragePdfSettingsKey);
+            if (raw) {
+                let saved = JSON.parse(raw);
+                pdfFontSettings = { ...pdfFontSettings, ...saved };
+            }
+        } catch (e) {
+            console.error('Failed to load PDF settings', e);
+        }
+    };
+    
+    let savePdfSettings = () => {
+        try {
+            localStorage.setItem(
+                localStorageNamespace + '.' + localStoragePdfSettingsKey,
+                JSON.stringify(pdfFontSettings)
+            );
+        } catch (e) {
+            console.error('Failed to save PDF settings', e);
+        }
+    };
+    
+    let openPdfSettingsModal = () => {
+        // Check if panel already exists
+        if (document.getElementById('pdf-settings-panel')) {
+            document.getElementById('pdf-settings-panel').remove();
+            return;
+        }
+        
+        // Create floating panel
+        const panel = document.createElement('div');
+        panel.id = 'pdf-settings-panel';
+        panel.style.cssText = `
+            position: fixed;
+            top: 60px;
+            right: 20px;
+            width: 320px;
+            max-height: calc(100vh - 80px);
+            background: var(--bg-color, white);
+            color: var(--text-color, black);
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            z-index: 9999;
+            overflow-y: auto;
+            font-family: system-ui, -apple-system, sans-serif;
+        `;
+        
+        panel.innerHTML = `
+            <div style="position: sticky; top: 0; background: var(--bg-color, white); padding: 15px; border-bottom: 1px solid #ddd; display: flex; justify-content: space-between; align-items: center;">
+                <h3 style="margin: 0; font-size: 16px;">PDF Export Settings</h3>
+                <button id="pdf-close-panel" style="background: none; border: none; font-size: 20px; cursor: pointer; padding: 0; width: 24px; height: 24px;">×</button>
+            </div>
+            
+            <div style="padding: 15px;">
+                <div style="margin-bottom: 20px;">
+                    <h4 style="margin: 0 0 10px 0; font-size: 13px; font-weight: 600; color: #666;">Font Family</h4>
+                    <select id="pdf-font-family" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; background: var(--bg-color, white); color: var(--text-color, black);">
+                        <option value="helvetica" ${pdfFontSettings.fontFamily === 'helvetica' ? 'selected' : ''}>Helvetica (Sans-serif)</option>
+                        <option value="times" ${pdfFontSettings.fontFamily === 'times' ? 'selected' : ''}>Times (Serif)</option>
+                        <option value="courier" ${pdfFontSettings.fontFamily === 'courier' ? 'selected' : ''}>Courier (Monospace)</option>
+                    </select>
+                </div>
+                
+                <div style="margin-bottom: 20px;">
+                    <h4 style="margin: 0 0 10px 0; font-size: 13px; font-weight: 600; color: #666;">Font Sizes (pt)</h4>
+                    
+                    <label style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: 12px;">
+                        <span>H1 Heading:</span>
+                        <input type="number" id="pdf-h1" min="6" max="32" value="${pdfFontSettings.h1}" style="width: 60px; padding: 4px; border: 1px solid #ddd; border-radius: 3px;">
+                    </label>
+                    
+                    <label style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: 12px;">
+                        <span>H2 Heading:</span>
+                        <input type="number" id="pdf-h2" min="6" max="32" value="${pdfFontSettings.h2}" style="width: 60px; padding: 4px; border: 1px solid #ddd; border-radius: 3px;">
+                    </label>
+                    
+                    <label style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: 12px;">
+                        <span>H3 Heading:</span>
+                        <input type="number" id="pdf-h3" min="6" max="32" value="${pdfFontSettings.h3}" style="width: 60px; padding: 4px; border: 1px solid #ddd; border-radius: 3px;">
+                    </label>
+                    
+                    <label style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: 12px;">
+                        <span>H4-H6 Heading:</span>
+                        <input type="number" id="pdf-h4" min="6" max="32" value="${pdfFontSettings.h4}" style="width: 60px; padding: 4px; border: 1px solid #ddd; border-radius: 3px;">
+                    </label>
+                    
+                    <label style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: 12px;">
+                        <span>Paragraph:</span>
+                        <input type="number" id="pdf-paragraph" min="6" max="32" value="${pdfFontSettings.paragraph}" style="width: 60px; padding: 4px; border: 1px solid #ddd; border-radius: 3px;">
+                    </label>
+                    
+                    <label style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: 12px;">
+                        <span>List:</span>
+                        <input type="number" id="pdf-list" min="6" max="32" value="${pdfFontSettings.list}" style="width: 60px; padding: 4px; border: 1px solid #ddd; border-radius: 3px;">
+                    </label>
+                    
+                    <label style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: 12px;">
+                        <span>Blockquote:</span>
+                        <input type="number" id="pdf-blockquote" min="6" max="32" value="${pdfFontSettings.blockquote}" style="width: 60px; padding: 4px; border: 1px solid #ddd; border-radius: 3px;">
+                    </label>
+                    
+                    <label style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: 12px;">
+                        <span>Code:</span>
+                        <input type="number" id="pdf-code" min="6" max="32" value="${pdfFontSettings.code}" style="width: 60px; padding: 4px; border: 1px solid #ddd; border-radius: 3px;">
+                    </label>
+                    
+                    <label style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: 12px;">
+                        <span>Table:</span>
+                        <input type="number" id="pdf-table" min="6" max="32" value="${pdfFontSettings.table}" style="width: 60px; padding: 4px; border: 1px solid #ddd; border-radius: 3px;">
+                    </label>
+                </div>
+                
+                <div style="margin-bottom: 20px;">
+                    <h4 style="margin: 0 0 10px 0; font-size: 13px; font-weight: 600; color: #666;">Table Styling</h4>
+                    
+                    <label style="display: block; margin-bottom: 10px; font-size: 12px;">
+                        <span style="display: block; margin-bottom: 4px;">Borders:</span>
+                        <select id="pdf-table-borders" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; background: var(--bg-color, white); color: var(--text-color, black);">
+                            <option value="all" ${pdfFontSettings.tableBorders === 'all' ? 'selected' : ''}>All Borders</option>
+                            <option value="horizontal" ${pdfFontSettings.tableBorders === 'horizontal' ? 'selected' : ''}>Horizontal Only</option>
+                            <option value="none" ${pdfFontSettings.tableBorders === 'none' ? 'selected' : ''}>No Borders</option>
+                        </select>
+                    </label>
+                    
+                    <label style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; font-size: 12px;">
+                        <span>Border Weight:</span>
+                        <input type="number" id="pdf-border-weight" min="0.1" max="2" step="0.1" value="${pdfFontSettings.tableBorderWeight}" style="width: 60px; padding: 4px; border: 1px solid #ddd; border-radius: 3px;">
+                    </label>
+                    
+                    <label style="display: block; margin-bottom: 10px; font-size: 12px;">
+                        <span style="display: block; margin-bottom: 4px;">Border Color:</span>
+                        <input type="color" id="pdf-border-color" value="${pdfFontSettings.tableBorderColor}" style="width: 100%; height: 32px; border: 1px solid #ddd; border-radius: 4px; cursor: pointer;">
+                    </label>
+                    
+                    <label style="display: block; margin-bottom: 10px; font-size: 12px;">
+                        <span style="display: block; margin-bottom: 4px;">Header Background:</span>
+                        <input type="color" id="pdf-header-bg" value="${pdfFontSettings.tableHeaderBg}" style="width: 100%; height: 32px; border: 1px solid #ddd; border-radius: 4px; cursor: pointer;">
+                    </label>
+                    
+                    <label style="display: block; margin-bottom: 10px; font-size: 12px;">
+                        <span style="display: block; margin-bottom: 4px;">Header Text Color:</span>
+                        <input type="color" id="pdf-header-color" value="${pdfFontSettings.tableHeaderColor}" style="width: 100%; height: 32px; border: 1px solid #ddd; border-radius: 4px; cursor: pointer;">
+                    </label>
+                </div>
+                
+                <div style="display: flex; gap: 8px;">
+                    <button id="pdf-reset-btn" style="flex: 1; padding: 8px; cursor: pointer; border: 1px solid #ddd; border-radius: 4px; background: var(--bg-color, white); color: var(--text-color, black);">Reset</button>
+                    <button id="pdf-export-now-btn" style="flex: 1; padding: 8px; cursor: pointer; background: #007bff; color: white; border: none; border-radius: 4px; font-weight: 500;">Export PDF</button>
+                </div>
+                
+                <p style="margin: 15px 0 0 0; font-size: 11px; color: #999; text-align: center;">Changes save automatically</p>
+            </div>
+        `;
+        
+        document.body.appendChild(panel);
+        
+        // Add event listeners for all inputs
+        const updateSetting = (key, value) => {
+            pdfFontSettings[key] = value;
+            savePdfSettings();
+        };
+        
+        // Font sizes
+        ['h1', 'h2', 'h3', 'h4', 'paragraph', 'list', 'blockquote', 'code', 'table'].forEach(key => {
+            const input = document.getElementById(`pdf-${key}`);
+            input.addEventListener('change', () => updateSetting(key, parseInt(input.value) || 8));
+        });
+        
+        // Font family
+        document.getElementById('pdf-font-family').addEventListener('change', (e) => {
+            updateSetting('fontFamily', e.target.value);
+        });
+        
+        // Table settings
+        document.getElementById('pdf-table-borders').addEventListener('change', (e) => {
+            updateSetting('tableBorders', e.target.value);
+        });
+        
+        document.getElementById('pdf-border-weight').addEventListener('change', (e) => {
+            updateSetting('tableBorderWeight', parseFloat(e.target.value) || 0.1);
+        });
+        
+        document.getElementById('pdf-border-color').addEventListener('change', (e) => {
+            updateSetting('tableBorderColor', e.target.value);
+        });
+        
+        document.getElementById('pdf-header-bg').addEventListener('change', (e) => {
+            updateSetting('tableHeaderBg', e.target.value);
+        });
+        
+        document.getElementById('pdf-header-color').addEventListener('change', (e) => {
+            updateSetting('tableHeaderColor', e.target.value);
+        });
+        
+        // Buttons
+        document.getElementById('pdf-reset-btn').addEventListener('click', () => {
+            pdfFontSettings = {
+                h1: 10,
+                h2: 10,
+                h3: 10,
+                h4: 10,
+                paragraph: 8,
+                list: 8,
+                blockquote: 8,
+                code: 8,
+                table: 8,
+                fontFamily: 'helvetica',
+                tableBorders: 'horizontal',
+                tableBorderWeight: 0.1,
+                tableBorderColor: '#cccccc',
+                tableHeaderBg: '#f0f0f0',
+                tableHeaderColor: '#000000'
+            };
+            savePdfSettings();
+            panel.remove();
+            openPdfSettingsModal(); // Reopen with reset values
+        });
+        
+        document.getElementById('pdf-export-now-btn').addEventListener('click', () => {
+            exportPreviewToPdf();
+        });
+        
+        document.getElementById('pdf-close-panel').addEventListener('click', () => {
+            panel.remove();
+        });
     };
 
     // ----- setup -----
@@ -1371,6 +1627,20 @@ This web site is using ${"`"}markedjs/marked${"`"}.
         exportButton.addEventListener('click', (event) => {
             event.preventDefault();
             exportPreviewToPdf();
+        });
+    };
+    
+    let setupPdfSettingsButton = () => {
+        let pdfSettingsButton = document.querySelector('#pdf-settings-button a');
+        if (!pdfSettingsButton) {
+            console.error('PDF Settings button not found');
+            return;
+        }
+        
+        pdfSettingsButton.addEventListener('click', (event) => {
+            event.preventDefault();
+            console.log('PDF Settings clicked');
+            openPdfSettingsModal();
         });
     };
 
@@ -1518,6 +1788,10 @@ This web site is using ${"`"}markedjs/marked${"`"}.
     setupResetButton();
     setupCopyButton(editor);
     setupExportButton();
+    setupPdfSettingsButton();
+    
+    // Load PDF settings
+    loadPdfSettings();
 
     let scrollBarSettings = loadScrollBarSettings() || false;
     initScrollBarSync(scrollBarSettings);
