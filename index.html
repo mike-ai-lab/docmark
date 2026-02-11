@@ -72,42 +72,59 @@
         
         <div class="header-center">
             <div class="button-group">
-                <div class="btn-item" id="reset-button"><a href="#">Reset</a></div>
-                <div class="btn-item" id="clear-button"><a href="#">Clear</a></div>
                 <div class="btn-item" id="paste-button"><a href="#">Paste</a></div>
                 <div class="btn-item" id="copy-button"><a href="#">Copy</a></div>
+                <div class="btn-item" id="undo-button"><a href="#">Undo</a></div>
+                <div class="btn-item" id="clear-button"><a href="#">Clear</a></div>
             </div>
             
             <div class="button-group">
-                <div class="btn-item" id="export-button"><a href="#">Export PDF</a></div>
-                <div class="btn-item" id="export-html-button"><a href="#">Export HTML</a></div>
-                <div class="btn-item" id="pdf-settings-button"><a href="#">PDF Settings</a></div>
+                <div class="btn-item" id="insert-header-button"><a href="#">+ Header</a></div>
+                <div class="btn-item" id="insert-footer-button"><a href="#">+ Footer</a></div>
+                <div class="btn-item" id="insert-break-button"><a href="#">+ Break</a></div>
+            </div>
+            
+            <div class="button-group">
+                <div class="btn-item dropdown" id="export-dropdown">
+                    <a href="#">Export ▾</a>
+                    <div class="dropdown-content">
+                        <a href="#" id="export-pdf-link">Export PDF</a>
+                        <a href="#" id="print-pdf-link">Print to PDF</a>
+                        <a href="#" id="export-html-link">Export HTML</a>
+                    </div>
+                </div>
+                <div class="btn-item dropdown" id="settings-dropdown">
+                    <a href="#">Settings ▾</a>
+                    <div class="dropdown-content">
+                        <label class="dropdown-item">
+                            <input type="checkbox" id="sync-scroll-checkbox">
+                            <span>Sync Scroll</span>
+                        </label>
+                        <label class="dropdown-item">
+                            <input type="checkbox" id="sync-cursor-checkbox">
+                            <span>Sync Cursor</span>
+                        </label>
+                        <label class="dropdown-item">
+                            <input type="checkbox" id="theme-checkbox">
+                            <span>Dark Mode</span>
+                        </label>
+                        <div class="dropdown-item">
+                            <label>
+                                <span>Style:</span>
+                                <select id="style-selector">
+                                    <option value="github">GitHub</option>
+                                    <option value="gitbook">GitBook</option>
+                                    <option value="vscode">VSCode</option>
+                                </select>
+                            </label>
+                        </div>
+                        <a href="#" id="pdf-settings-link">PDF Settings</a>
+                    </div>
+                </div>
             </div>
         </div>
         
         <div class="header-right">
-            <div class="controls-group">
-                <label class="control-item">
-                    <input type="checkbox" id="sync-scroll-checkbox">
-                    <span>Sync Scroll</span>
-                </label>
-                <label class="control-item">
-                    <input type="checkbox" id="sync-cursor-checkbox">
-                    <span>Sync Cursor</span>
-                </label>
-                <label class="control-item">
-                    <input type="checkbox" id="theme-checkbox">
-                    <span>Dark Mode</span>
-                </label>
-                <label class="control-item">
-                    <span>Style:</span>
-                    <select id="style-selector">
-                        <option value="github">GitHub</option>
-                        <option value="gitbook">GitBook</option>
-                        <option value="vscode">VSCode</option>
-                    </select>
-                </label>
-            </div>
             <div id="github"><a href="https://github.com/mike-ai-lab/docmark"><img src="image/GitHub-Mark-Light-32px.webp"></a></div>
         </div>
     </header>

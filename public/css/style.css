@@ -236,6 +236,7 @@ header a:hover {
   cursor: pointer;
   transition: background 0.2s ease;
   white-space: nowrap;
+  position: relative;
 }
 
 .btn-item:hover {
@@ -244,6 +245,79 @@ header a:hover {
 
 .btn-item a {
   display: block;
+}
+
+/* Dropdown styles */
+.dropdown {
+  position: relative;
+}
+
+.dropdown-content {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  margin-top: 8px;
+  background: #2c2c2c;
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  min-width: 180px;
+  z-index: 1000;
+  padding: 6px 0;
+}
+
+.dropdown:hover .dropdown-content {
+  display: block;
+}
+
+.dropdown-content a,
+.dropdown-content .dropdown-item {
+  display: block;
+  padding: 8px 16px;
+  color: #fff;
+  text-decoration: none;
+  transition: background 0.2s ease;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.dropdown-content a:hover {
+  background: rgba(255,255,255,0.1);
+}
+
+.dropdown-content .dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dropdown-content .dropdown-item input[type="checkbox"] {
+  cursor: pointer;
+  margin: 0;
+}
+
+.dropdown-content .dropdown-item select {
+  background: rgba(255,255,255,0.1);
+  color: #fff;
+  border: 1px solid rgba(255,255,255,0.2);
+  padding: 3px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  flex: 1;
+}
+
+.dropdown-content .dropdown-item select:hover {
+  background: rgba(255,255,255,0.15);
+}
+
+.dropdown-content .dropdown-item label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  cursor: pointer;
 }
 
 .header-right {
@@ -321,7 +395,7 @@ footer {
   overflow: hidden;
   width: 100%;
   margin: 0 auto;
-  background-color: #fff;
+  background-color: #ffffff;
   border-bottom: 1px solid #e8e8e8;
   display: flex;
 }
@@ -336,11 +410,51 @@ footer {
 
 #preview-wrapper {
   padding: 8px 16px 16px 16px;
-  background-color: #fdfdfd;
+  background-color: #ffffff;
 }
 
 [data-theme="dark"] #preview-wrapper {
   background-color: #1E1E1E;
+}
+
+/* Ensure markdown body matches export colors */
+#preview-wrapper .markdown-body {
+  background-color: #ffffff !important;
+  color: #24292f !important;
+}
+
+[data-theme="dark"] #preview-wrapper .markdown-body {
+  background-color: #1E1E1E !important;
+  color: #e6edf3 !important;
+}
+
+/* Fix horizontal rules (hr / ---) in dark mode */
+[data-theme="dark"] #preview-wrapper .markdown-body hr {
+  background-color: rgba(255, 255, 255, 0.8) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.8) !important;
+  border-top: none !important;
+  border-left: none !important;
+  border-right: none !important;
+  opacity: 1 !important;
+}
+
+/* Fix horizontal rules in light mode for consistency */
+#preview-wrapper .markdown-body hr {
+  background-color: #d1d9e0 !important;
+  border-bottom: 1px solid #d1d9e0 !important;
+  border-top: none !important;
+  border-left: none !important;
+  border-right: none !important;
+}
+
+/* Fix table borders in dark mode - make horizontal lines white */
+[data-theme="dark"] #preview-wrapper .markdown-body table th,
+[data-theme="dark"] #preview-wrapper .markdown-body table td {
+  border: 1px solid rgba(255, 255, 255, 0.3) !important;
+}
+
+[data-theme="dark"] #preview-wrapper .markdown-body table tr {
+  border-top: 1px solid rgba(255, 255, 255, 0.3) !important;
 }
 
 .column {

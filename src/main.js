@@ -235,8 +235,37 @@ This web site is using ${"`"}markedjs/marked${"`"}.
         return editor;
     };
 
+    // Parse YAML front matter (metadata)
+    let parseMetadata = (markdown) => {
+        const frontMatterRegex = /^---\s*\n([\s\S]*?)\n---\s*\n/;
+        const match = markdown.match(frontMatterRegex);
+        
+        if (!match) return { metadata: null, content: markdown };
+        
+        const yamlContent = match[1];
+        const content = markdown.slice(match[0].length);
+        
+        // Simple YAML parser for our needs
+        const metadata = {};
+        const lines = yamlContent.split('\n');
+        
+        lines.forEach(line => {
+            const colonIndex = line.indexOf(':');
+            if (colonIndex > 0) {
+                const key = line.slice(0, colonIndex).trim();
+                const value = line.slice(colonIndex + 1).trim();
+                metadata[key] = value;
+            }
+        });
+        
+        return { metadata, content };
+    };
+
     // Render markdown text as html with accurate line mapping
     let convert = (markdown) => {
+        // Parse metadata first
+        const { metadata, content } = parseMetadata(markdown);
+        
         let options = {
             headerIds: false,
             mangle: false,
@@ -376,8 +405,54 @@ This web site is using ${"`"}markedjs/marked${"`"}.
             }
         });
         
+        // Add metadata-based header and footer if present
+        let finalHtml = tempDiv.innerHTML;
+        
+        if (metadata) {
+            // Generate header if metadata exists
+            if (metadata.title || metadata.date) {
+                const title = metadata.title || 'Document';
+                const date = metadata.date || new Date().toLocaleDateString('en-GB', { 
+                    day: 'numeric', 
+                    month: 'short', 
+                    year: 'numeric' 
+                });
+                
+                const headerHtml = `<h1>${title}</h1>
+<div style="text-align: right; margin-top: -40px; margin-bottom: 20px; color: #666; font-size: 0.9em;">${date}</div>
+<hr>`;
+                
+                finalHtml = headerHtml + finalHtml;
+            }
+            
+            // Generate footer if metadata exists
+            if (metadata['footer-left'] || metadata['footer-right']) {
+                const footerLeft = metadata['footer-left'] || '';
+                const footerRight = metadata['footer-right'] || '';
+                const footerDate = metadata.date || new Date().toLocaleDateString('en-GB', { 
+                    day: 'numeric', 
+                    month: 'short', 
+                    year: 'numeric' 
+                });
+                
+                const footerHtml = `<hr style="margin-top: 40px;">
+<div style="display: flex; justify-content: space-between; margin-top: 20px;">
+  <div>
+    <strong>${footerLeft}</strong><br>
+    <span style="color: #666;">${metadata.title || 'Document'}</span>
+  </div>
+  <div style="text-align: right;">
+    <strong>${footerRight}</strong><br>
+    <span style="color: #666;">${footerDate}</span>
+  </div>
+</div>`;
+                
+                finalHtml = finalHtml + footerHtml;
+            }
+        }
+        
         // Update the output
-        document.querySelector('#output').innerHTML = tempDiv.innerHTML;
+        document.querySelector('#output').innerHTML = finalHtml;
     };
 
     // Cursor synchronization: highlight preview element based on editor cursor
@@ -1161,12 +1236,46 @@ This web site is using ${"`"}markedjs/marked${"`"}.
 
             // Parse HTML and extract text content
             const parseElement = (element) => {
+                // Skip elements marked to skip (like date divs already processed)
+                if (element._skipInPdf) return;
+                
                 const tagName = element.tagName.toLowerCase();
 
                 switch (tagName) {
                     case 'h1':
                         addSpacing(5); // More space before h1 to separate sections
-                        addText(element.textContent, fontSizes.h1, true);
+                        
+                        // Check if next sibling is a date div (right-aligned with negative margin)
+                        const nextSibling = element.nextElementSibling;
+                        const isDateDiv = nextSibling && 
+                                         nextSibling.tagName.toLowerCase() === 'div' && 
+                                         nextSibling.style.textAlign === 'right' &&
+                                         nextSibling.style.marginTop.includes('-');
+                        
+                        if (isDateDiv) {
+                            // Render H1 and date side-by-side
+                            const h1Text = element.textContent;
+                            const dateText = nextSibling.textContent;
+                            
+                            doc.setFont('helvetica', 'bold');
+                            doc.setFontSize(fontSizes.h1);
+                            doc.text(h1Text, margin, yPosition);
+                            
+                            // Add date on the right
+                            doc.setFont('helvetica', 'normal');
+                            doc.setFontSize(fontSizes.h1 * 0.6);
+                            doc.setTextColor(100, 100, 100);
+                            const dateWidth = doc.getTextWidth(dateText);
+                            doc.text(dateText, pageWidth - margin - dateWidth, yPosition);
+                            doc.setTextColor(0, 0, 0);
+                            
+                            yPosition += fontSizes.h1 * 0.5;
+                            
+                            // Skip the date div in the next iteration
+                            element.nextElementSibling._skipInPdf = true;
+                        } else {
+                            addText(element.textContent, fontSizes.h1, true);
+                        }
                         addSpacing(0.2); // Very tight to content below
                         break;
                     case 'h2':
@@ -1595,13 +1704,60 @@ This web site is using ${"`"}markedjs/marked${"`"}.
                         addSpacing(3);
                         break;
                     default:
-                        // For other elements, just extract text
-                        if (element.textContent && element.textContent.trim()) {
-                            const children = element.children;
-                            if (children.length === 0) {
-                                addText(element.textContent, fontSizes.paragraph);
-                            } else {
-                                Array.from(children).forEach(child => parseElement(child));
+                        // Check if it's a flexbox footer div
+                        if (tagName === 'div' && element.style.display === 'flex' && element.style.justifyContent === 'space-between') {
+                            // This is a flexbox footer - render side by side
+                            const leftDiv = element.children[0];
+                            const rightDiv = element.children[1];
+                            
+                            if (leftDiv && rightDiv) {
+                                // Left side
+                                doc.setFont('helvetica', 'bold');
+                                doc.setFontSize(fontSizes.paragraph);
+                                const leftStrong = leftDiv.querySelector('strong');
+                                if (leftStrong) {
+                                    doc.text(leftStrong.textContent, margin, yPosition);
+                                    yPosition += fontSizes.paragraph * 0.5;
+                                }
+                                
+                                doc.setFont('helvetica', 'normal');
+                                doc.setTextColor(100, 100, 100);
+                                const leftSpan = leftDiv.querySelector('span');
+                                if (leftSpan) {
+                                    doc.text(leftSpan.textContent, margin, yPosition);
+                                }
+                                doc.setTextColor(0, 0, 0);
+                                
+                                // Right side
+                                const rightY = yPosition - fontSizes.paragraph * 0.5;
+                                doc.setFont('helvetica', 'bold');
+                                const rightStrong = rightDiv.querySelector('strong');
+                                if (rightStrong) {
+                                    const rightStrongWidth = doc.getTextWidth(rightStrong.textContent);
+                                    doc.text(rightStrong.textContent, pageWidth - margin - rightStrongWidth, rightY);
+                                }
+                                
+                                doc.setFont('helvetica', 'normal');
+                                doc.setTextColor(100, 100, 100);
+                                const rightSpan = rightDiv.querySelector('span');
+                                if (rightSpan) {
+                                    const rightSpanWidth = doc.getTextWidth(rightSpan.textContent);
+                                    doc.text(rightSpan.textContent, pageWidth - margin - rightSpanWidth, yPosition);
+                                }
+                                doc.setTextColor(0, 0, 0);
+                                
+                                yPosition += fontSizes.paragraph * 0.5;
+                                addSpacing(2);
+                            }
+                        } else {
+                            // For other elements, just extract text
+                            if (element.textContent && element.textContent.trim()) {
+                                const children = element.children;
+                                if (children.length === 0) {
+                                    addText(element.textContent, fontSizes.paragraph);
+                                } else {
+                                    Array.from(children).forEach(child => parseElement(child));
+                                }
                             }
                         }
                 }
@@ -1911,39 +2067,210 @@ This web site is using ${"`"}markedjs/marked${"`"}.
     };
 
     let setupExportButton = () => {
-        const exportButton = document.querySelector('#export-button');
-        if (!exportButton) {
-            return;
+        const exportPdfLink = document.querySelector('#export-pdf-link');
+        if (exportPdfLink) {
+            exportPdfLink.addEventListener('click', (event) => {
+                event.preventDefault();
+                exportPreviewToPdf();
+            });
         }
-        exportButton.addEventListener('click', (event) => {
-            event.preventDefault();
-            exportPreviewToPdf();
-        });
     };
 
     let setupExportHtmlButton = () => {
-        const exportHtmlButton = document.querySelector('#export-html-button');
-        if (!exportHtmlButton) {
-            return;
+        const exportHtmlLink = document.querySelector('#export-html-link');
+        if (exportHtmlLink) {
+            exportHtmlLink.addEventListener('click', (event) => {
+                event.preventDefault();
+                exportPreviewToHtml();
+            });
         }
-        exportHtmlButton.addEventListener('click', (event) => {
-            event.preventDefault();
-            exportPreviewToHtml();
-        });
     };
     
     let setupPdfSettingsButton = () => {
-        let pdfSettingsButton = document.querySelector('#pdf-settings-button a');
-        if (!pdfSettingsButton) {
-            console.error('PDF Settings button not found');
+        let pdfSettingsLink = document.querySelector('#pdf-settings-link');
+        if (pdfSettingsLink) {
+            pdfSettingsLink.addEventListener('click', (event) => {
+                event.preventDefault();
+                console.log('PDF Settings clicked');
+                openPdfSettingsModal();
+            });
+        }
+    };
+
+    // ----- Undo button -----
+    let setupUndoButton = () => {
+        const undoButton = document.querySelector('#undo-button');
+        if (!undoButton) return;
+        
+        undoButton.addEventListener('click', (event) => {
+            event.preventDefault();
+            if (editor) {
+                editor.trigger('keyboard', 'undo', null);
+                editor.focus();
+            }
+        });
+    };
+
+    // ----- Option 1: Print to PDF button -----
+    let setupPrintPdfButton = () => {
+        const printPdfLink = document.querySelector('#print-pdf-link');
+        if (printPdfLink) {
+            printPdfLink.addEventListener('click', async (event) => {
+                event.preventDefault();
+                await printPreviewToPdf();
+            });
+        }
+    };
+
+    let printPreviewToPdf = async () => {
+        const outputElement = document.querySelector('#output');
+        if (!outputElement) {
+            console.log('No output element found');
             return;
         }
+
+        const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+        const css = await getStyleCss(currentStyle, isDark);
         
-        pdfSettingsButton.addEventListener('click', (event) => {
+        const htmlContent = `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Print Preview</title>
+    <style>
+        @media print {
+            @page {
+                margin: 1cm;
+            }
+            body {
+                margin: 0;
+                padding: 0;
+            }
+        }
+        body {
+            margin: 0;
+            padding: 20px;
+            background-color: ${isDark ? '#1E1E1E' : '#ffffff'};
+            color: ${isDark ? '#e6edf3' : '#24292f'};
+        }
+        .markdown-body {
+            max-width: 900px;
+            margin: 0 auto;
+            color: ${isDark ? '#e6edf3' : '#24292f'};
+        }
+        ${css}
+    </style>
+</head>
+<body>
+    <div class="markdown-body">
+        ${outputElement.innerHTML}
+    </div>
+    <script>
+        window.onload = function() {
+            window.print();
+        };
+    </script>
+</body>
+</html>`;
+
+        // Open in new window and trigger print
+        const printWindow = window.open('', '_blank');
+        printWindow.document.write(htmlContent);
+        printWindow.document.close();
+    };
+
+    // ----- Option 2: Insert formatting buttons -----
+    let setupInsertHeaderButton = () => {
+        const button = document.querySelector('#insert-header-button');
+        if (!button) return;
+        
+        button.addEventListener('click', (event) => {
             event.preventDefault();
-            console.log('PDF Settings clicked');
-            openPdfSettingsModal();
+            insertHeaderTemplate();
         });
+    };
+
+    let setupInsertFooterButton = () => {
+        const button = document.querySelector('#insert-footer-button');
+        if (!button) return;
+        
+        button.addEventListener('click', (event) => {
+            event.preventDefault();
+            insertFooterTemplate();
+        });
+    };
+
+    let setupInsertBreakButton = () => {
+        const button = document.querySelector('#insert-break-button');
+        if (!button) return;
+        
+        button.addEventListener('click', (event) => {
+            event.preventDefault();
+            insertLineBreak();
+        });
+    };
+
+    let insertHeaderTemplate = () => {
+        const today = new Date().toLocaleDateString('en-GB', { 
+            day: 'numeric', 
+            month: 'short', 
+            year: 'numeric' 
+        });
+        
+        const template = `# Document Title
+
+<div style="text-align: right; margin-top: -40px; margin-bottom: 20px; color: #666; font-size: 0.9em;">${today}</div>
+
+---
+
+`;
+        
+        const position = editor.getPosition();
+        editor.executeEdits('', [{
+            range: new monaco.Range(position.lineNumber, position.column, position.lineNumber, position.column),
+            text: template
+        }]);
+        editor.focus();
+    };
+
+    let insertFooterTemplate = () => {
+        const today = new Date().toLocaleDateString('en-GB', { 
+            day: 'numeric', 
+            month: 'short', 
+            year: 'numeric' 
+        });
+        
+        const template = `
+---
+
+<div style="display: flex; justify-content: space-between; margin-top: 20px;">
+  <div>
+    <strong>SIGNATURE</strong><br>
+    <span style="color: #666;">Document Name</span>
+  </div>
+  <div style="text-align: right;">
+    <strong>CLIENT</strong><br>
+    <span style="color: #666;">${today}</span>
+  </div>
+</div>
+`;
+        
+        const position = editor.getPosition();
+        editor.executeEdits('', [{
+            range: new monaco.Range(position.lineNumber, position.column, position.lineNumber, position.column),
+            text: template
+        }]);
+        editor.focus();
+    };
+
+    let insertLineBreak = () => {
+        const position = editor.getPosition();
+        editor.executeEdits('', [{
+            range: new monaco.Range(position.lineNumber, position.column, position.lineNumber, position.column),
+            text: '\n\n---\n\n'
+        }]);
+        editor.focus();
     };
 
     // ----- local state -----
@@ -2102,13 +2429,17 @@ This web site is using ${"`"}markedjs/marked${"`"}.
     } else {
         presetValue(defaultInput);
     }
-    setupResetButton();
     setupClearButton();
     setupPasteButton();
     setupCopyButton(editor);
+    setupUndoButton();
     setupExportButton();
+    setupPrintPdfButton();
     setupExportHtmlButton();
     setupPdfSettingsButton();
+    setupInsertHeaderButton();
+    setupInsertFooterButton();
+    setupInsertBreakButton();
     
     // Load PDF settings
     loadPdfSettings();
