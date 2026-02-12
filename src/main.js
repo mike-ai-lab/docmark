@@ -32,9 +32,9 @@ const init = () => {
         table: 8,
         fontFamily: 'helvetica', // helvetica, times, courier
         tableBorders: 'horizontal', // all, horizontal, none
-        tableBorderWeight: 0.1,
-        tableBorderColor: '#cccccc',
-        tableHeaderBg: '#f0f0f0',
+        tableBorderWeight: 0.15,
+        tableBorderColor: '#d0d0d0',
+        tableHeaderBg: '#fafafa',
         tableHeaderColor: '#000000'
     };
     // default template
@@ -822,62 +822,68 @@ This web site is using ${"`"}markedjs/marked${"`"}.
         };
 
         if (style === 'gitbook') {
+            // GitBook: Clean, modern, spacious with subtle backgrounds
             return {
                 ...baseSettings,
                 margin: 20,
-                h1: 12,
-                h2: 11,
-                h3: 10,
-                h4: 9,
+                h1: 14,
+                h2: 12,
+                h3: 11,
+                h4: 10,
                 paragraph: 9,
                 list: 9,
                 blockquote: 9,
                 code: 8,
-                table: 8,
+                table: 9,
                 fontFamily: 'helvetica',
-                lineSpacing: 1.7,
-                headingSpacing: 1.4,
+                lineSpacing: 1.8,
+                headingSpacing: 1.5,
                 tableBorders: 'all',
-                tableBorderWeight: 0.2,
-                tableBorderColor: '#d0d7de',
-                tableHeaderBg: '#f6f8fa',
+                tableBorderWeight: 0.3,
+                tableBorderColor: '#e0e0e0',
+                tableHeaderBg: '#f5f5f5',
                 tableHeaderColor: '#000000',
-                linkColor: [0, 102, 218], // Blue for links
-                codeBackground: true
+                linkColor: [80, 80, 80],
+                codeBackground: true,
+                codeBackgroundColor: '#f8f8f8',
+                blockquoteBorder: true,
+                blockquoteBorderColor: '#d0d0d0'
             };
         } else if (style === 'vscode') {
+            // VSCode: Compact, technical, minimal borders
             return {
                 ...baseSettings,
                 margin: 15,
-                h1: 11,
-                h2: 10,
-                h3: 9,
+                h1: 12,
+                h2: 11,
+                h3: 10,
                 h4: 9,
                 paragraph: 8,
                 list: 8,
                 blockquote: 8,
-                code: 8,
+                code: 7,
                 table: 8,
-                fontFamily: 'helvetica',
-                lineSpacing: 1.6,
-                headingSpacing: 1.3,
+                fontFamily: 'courier',
+                lineSpacing: 1.4,
+                headingSpacing: 1.2,
                 tableBorders: 'horizontal',
-                tableBorderWeight: 0.1,
+                tableBorderWeight: 0.2,
                 tableBorderColor: '#cccccc',
-                tableHeaderBg: '#f0f0f0',
+                tableHeaderBg: 'none',
                 tableHeaderColor: '#000000',
-                linkColor: [0, 102, 204],
-                codeBackground: true
+                linkColor: [60, 60, 60],
+                codeBackground: false,
+                blockquoteBorder: false
             };
         } else {
-            // GitHub style (default)
+            // GitHub: Traditional, balanced, professional
             return {
                 ...baseSettings,
                 margin: 15,
-                h1: 10,
-                h2: 10,
+                h1: 13,
+                h2: 11,
                 h3: 10,
-                h4: 10,
+                h4: 9,
                 paragraph: 8,
                 list: 8,
                 blockquote: 8,
@@ -885,14 +891,17 @@ This web site is using ${"`"}markedjs/marked${"`"}.
                 table: 8,
                 fontFamily: 'helvetica',
                 lineSpacing: 1.5,
-                headingSpacing: 1.2,
+                headingSpacing: 1.3,
                 tableBorders: 'horizontal',
-                tableBorderWeight: 0.1,
-                tableBorderColor: '#cccccc',
-                tableHeaderBg: '#f0f0f0',
+                tableBorderWeight: 0.15,
+                tableBorderColor: '#d0d0d0',
+                tableHeaderBg: '#fafafa',
                 tableHeaderColor: '#000000',
-                linkColor: [0, 102, 204],
-                codeBackground: false
+                linkColor: [70, 70, 70],
+                codeBackground: true,
+                codeBackgroundColor: '#f6f6f6',
+                blockquoteBorder: true,
+                blockquoteBorderColor: '#ddd'
             };
         }
     };
@@ -1689,10 +1698,20 @@ This web site is using ${"`"}markedjs/marked${"`"}.
                                 tableY = margin;
                             }
                             
-                            // Draw cells with horizontal lines only
+                            // Draw cells with borders based on style settings
                             let xPos = margin;
                             cells.forEach((cell, colIndex) => {
                                 const colWidth = colWidths[colIndex] || 30;
+                                
+                                // Apply header background color if this is a header row
+                                if (isHeader && fontSizes.tableHeaderBg && fontSizes.tableHeaderBg !== 'none') {
+                                    const hexColor = fontSizes.tableHeaderBg;
+                                    const r = parseInt(hexColor.slice(1, 3), 16);
+                                    const g = parseInt(hexColor.slice(3, 5), 16);
+                                    const b = parseInt(hexColor.slice(5, 7), 16);
+                                    doc.setFillColor(r, g, b);
+                                    doc.rect(xPos, tableY, colWidth, maxRowHeight, 'F');
+                                }
                                 
                                 // Draw text and detect URLs
                                 doc.setFontSize(TABLE_FONT_SIZE);
@@ -1743,10 +1762,51 @@ This web site is using ${"`"}markedjs/marked${"`"}.
                                 xPos += colWidth;
                             });
                             
-                            // Draw horizontal line after row
-                            doc.setDrawColor(200, 200, 200);
-                            doc.setLineWidth(0.1);
-                            doc.line(margin, tableY + maxRowHeight, margin + colWidths.reduce((a, b) => a + b, 0), tableY + maxRowHeight);
+                            // Draw borders based on style settings
+                            const borderStyle = fontSizes.tableBorders || 'horizontal';
+                            const borderWeight = fontSizes.tableBorderWeight || 0.1;
+                            const borderColor = fontSizes.tableBorderColor || '#cccccc';
+                            
+                            // Parse hex color
+                            const r = parseInt(borderColor.slice(1, 3), 16);
+                            const g = parseInt(borderColor.slice(3, 5), 16);
+                            const b = parseInt(borderColor.slice(5, 7), 16);
+                            doc.setDrawColor(r, g, b);
+                            
+                            if (borderStyle === 'all') {
+                                // Draw all borders (horizontal and vertical)
+                                doc.setLineWidth(isHeader ? borderWeight * 2 : borderWeight);
+                                
+                                // Horizontal line after row
+                                doc.line(margin, tableY + maxRowHeight, margin + colWidths.reduce((a, b) => a + b, 0), tableY + maxRowHeight);
+                                
+                                // Vertical lines between columns
+                                let vertX = margin;
+                                colWidths.forEach((width, idx) => {
+                                    if (idx > 0) {
+                                        doc.line(vertX, tableY, vertX, tableY + maxRowHeight);
+                                    }
+                                    vertX += width;
+                                });
+                                
+                                // Right border
+                                doc.line(vertX, tableY, vertX, tableY + maxRowHeight);
+                                
+                                // Top border for first row
+                                if (rowIndex === 0) {
+                                    doc.line(margin, tableY, margin + colWidths.reduce((a, b) => a + b, 0), tableY);
+                                }
+                            } else if (borderStyle === 'horizontal') {
+                                // Draw only horizontal lines
+                                doc.setLineWidth(isHeader ? borderWeight * 2 : borderWeight);
+                                doc.line(margin, tableY + maxRowHeight, margin + colWidths.reduce((a, b) => a + b, 0), tableY + maxRowHeight);
+                                
+                                // Top border for first row
+                                if (rowIndex === 0) {
+                                    doc.line(margin, tableY, margin + colWidths.reduce((a, b) => a + b, 0), tableY);
+                                }
+                            }
+                            // If borderStyle === 'none', don't draw any borders
                             
                             tableY += maxRowHeight;
                         });
@@ -2365,32 +2425,112 @@ This web site is using ${"`"}markedjs/marked${"`"}.
     // Helper message display
     let showHelperMessage = (message) => {
         const helperPanel = document.querySelector('#helper-panel');
-        const helperContent = document.querySelector('#helper-panel-content');
+        const canvas = document.getElementById('mofu-canvas');
+        const mouth = document.getElementById('mofu-mouth');
         
-        if (!helperPanel || !helperContent) return;
+        if (!helperPanel) return;
         
-        // Set message
-        helperContent.textContent = message;
+        // Set message directly in panel
+        helperPanel.textContent = message;
         
         // Show panel
         helperPanel.classList.remove('hidden');
         
-        // Auto-hide after 6 seconds
+        // Subtle blob reaction - just a gentle smile widening
+        if (canvas && mouth) {
+            const originalWidth = mouth.style.width || '7px';
+            mouth.style.width = '9px';
+            mouth.style.transition = 'width 0.3s ease';
+            
+            setTimeout(() => {
+                mouth.style.width = originalWidth;
+            }, 800);
+        }
+        
+        // Auto-hide after 4 seconds
         setTimeout(() => {
             helperPanel.classList.add('hidden');
-        }, 6000);
+        }, 4000);
     };
 
     // Setup helper panel close button
     let setupHelperPanel = () => {
-        const closeBtn = document.querySelector('#helper-close-btn');
         const helperPanel = document.querySelector('#helper-panel');
         
-        if (closeBtn && helperPanel) {
-            closeBtn.addEventListener('click', () => {
+        // Click to dismiss
+        if (helperPanel) {
+            helperPanel.addEventListener('click', () => {
                 helperPanel.classList.add('hidden');
             });
         }
+    };
+
+    // Setup dropdown menus to work reliably
+    let setupDropdowns = () => {
+        const dropdowns = document.querySelectorAll('.dropdown');
+        
+        dropdowns.forEach(dropdown => {
+            const dropdownContent = dropdown.querySelector('.dropdown-content');
+            if (!dropdownContent) return;
+            
+            let isOpen = false;
+            let closeTimeout = null;
+            
+            // Open on hover
+            dropdown.addEventListener('mouseenter', () => {
+                clearTimeout(closeTimeout);
+                isOpen = true;
+                dropdownContent.style.display = 'block';
+            });
+            
+            // Delay close when mouse leaves
+            dropdown.addEventListener('mouseleave', () => {
+                closeTimeout = setTimeout(() => {
+                    isOpen = false;
+                    dropdownContent.style.display = 'none';
+                }, 200);
+            });
+            
+            // Keep open when hovering over dropdown content
+            dropdownContent.addEventListener('mouseenter', () => {
+                clearTimeout(closeTimeout);
+                isOpen = true;
+            });
+            
+            dropdownContent.addEventListener('mouseleave', () => {
+                closeTimeout = setTimeout(() => {
+                    isOpen = false;
+                    dropdownContent.style.display = 'none';
+                }, 200);
+            });
+            
+            // Toggle on click
+            dropdown.addEventListener('click', (e) => {
+                // Don't toggle if clicking on a checkbox, select, or link
+                if (e.target.tagName === 'INPUT' || 
+                    e.target.tagName === 'SELECT' || 
+                    e.target.tagName === 'A' ||
+                    e.target.closest('a')) {
+                    return;
+                }
+                
+                clearTimeout(closeTimeout);
+                isOpen = !isOpen;
+                dropdownContent.style.display = isOpen ? 'block' : 'none';
+            });
+        });
+        
+        // Close all dropdowns when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.dropdown')) {
+                dropdowns.forEach(dropdown => {
+                    const content = dropdown.querySelector('.dropdown-content');
+                    if (content) {
+                        content.style.display = 'none';
+                    }
+                });
+            }
+        });
     };
 
     // ----- Cheat Sheet Panel (Third Panel) -----
@@ -2677,7 +2817,6 @@ This web site is using ${"`"}markedjs/marked${"`"}.
         const editorPane = document.getElementById('edit');
         const previewPane = document.getElementById('preview');
         const container = document.getElementById('container');
-        const helperPanel = document.getElementById('helper-panel');
 
         let isDragging = false;
 
@@ -2691,8 +2830,7 @@ This web site is using ${"`"}markedjs/marked${"`"}.
 
         const getAvailableWidth = () => {
             const containerRect = container.getBoundingClientRect();
-            const helperWidth = helperPanel && !helperPanel.classList.contains('hidden') ? 300 : 0;
-            return containerRect.width - helperWidth;
+            return containerRect.width;
         };
 
         const getAvailableHeight = () => {
@@ -2857,14 +2995,6 @@ This web site is using ${"`"}markedjs/marked${"`"}.
         };
 
         window.addEventListener('resize', updatePaneSizes);
-        
-        // Watch for helper panel changes
-        if (helperPanel) {
-            const observer = new MutationObserver(() => {
-                updatePaneSizes();
-            });
-            observer.observe(helperPanel, { attributes: true, attributeFilter: ['class'] });
-        }
 
         // Watch for layout changes (vertical/horizontal toggle)
         const layoutObserver = new MutationObserver(() => {
@@ -2893,6 +3023,7 @@ This web site is using ${"`"}markedjs/marked${"`"}.
     setupInsertFooterButton();
     setupInsertBreakButton();
     setupHelperPanel();
+    setupDropdowns();
     setupCheatSheetButton();
     
     // Load PDF settings
