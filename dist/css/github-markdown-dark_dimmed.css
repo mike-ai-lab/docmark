@@ -491,6 +491,26 @@
   margin-bottom: 1rem;
 }
 
+/* Better spacing for tables */
+.markdown-body h1 + table,
+.markdown-body h2 + table,
+.markdown-body h3 + table,
+.markdown-body h4 + table,
+.markdown-body h5 + table,
+.markdown-body h6 + table {
+  margin-top: 0.5rem;
+}
+
+.markdown-body table + p,
+.markdown-body table + h1,
+.markdown-body table + h2,
+.markdown-body table + h3,
+.markdown-body table + h4,
+.markdown-body table + h5,
+.markdown-body table + h6 {
+  margin-top: 1.5rem;
+}
+
 .markdown-body blockquote>:first-child {
   margin-top: 0;
 }

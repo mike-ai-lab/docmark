@@ -39,6 +39,16 @@
           link.type = 'text/css';
           link.href = href;
           document.head.appendChild(link);
+          
+          // Set highlight.js theme based on dark mode
+          setTimeout(function() {
+            var lightTheme = document.getElementById('hljs-light-theme');
+            var darkTheme = document.getElementById('hljs-dark-theme');
+            if (lightTheme && darkTheme) {
+              lightTheme.disabled = useDark;
+              darkTheme.disabled = !useDark;
+            }
+          }, 0);
         } catch (e) {
           // ignore — app will correct theme after load
         }
@@ -46,7 +56,14 @@
     </script>
     <link rel="stylesheet" type="text/css" href="css/style.css?v=1.12.0">
     <link rel="stylesheet" type="text/css" href="css/vscode-style.css?v=1.12.0">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css" id="hljs-light-theme">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css" id="hljs-dark-theme" disabled>
     <link rel="icon" type="image/png" href="favicon.png">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script>
+      // Make hljs available globally for the module
+      window.hljs = hljs;
+    </script>
     <script defer src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" integrity="sha512-qZvrmS2ekKPF2mSznTQsxqPgnpkI4DNTlrdUmTzrDgektczlKNRRhy5X5AAOnx5S09ydFYWWNSfcEqDTTHgtNA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script type="module" src="/src/main.js?v=1.11.0"></script>
     <title>Markdown Live Preview</title>
@@ -75,6 +92,7 @@
                 <div class="btn-item" id="paste-button"><a href="#">Paste</a></div>
                 <div class="btn-item" id="copy-button"><a href="#">Copy</a></div>
                 <div class="btn-item" id="undo-button"><a href="#">Undo</a></div>
+                <div class="btn-item" id="beautify-button"><a href="#">Beautify</a></div>
                 <div class="btn-item" id="clear-button"><a href="#">Clear</a></div>
             </div>
             
@@ -105,6 +123,10 @@
                             <span>Sync Cursor</span>
                         </label>
                         <label class="dropdown-item">
+                            <input type="checkbox" id="helper-messages-checkbox">
+                            <span>Helper Messages</span>
+                        </label>
+                        <label class="dropdown-item">
                             <input type="checkbox" id="theme-checkbox">
                             <span>Dark Mode</span>
                         </label>
@@ -115,6 +137,10 @@
                         <label class="dropdown-item">
                             <input type="checkbox" id="vertical-layout-checkbox">
                             <span>Vertical Layout</span>
+                        </label>
+                        <label class="dropdown-item">
+                            <input type="checkbox" id="toc-checkbox">
+                            <span>Table of Contents</span>
                         </label>
                         <div class="dropdown-item">
                             <label>
@@ -167,10 +193,16 @@
                 <!-- Cheatsheet content will be inserted here -->
             </div>
         </div>
-    </div>
 
-    <div id="helper-panel" class="helper-panel hidden">
-        <!-- Simple text message only -->
+        <div id="toc-panel" class="column toc-pane hidden">
+            <div class="toc-panel-header">
+                <h3>Table of Contents</h3>
+                <button class="toc-close" id="toc-close-btn">×</button>
+            </div>
+            <div class="toc-panel-content" id="toc-content">
+                <!-- TOC will be inserted here -->
+            </div>
+        </div>
     </div>
 
     <footer></footer>

@@ -1,0 +1,273 @@
+import React, { useState, useCallback, useRef, useEffect } from 'react';
+import { 
+  Columns, Layout, ChevronRight, ChevronLeft, 
+  Save, Rows, Plus, Search, Zap, Layers, 
+  FileText, Briefcase, MapPin, ClipboardList, Trash2
+} from 'lucide-react';
+
+const App = () => {
+  const [orientation, setOrientation] = useState('horizontal');
+  const [markdown, setMarkdown] = useState(`# Project: Riyadh Villa Expansion\n\n12 Feb 2026 | Location: An Narjis, Riyadh\n\n---\n\n### Concept: Modern Najdi Architecture\nThis design integrates **sustainable local stone** with *passive cooling*.\n\n#### Proposed Material Palette:\n| Material | Source | Quality | Thermal Value | Compliance |\n| :--- | :--- | :--- | :--- | :--- |`);
+
+  const [splitOffset, setSplitOffset] = useState(40); 
+  const [rightPanelOpen, setRightPanelOpen] = useState(true);
+  const [rightPanelWidth, setRightPanelWidth] = useState(360); 
+  const [activeTab, setActiveTab] = useState('templates'); 
+  
+  const containerRef = useRef(null);
+  const mainAreaRef = useRef(null);
+  const isResizingMain = useRef(false);
+  const isResizingSide = useRef(false);
+
+  // --- Templates for Document Creation ---
+  const templates = [
+    {
+      id: 'site-visit',
+      name: "Site Visit Report",
+      icon: <MapPin size={16}/>,
+      content: `# Site Visit Report: [Site Name]\n\n**Date:** ${new Date().toLocaleDateString()}\n**Location:** Riyadh, KSA\n\n---\n\n### 1. Observations\n- [ ] Structural progress check\n- [ ] Material delivery verification\n\n### 2. Issues Encountered\n> Note: High dust levels today affecting finish application.\n\n### 3. Action Items\n1. Coordinate with MEP contractor.\n2. Confirm Riyadh Stone batch color.`
+    },
+    {
+      id: 'material-spec',
+      name: "Material Proposal",
+      icon: <Layers size={16}/>,
+      content: `# Material Specification Proposal\n\n**Client:** [Client Name]\n**Project:** [Project ID]\n\n---\n\n### Design Intent\nCreating a bridge between traditional Najdi textures and modern minimalism.\n\n#### Proposed Material Palette:\n| Material | Source | Quality | Thermal Value | Compliance |\n| :--- | :--- | :--- | :--- | :--- |\n\n### Maintenance Notes\n- All local stone to be sealed with nano-coating.\n- Glazing requires monthly cleaning due to sand accumulation.`
+    },
+    {
+      id: 'meeting-minutes',
+      name: "Meeting Minutes",
+      icon: <ClipboardList size={16}/>,
+      content: `# Meeting Minutes: Concept Review\n\n**Attendees:** Muhamad, [Client], [Engineer]\n**Location:** Muhamad Studio, Riyadh\n\n---\n\n### Discussion Points\n- Budget alignment for premium marble.\n- HVAC integration in the central courtyard.\n\n### Decisions\n- [x] Approved the use of Grade A Riyadh Stone.\n- [ ] Awaiting final glazing samples.`
+    }
+  ];
+
+  // Material Library for Insertion
+  const materialLibrary = [
+    { name: "Riyadh Stone", cat: "Facade", source: "Local", quality: "Grade A", thermal: "Ex", compliant: "✅" },
+    { name: "Double Glazing", cat: "Openings", source: "Dammam", quality: "Std", thermal: "Hi", compliant: "✅" },
+    { name: "GRC Panels", cat: "Facade", source: "Local", quality: "Custom", thermal: "Med", compliant: "✅" }
+  ];
+
+  const applyTemplate = (content) => {
+    // Using a custom confirmation state would be better, but keeping it simple as requested
+    if (window.confirm("This will replace your current workspace. Continue?")) {
+      setMarkdown(content);
+    }
+  };
+
+  const insertMaterial = (mat) => {
+    const tableHeader = "| Material | Source | Quality | Thermal Value | Compliance |";
+    const divider = "| :--- | :--- | :--- | :--- | :--- |";
+    const newRow = `| ${mat.name} | ${mat.source} | ${mat.quality} | ${mat.thermal} | ${mat.compliant} |`;
+
+    setMarkdown(prev => {
+      if (prev.includes(tableHeader)) {
+        const lines = prev.split('\n');
+        const tableIndex = lines.findLastIndex(line => line.startsWith('|'));
+        lines.splice(tableIndex + 1, 0, newRow);
+        return lines.join('\n');
+      } else {
+        return prev + `\n\n#### Proposed Material Palette:\n${tableHeader}\n${divider}\n${newRow}`;
+      }
+    });
+  };
+
+  const renderMarkdown = (text) => {
+    if (!text) return '';
+    let html = text;
+    
+    // Basic Markdown Parser
+    html = html.replace(/^# (.*$)/gim, '<h1 class="text-4xl font-black mb-8 text-slate-900 border-l-8 border-blue-600 pl-6">$1</h1>');
+    html = html.replace(/^## (.*$)/gim, '<h2 class="text-2xl font-bold mb-4 text-slate-800 border-b pb-2">$1</h2>');
+    html = html.replace(/^### (.*$)/gim, '<h3 class="text-xl font-semibold mb-3 text-blue-600">$1</h3>');
+    html = html.replace(/^#### (.*$)/gim, '<h4 class="text-sm font-bold uppercase tracking-widest mb-2 text-slate-400">$1</h4>');
+    html = html.replace(/^\> (.*$)/gim, '<blockquote class="border-l-4 border-amber-500 pl-6 py-4 italic my-6 text-slate-600 bg-amber-50/30 rounded-r-lg">$1</blockquote>');
+    
+    // Table Parser
+    const tableRegex = /^\|(.+)\|$\n^\|([-| :]+)\|$\n((?:^\|.+\|$\n?)+)/gm;
+    html = html.replace(tableRegex, (match, header, divider, rows) => {
+      const parseRow = (row, isHeader = false) => row.split('|').filter(c => c.trim() !== '').map(c => `<${isHeader ? 'th' : 'td'} class="border border-slate-100 px-4 py-3 ${isHeader ? 'bg-slate-50 font-bold text-slate-700' : ''}">${c.trim()}</${isHeader ? 'th' : 'td'}>`).join('');
+      return `<div class="my-8 overflow-hidden rounded-xl border border-slate-200 shadow-sm"><table class="w-full border-collapse text-sm text-left"><thead><tr>${parseRow(header, true)}</tr></thead><tbody class="divide-y divide-slate-50">${rows.trim().split('\n').map(r => `<tr>${parseRow(r)}</tr>`).join('')}</tbody></table></div>`;
+    });
+
+    html = html.replace(/^- \[ \] (.*$)/gim, '<li class="flex items-center gap-3 py-1 text-slate-500 list-none"><div class="w-4 h-4 border-2 border-slate-300 rounded shrink-0"></div> $1</li>');
+    html = html.replace(/^- \[x\] (.*$)/gim, '<li class="flex items-center gap-3 py-1 text-emerald-600 font-medium list-none"><div class="w-4 h-4 bg-emerald-500 rounded flex items-center justify-center text-[10px] text-white shrink-0">✓</div> $1</li>');
+    html = html.replace(/\*\*(.*)\*\*/gim, '<strong>$1</strong>');
+    html = html.replace(/\n/g, '<br />');
+    return html;
+  };
+
+  const handleMouseMove = useCallback((e) => {
+    if (isResizingMain.current) {
+      const rect = mainAreaRef.current.getBoundingClientRect();
+      const offset = orientation === 'horizontal' ? ((e.clientX - rect.left) / rect.width) * 100 : ((e.clientY - rect.top) / rect.height) * 100;
+      if (offset > 15 && offset < 85) setSplitOffset(offset);
+    }
+    if (isResizingSide.current) {
+      const rect = containerRef.current.getBoundingClientRect();
+      const width = rect.right - e.clientX;
+      if (width > 280 && width < 600) setRightPanelWidth(width);
+    }
+  }, [orientation]);
+
+  const stopResizing = () => { 
+    isResizingMain.current = false; 
+    isResizingSide.current = false; 
+    document.removeEventListener('mousemove', handleMouseMove); 
+  };
+
+  return (
+    <div className="flex flex-col h-screen w-full bg-[#f8fafc] font-sans text-slate-800 overflow-hidden" ref={containerRef}>
+      {/* Header */}
+      <header className="h-16 border-b bg-white flex items-center justify-between px-6 shrink-0 z-40">
+        <div className="flex items-center gap-4">
+          <div className="bg-blue-600 text-white p-2 rounded-xl shadow-lg shadow-blue-100"><Briefcase size={20} /></div>
+          <h1 className="font-black text-xl tracking-tighter uppercase">MUHAMAD <span className="text-blue-600 font-light">STUDIO</span></h1>
+        </div>
+        
+        <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl">
+                <button onClick={() => setOrientation('horizontal')} className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${orientation === 'horizontal' ? 'bg-white shadow-sm' : 'text-slate-400'}`}>Side</button>
+                <button onClick={() => setOrientation('vertical')} className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${orientation === 'vertical' ? 'bg-white shadow-sm' : 'text-slate-400'}`}>Stack</button>
+            </div>
+            <button className="bg-slate-900 text-white px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest flex items-center gap-2 hover:bg-black transition-all">
+                <Save size={16} /> Finalize PDF
+            </button>
+        </div>
+      </header>
+
+      <main className="flex flex-1 overflow-hidden relative">
+        <div ref={mainAreaRef} className={`flex flex-1 overflow-hidden ${orientation === 'vertical' ? 'flex-col' : 'flex-row'}`}>
+          {/* Editor Area */}
+          <section className="flex flex-col bg-white overflow-hidden relative" style={orientation === 'horizontal' ? { width: `${splitOffset}%` } : { height: `${splitOffset}%` }}>
+            <div className="px-5 py-3 bg-slate-50 border-b flex justify-between items-center">
+              <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Creation Mode</span>
+              <div className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded">Markdown Enabled</div>
+            </div>
+            <textarea 
+              className="flex-1 p-10 outline-none font-mono text-sm leading-relaxed text-slate-700 bg-[#fafafa]/30 resize-none" 
+              value={markdown} 
+              onChange={(e) => setMarkdown(e.target.value)} 
+              placeholder="Start your ideation here..."
+            />
+          </section>
+
+          {/* Draggable Divider */}
+          <div 
+            onMouseDown={() => { isResizingMain.current = true; document.addEventListener('mousemove', handleMouseMove); document.addEventListener('mouseup', stopResizing); }} 
+            className={`${orientation === 'horizontal' ? 'w-1 cursor-col-resize' : 'h-1 cursor-row-resize'} hover:bg-blue-400 bg-slate-200 shrink-0 z-30 transition-colors`} 
+          />
+
+          {/* Preview Panel */}
+          <section className="flex-1 flex flex-col bg-white overflow-hidden shadow-2xl z-10 border-l border-slate-100">
+            <div className="px-5 py-3 bg-white border-b flex justify-between items-center">
+                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Delivery View (PDF Preview)</span>
+                <span className="text-[10px] font-bold text-slate-400">A4 Vertical</span>
+            </div>
+            <div className="flex-1 overflow-auto p-16 bg-slate-100/50">
+              <div className="max-w-[800px] mx-auto bg-white p-[80px] shadow-sm border border-slate-200 min-h-[1122px] transition-all">
+                <div className="flex justify-between items-start mb-16">
+                    <div className="w-12 h-1 bg-slate-900"></div>
+                    <div className="text-right">
+                        <p className="text-[10px] font-black text-slate-900 uppercase tracking-tighter">Muhamad Studio</p>
+                        <p className="text-[8px] font-bold text-slate-400 uppercase">Riyadh, Saudi Arabia</p>
+                    </div>
+                </div>
+                <div className="prose prose-slate max-w-none" dangerouslySetInnerHTML={{ __html: renderMarkdown(markdown) }} />
+              </div>
+            </div>
+          </section>
+        </div>
+
+        {/* Intelligence Sidebar Resizer */}
+        <div 
+          onMouseDown={() => { isResizingSide.current = true; document.addEventListener('mousemove', handleMouseMove); document.addEventListener('mouseup', stopResizing); }} 
+          className="w-1 hover:bg-blue-400 bg-slate-200 cursor-col-resize shrink-0 z-30 transition-colors" 
+        />
+
+        {/* Intelligence Sidebar */}
+        <aside className={`bg-white flex flex-col transition-all duration-300 relative border-l ${!rightPanelOpen ? 'w-0 overflow-hidden' : ''}`} style={{ width: rightPanelOpen ? `${rightPanelWidth}px` : '0px' }}>
+          <button 
+            onClick={() => setRightPanelOpen(!rightPanelOpen)} 
+            className="absolute -left-4 top-24 bg-white border shadow-md rounded-full p-1.5 z-50 text-slate-400 hover:text-blue-600 transition-colors"
+          >
+            {rightPanelOpen ? <ChevronRight size={16}/> : <ChevronLeft size={16}/>}
+          </button>
+          
+          <div className="flex border-b shrink-0">
+            <button 
+              onClick={() => setActiveTab('templates')} 
+              className={`flex-1 py-4 text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'templates' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-slate-400 hover:text-slate-600'}`}
+            >
+              Templates
+            </button>
+            <button 
+              onClick={() => setActiveTab('assets')} 
+              className={`flex-1 py-4 text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'assets' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-slate-400 hover:text-slate-600'}`}
+            >
+              Assets
+            </button>
+          </div>
+
+          <div className="flex-1 overflow-y-auto p-6 space-y-6">
+            {activeTab === 'templates' ? (
+              <div className="space-y-4">
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Select Base Structure</p>
+                {templates.map(tmp => (
+                  <button 
+                    key={tmp.id} 
+                    onClick={() => applyTemplate(tmp.content)}
+                    className="w-full p-4 bg-slate-50 border border-slate-100 rounded-xl hover:border-blue-300 hover:bg-blue-50/30 transition-all text-left group"
+                  >
+                    <div className="flex items-center gap-3 mb-2">
+                        <div className="p-2 bg-white rounded-lg shadow-sm group-hover:text-blue-600 transition-colors">{tmp.icon}</div>
+                        <span className="font-bold text-sm text-slate-900">{tmp.name}</span>
+                    </div>
+                    <p className="text-[10px] text-slate-500 line-clamp-2">Professional architectural structure optimized for KSA delivery standards.</p>
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Quick Asset Insert</p>
+                {materialLibrary.map((mat, i) => (
+                    <div key={i} className="p-4 bg-white border border-slate-200 rounded-xl hover:shadow-md transition-all group">
+                        <div className="flex justify-between items-center">
+                            <div>
+                                <h4 className="font-bold text-xs text-slate-900">{mat.name}</h4>
+                                <p className="text-[9px] text-slate-400 uppercase font-black">{mat.cat}</p>
+                            </div>
+                            <button 
+                              onClick={() => insertMaterial(mat)} 
+                              className="p-1.5 bg-slate-50 rounded-lg group-hover:bg-blue-600 group-hover:text-white transition-all text-slate-400"
+                            >
+                              <Plus size={14}/>
+                            </button>
+                        </div>
+                    </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="p-6 border-t bg-slate-50/50 shrink-0">
+             <div className="flex items-center gap-2 text-blue-600 mb-2 font-black text-[10px] uppercase tracking-widest">
+                <Zap size={12}/> AI Formatting Guide
+             </div>
+             <p className="text-[10px] text-slate-500 leading-relaxed italic">"Your document follows SBC 601 standards. Material palettes are synchronized with Riyadh's local market."</p>
+          </div>
+        </aside>
+      </main>
+
+      <footer className="h-10 border-t bg-white flex items-center px-6 justify-between shrink-0">
+        <div className="flex gap-6 text-[10px] font-black text-slate-400 uppercase tracking-widest italic">
+            <span>Editor: Markdown v3.0</span>
+            <span className="text-blue-600">Secure Sync: Riyadh Cloud</span>
+        </div>
+        <div className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">MUHAMAD STUDIO • {new Date().getFullYear()}</div>
+      </footer>
+    </div>
+  );
+};
+
+export default App;

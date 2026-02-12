@@ -7,6 +7,10 @@ const init = () => {
     let hasEdited = false;
     let scrollBarSync = false;
     let cursorSync = false;
+    let tocEnabled = false;
+
+    // Global drag state - only one resizer can be active at a time
+    let activeResizer = null;
 
     const localStorageNamespace = 'com.markdownlivepreview';
     const localStorageKey = 'last_state';
@@ -17,6 +21,8 @@ const init = () => {
     const localStorageFlipPanelsKey = 'flip_panels_settings';
     const localStorageVerticalLayoutKey = 'vertical_layout_settings';
     const localStoragePdfSettingsKey = 'pdf_font_settings';
+    const localStorageHelperMessagesKey = 'helper_messages_settings';
+    const localStorageTocKey = 'toc_settings';
     const confirmationMessage = 'Are you sure you want to reset? Your changes will be lost.';
     
     // PDF Font Settings - configurable
@@ -233,6 +239,11 @@ This web site is using ${"`"}markedjs/marked${"`"}.
             let value = editor.getValue();
             convert(value);
             saveLastContent(value);
+            
+            // Update TOC if visible
+            if (tocVisible) {
+                updateToc();
+            }
         });
 
         // Scroll sync is now handled in the consolidated section at the bottom
@@ -271,19 +282,49 @@ This web site is using ${"`"}markedjs/marked${"`"}.
         // Parse metadata first
         const { metadata, content } = parseMetadata(markdown);
         
-        let options = {
+        // Configure marked with syntax highlighting
+        marked.setOptions({
             headerIds: false,
             mangle: false,
             breaks: true,        // Support line breaks like VSCode
             gfm: true,           // GitHub Flavored Markdown
             pedantic: false,     // Don't be overly strict
             smartLists: true,    // Better list handling
-            smartypants: false   // Don't convert quotes/dashes
-        };
+            smartypants: false,  // Don't convert quotes/dashes
+            highlight: function(code, lang) {
+                // Check if highlight.js is available
+                if (typeof window.hljs === 'undefined') {
+                    console.warn('highlight.js not loaded');
+                    return code;
+                }
+                
+                // Use highlight.js for syntax highlighting
+                if (lang && window.hljs.getLanguage(lang)) {
+                    try {
+                        return window.hljs.highlight(code, { language: lang }).value;
+                    } catch (e) {
+                        console.error('Highlight error:', e);
+                        return code;
+                    }
+                }
+                // Auto-detect language if not specified
+                try {
+                    return window.hljs.highlightAuto(code).value;
+                } catch (e) {
+                    console.error('Auto-highlight error:', e);
+                    return code;
+                }
+            }
+        });
         
         // First, render the HTML
-        let html = marked.parse(markdown, options);
-        let sanitized = DOMPurify.sanitize(html);
+        let html = marked.parse(markdown);
+        
+        // Configure DOMPurify to allow highlight.js classes
+        let sanitized = DOMPurify.sanitize(html, {
+            ADD_ATTR: ['class'], // Allow class attributes for syntax highlighting
+            ADD_TAGS: ['span']   // Allow span tags for syntax highlighting
+        });
         
         // Create a temporary container
         const tempDiv = document.createElement('div');
@@ -559,16 +600,440 @@ This web site is using ${"`"}markedjs/marked${"`"}.
 
     // Clear editor content
     let clearEditor = () => {
-        if (editor.getValue().trim() !== '') {
-            var confirmed = window.confirm('Are you sure you want to clear all content?');
-            if (!confirmed) {
-                return;
-            }
-        }
         editor.setValue('');
         editor.focus();
         hasEdited = false;
     };
+
+    // Beautify markdown - format and clean up markdown text
+    let beautifyMarkdown = () => {
+        const originalContent = editor.getValue();
+        if (!originalContent || originalContent.trim() === '') return;
+        
+        const beautifiedContent = performBeautify(originalContent);
+        
+        // If no changes, notify user
+        if (originalContent === beautifiedContent) {
+            showMofuHelper('Your markdown is already <strong>beautifully formatted</strong>!');
+            return;
+        }
+        
+        // Show inline diff in Monaco editor
+        showInlineDiff(originalContent, beautifiedContent);
+    };
+    
+    // Show inline diff view in Monaco editor
+    let showInlineDiff = (original, modified) => {
+        // Hide the regular editor
+        const editorWrapper = document.getElementById('editor-wrapper');
+        const originalEditorDiv = document.getElementById('editor');
+        
+        // Create diff editor container
+        const diffContainer = document.createElement('div');
+        diffContainer.id = 'diff-editor-container';
+        diffContainer.style.cssText = 'width: 100%; height: 100%; position: relative;';
+        
+        // Create action buttons overlay
+        const actionsBar = document.createElement('div');
+        actionsBar.style.cssText = `
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        `;
+        
+        actionsBar.innerHTML = `
+            <button id="diff-copy-btn" title="Copy Diff" style="
+                width: 40px;
+                height: 40px;
+                background: var(--bg-color, white);
+                color: var(--text-color, black);
+                border: 1px solid #ddd;
+                border-radius: 4px;
+                cursor: pointer;
+                font-size: 18px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                padding: 0;
+            ">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect width="14" height="14" x="8" y="8" rx="2" ry="2"/>
+                    <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>
+                </svg>
+            </button>
+            <button id="diff-discard-btn" title="Cancel" style="
+                width: 40px;
+                height: 40px;
+                background: var(--bg-color, white);
+                color: var(--text-color, black);
+                border: 1px solid #ddd;
+                border-radius: 4px;
+                cursor: pointer;
+                font-size: 18px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                padding: 0;
+            ">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M18 6 6 18"/>
+                    <path d="m6 6 12 12"/>
+                </svg>
+            </button>
+            <button id="diff-apply-btn" title="Apply Changes" style="
+                width: 40px;
+                height: 40px;
+                background: #28a745;
+                color: white;
+                border: none;
+                border-radius: 4px;
+                cursor: pointer;
+                font-size: 18px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                padding: 0;
+            ">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M20 6 9 17l-5-5"/>
+                </svg>
+            </button>
+        `;
+        
+        diffContainer.appendChild(actionsBar);
+        
+        // Create diff editor div
+        const diffEditorDiv = document.createElement('div');
+        diffEditorDiv.id = 'diff-editor';
+        diffEditorDiv.style.cssText = 'width: 100%; height: 100%;';
+        diffContainer.appendChild(diffEditorDiv);
+        
+        // Hide original editor and show diff container
+        originalEditorDiv.style.display = 'none';
+        editorWrapper.appendChild(diffContainer);
+        
+        // Update preview with beautified content immediately
+        convert(modified);
+        
+        // Get current theme
+        const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+        
+        // Generate unified diff format with +/- prefixes
+        const originalLines = original.split('\n');
+        const modifiedLines = modified.split('\n');
+        const diffLines = [];
+        const decorations = [];
+        
+        let lineNumber = 1;
+        const maxLines = Math.max(originalLines.length, modifiedLines.length);
+        
+        for (let i = 0; i < maxLines; i++) {
+            const origLine = originalLines[i];
+            const modLine = modifiedLines[i];
+            
+            if (origLine === modLine) {
+                // Unchanged line - show as context
+                if (origLine !== undefined) {
+                    diffLines.push('  ' + origLine);
+                    lineNumber++;
+                }
+            } else {
+                // Line changed
+                if (origLine !== undefined && modLine !== undefined) {
+                    // Both exist - show deletion then addition
+                    diffLines.push('- ' + origLine);
+                    decorations.push({
+                        range: new monaco.Range(lineNumber, 1, lineNumber, 1),
+                        options: {
+                            isWholeLine: true,
+                            className: 'diff-line-deleted',
+                            glyphMarginClassName: 'diff-glyph-deleted'
+                        }
+                    });
+                    lineNumber++;
+                    
+                    diffLines.push('+ ' + modLine);
+                    decorations.push({
+                        range: new monaco.Range(lineNumber, 1, lineNumber, 1),
+                        options: {
+                            isWholeLine: true,
+                            className: 'diff-line-added',
+                            glyphMarginClassName: 'diff-glyph-added'
+                        }
+                    });
+                    lineNumber++;
+                } else if (origLine !== undefined) {
+                    // Only original exists - deletion
+                    diffLines.push('- ' + origLine);
+                    decorations.push({
+                        range: new monaco.Range(lineNumber, 1, lineNumber, 1),
+                        options: {
+                            isWholeLine: true,
+                            className: 'diff-line-deleted',
+                            glyphMarginClassName: 'diff-glyph-deleted'
+                        }
+                    });
+                    lineNumber++;
+                } else if (modLine !== undefined) {
+                    // Only modified exists - addition
+                    diffLines.push('+ ' + modLine);
+                    decorations.push({
+                        range: new monaco.Range(lineNumber, 1, lineNumber, 1),
+                        options: {
+                            isWholeLine: true,
+                            className: 'diff-line-added',
+                            glyphMarginClassName: 'diff-glyph-added'
+                        }
+                    });
+                    lineNumber++;
+                }
+            }
+        }
+        
+        const diffText = diffLines.join('\n');
+        
+        // Create editor with diff content
+        const tempEditor = monaco.editor.create(diffEditorDiv, {
+            value: diffText,
+            language: 'markdown',
+            theme: isDark ? 'custom-dark' : 'custom-light',
+            fontSize: 14,
+            minimap: { enabled: false },
+            scrollBeyondLastLine: false,
+            automaticLayout: true,
+            wordWrap: 'off',
+            lineNumbers: 'on',
+            glyphMargin: true,
+            folding: false,
+            readOnly: true
+        });
+        
+        // Apply decorations
+        tempEditor.deltaDecorations([], decorations);
+        
+        console.log('Applied', decorations.length, 'diff decorations');
+        
+        // Copy button handler - copy the diff text with +/- prefixes
+        document.getElementById('diff-copy-btn').addEventListener('click', async () => {
+            try {
+                await navigator.clipboard.writeText(diffText);
+                const btn = document.getElementById('diff-copy-btn');
+                const originalBg = btn.style.background;
+                btn.style.background = '#28a745';
+                btn.querySelector('svg').style.stroke = 'white';
+                setTimeout(() => {
+                    btn.style.background = originalBg;
+                    btn.querySelector('svg').style.stroke = 'currentColor';
+                }, 1500);
+            } catch (err) {
+                showMofuHelper('Failed to copy to clipboard');
+            }
+        });
+        
+        // Apply button handler
+        document.getElementById('diff-apply-btn').addEventListener('click', () => {
+            // Apply to main editor
+            editor.setValue(modified);
+            
+            // Clean up temp editor
+            tempEditor.dispose();
+            diffContainer.remove();
+            originalEditorDiv.style.display = 'block';
+            
+            editor.focus();
+            showMofuHelper('Changes <strong>applied</strong>! Your markdown has been beautified.');
+        });
+        
+        // Cancel button handler
+        document.getElementById('diff-discard-btn').addEventListener('click', () => {
+            // Clean up temp editor
+            tempEditor.dispose();
+            diffContainer.remove();
+            originalEditorDiv.style.display = 'block';
+            
+            // Restore original content in preview
+            convert(original);
+            
+            editor.focus();
+            showMofuHelper('Changes <strong>discarded</strong>. Your original markdown is unchanged.');
+        });
+    };
+    
+/**
+ * Robust Markdown Beautifier
+ * Features: YAML safety, Code block protection, Table alignment, 
+ * List normalization, and Recursive Blockquote beautification.
+ * * Reference: CommonMark & GitHub Flavored Markdown (GFM) Specifications.
+ */
+let performBeautify = (content) => {
+    if (!content) return '';
+
+    const lines = content.split('\n');
+    const beautified = [];
+    let i = 0;
+    let previousType = 'start';
+
+    // Helper: Consistent spacing between different blocks
+    const ensureSpacing = () => {
+        if (beautified.length > 0 && beautified[beautified.length - 1] !== '') {
+            beautified.push('');
+        }
+    };
+
+    // Helper: Align Table Columns
+    const processTable = (tableLines) => {
+        const grid = tableLines.map(line => 
+            line.trim().replace(/^\||\|$/g, '').split('|').map(cell => cell.trim())
+        );
+        const colWidths = [];
+        grid.forEach(row => {
+            row.forEach((cell, colIdx) => {
+                colWidths[colIdx] = Math.max(colWidths[colIdx] || 0, cell.length);
+            });
+        });
+        return grid.map((row, rowIdx) => {
+            const isSep = row.every(cell => /^[ \-:]+$/.test(cell));
+            const aligned = row.map((cell, colIdx) => {
+                if (isSep) {
+                    const l = cell.startsWith(':'), r = cell.endsWith(':');
+                    return (l ? ':' : '') + '-'.repeat(Math.max(3, colWidths[colIdx] - (l ? 1 : 0) - (r ? 1 : 0))) + (r ? ':' : '');
+                }
+                return cell.padEnd(colWidths[colIdx], ' ');
+            });
+            return '| ' + aligned.join(' | ') + ' |';
+        }).join('\n');
+    };
+
+    while (i < lines.length) {
+        let line = lines[i];
+        let trimmed = line.trim();
+
+        // 1. YAML Front Matter (Preserve as-is)
+        if (i === 0 && trimmed === '---') {
+            beautified.push(trimmed);
+            i++;
+            while (i < lines.length && lines[i].trim() !== '---') {
+                beautified.push(lines[i]);
+                i++;
+            }
+            if (i < lines.length) beautified.push('---');
+            previousType = 'yaml';
+            i++; continue;
+        }
+
+        // 2. Code Blocks (No modification inside)
+        if (trimmed.startsWith('```')) {
+            ensureSpacing();
+            beautified.push(trimmed);
+            i++;
+            while (i < lines.length && !lines[i].trim().startsWith('```')) {
+                beautified.push(lines[i]);
+                i++;
+            }
+            if (i < lines.length) beautified.push(lines[i].trim());
+            previousType = 'code-end';
+            i++; continue;
+        }
+
+        // 3. Blockquotes (Recursive Beautification)
+        if (trimmed.startsWith('>')) {
+            if (previousType !== 'blockquote') ensureSpacing();
+            let quoteLines = [];
+            while (i < lines.length && lines[i].trim().startsWith('>')) {
+                // Strip the leading '>' and one space to process inner content
+                quoteLines.push(lines[i].trim().replace(/^>\s?/, ''));
+                i++;
+            }
+            // Recursively beautify the inner content of the blockquote
+            const innerBeautified = performBeautify(quoteLines.join('\n'));
+            innerBeautified.split('\n').forEach(qLine => beautified.push(`> ${qLine}`));
+            previousType = 'blockquote';
+            continue;
+        }
+
+        // 4. Tables
+        if (trimmed.startsWith('|')) {
+            ensureSpacing();
+            let tableLines = [];
+            while (i < lines.length && lines[i].trim().startsWith('|')) {
+                tableLines.push(lines[i]);
+                i++;
+            }
+            beautified.push(processTable(tableLines));
+            previousType = 'table';
+            continue;
+        }
+
+        // 5. Headers
+        const headerMatch = trimmed.match(/^(#{1,6})\s*(.*)/);
+        if (headerMatch) {
+            ensureSpacing();
+            let headerText = headerMatch[2].replace(/\s+#*$/, '').trim();
+            // Fix numbered headings: "1.Text" -> "1. Text"
+            headerText = headerText.replace(/^(\d+)\.(\S)/, '$1. $2');
+            beautified.push(`${headerMatch[1]} ${headerText}`);
+            previousType = 'header';
+            i++; continue;
+        }
+
+        // 6. Lists (Normalized to *)
+        const listMatch = line.match(/^(\s*)([*+-]|\d+\.)\s*(.*)/);
+        if (listMatch) {
+            if (previousType !== 'list' && previousType !== 'start') ensureSpacing();
+            let bullet = listMatch[2];
+            // Normalize all list markers to *
+            if (['+', '-'].includes(bullet) || /^\d+\.$/.test(bullet)) {
+                bullet = '*';
+            }
+            let content = listMatch[3].trim();
+            // Fix key-value pairs in list items: "Key:Value" -> "Key: Value"
+            content = content.replace(/^([A-Za-z][A-Za-z0-9\s]*):(\S)/, '$1: $2');
+            beautified.push(`${listMatch[1]}${bullet} ${content}`);
+            previousType = 'list';
+            i++; continue;
+        }
+
+        // 7. Horizontal Rules
+        if (/^([-*_])\1{2,}$/.test(trimmed)) {
+            ensureSpacing();
+            beautified.push('---');
+            previousType = 'hr';
+            i++; continue;
+        }
+
+        // 8. Empty Lines
+        if (trimmed === '') {
+            if (previousType !== 'empty' && previousType !== 'start') {
+                beautified.push('');
+                previousType = 'empty';
+            }
+            i++; continue;
+        }
+
+        // 9. Standard Text
+        if (['header', 'hr', 'code-end', 'table'].includes(previousType)) {
+            ensureSpacing();
+        }
+        // Fix key-value pairs: "Key:Value" -> "Key: Value"
+        let processedText = trimmed.replace(/^([A-Za-z][A-Za-z0-9\s]*):(\S)/, '$1: $2');
+        beautified.push(processedText);
+        previousType = 'text';
+        i++;
+    }
+
+    return beautified.join('\n').trim();
+};
+
+/**
+ * EXECUTION GUIDE:
+ * 1. Pass your raw Markdown string into `performBeautify(yourString)`.
+ * 2. The function returns the cleaned, aligned, and professional Markdown.
+ * 3. Use this for your architecture business documentation or AI-generated design notes.
+ */
 
     // Paste from clipboard
     let pasteFromClipboard = async () => {
@@ -633,6 +1098,21 @@ This web site is using ${"`"}markedjs/marked${"`"}.
         });
     };
 
+    // ----- helper messages toggle -----
+
+    let initHelperMessagesToggle = (settings) => {
+        let checkbox = document.querySelector('#helper-messages-checkbox');
+        if (!checkbox) return;
+        
+        checkbox.checked = settings;
+        helperMessagesEnabled = settings;
+
+        checkbox.addEventListener('change', (event) => {
+            let checked = event.currentTarget.checked;
+            saveHelperMessagesSetting(checked);
+        });
+    };
+
     // ----- preview CSS loader (switch github-markdown css) -----
     const PREVIEW_CSS_LIGHT = 'css/github-markdown-light.css?v=1.12.0';
     const PREVIEW_CSS_DARK = 'css/github-markdown-dark_dimmed.css?v=1.12.0';
@@ -674,6 +1154,14 @@ This web site is using ${"`"}markedjs/marked${"`"}.
     // ----- theme toggle (dark/light) -----
     let setTheme = (enabled) => {
         document.documentElement.setAttribute('data-theme', enabled ? 'dark' : 'light');
+        
+        // Switch highlight.js theme
+        const lightTheme = document.getElementById('hljs-light-theme');
+        const darkTheme = document.getElementById('hljs-dark-theme');
+        if (lightTheme && darkTheme) {
+            lightTheme.disabled = enabled;
+            darkTheme.disabled = !enabled;
+        }
     };
 
     let initThemeToggle = (settings) => {
@@ -770,10 +1258,6 @@ This web site is using ${"`"}markedjs/marked${"`"}.
         const container = document.querySelector('#container');
         if (enabled) {
             container.classList.add('vertical');
-            // Close cheatsheet panel in vertical mode
-            if (cheatSheetVisible) {
-                toggleCheatSheet();
-            }
         } else {
             container.classList.remove('vertical');
         }
@@ -1887,6 +2371,72 @@ This web site is using ${"`"}markedjs/marked${"`"}.
                 }
             };
 
+            // Add Table of Contents if enabled - on dedicated page
+            const tocData = getTocForPdf();
+            if (tocData && tocData.length > 0) {
+                // Center the TOC title vertically on the page
+                const tocStartY = pageHeight / 3;
+                yPosition = tocStartY;
+                
+                // Add "TABLE OF CONTENTS" title - centered and bold
+                doc.setFont('helvetica', 'bold');
+                doc.setFontSize(18);
+                const tocTitle = 'TABLE OF CONTENTS';
+                const titleWidth = doc.getTextWidth(tocTitle);
+                const titleX = (pageWidth - titleWidth) / 2;
+                doc.text(tocTitle, titleX, yPosition);
+                yPosition += 15;
+                
+                // Add decorative line under title
+                const lineMargin = pageWidth * 0.3;
+                doc.setDrawColor(100, 100, 100);
+                doc.setLineWidth(0.5);
+                doc.line(lineMargin, yPosition, pageWidth - lineMargin, yPosition);
+                yPosition += 10;
+                
+                // Add TOC items with proper formatting
+                doc.setFont('helvetica', 'normal');
+                doc.setFontSize(11);
+                
+                // Count H1 items for numbering
+                let h1Counter = 0;
+                
+                tocData.forEach((item) => {
+                    const indent = (item.level - 1) * 8;
+                    const itemText = sanitizeForPdf(item.text);
+                    const leftMargin = pageWidth * 0.2;
+                    
+                    // Check if we need a new page
+                    if (yPosition + 7 > pageHeight - margin * 2) {
+                        doc.addPage();
+                        yPosition = margin * 2;
+                    }
+                    
+                    // Add bullet or number based on level
+                    let prefix = '';
+                    if (item.level === 1) {
+                        h1Counter++;
+                        prefix = h1Counter + '. ';
+                        doc.setFont('helvetica', 'bold');
+                    } else if (item.level === 2) {
+                        prefix = '  • ';
+                        doc.setFont('helvetica', 'normal');
+                    } else {
+                        prefix = '    - ';
+                        doc.setFont('helvetica', 'normal');
+                    }
+                    
+                    // Add TOC item with indentation
+                    const fullText = prefix + itemText;
+                    doc.text(fullText, leftMargin + indent, yPosition);
+                    yPosition += 7;
+                });
+                
+                // Add new page for content
+                doc.addPage();
+                yPosition = margin;
+            }
+
             // Process all children of the output element
             Array.from(outputElement.children).forEach(child => {
                 parseElement(child);
@@ -2235,6 +2785,17 @@ This web site is using ${"`"}markedjs/marked${"`"}.
         });
     };
 
+    // ----- Beautify button -----
+    let setupBeautifyButton = () => {
+        const beautifyButton = document.querySelector('#beautify-button');
+        if (!beautifyButton) return;
+        
+        beautifyButton.addEventListener('click', (event) => {
+            event.preventDefault();
+            beautifyMarkdown();
+        });
+    };
+
     // ----- Option 1: Print to PDF button -----
     let setupPrintPdfButton = () => {
         const printPdfLink = document.querySelector('#print-pdf-link');
@@ -2304,6 +2865,147 @@ This web site is using ${"`"}markedjs/marked${"`"}.
         printWindow.document.close();
     };
 
+    // ----- Toast Notification System -----
+    let showToast = (message, type = 'info') => {
+        const toast = document.createElement('div');
+        toast.className = `toast-notification ${type}`;
+        toast.textContent = message;
+        
+        document.body.appendChild(toast);
+        
+        setTimeout(() => {
+            toast.classList.add('hiding');
+            setTimeout(() => {
+                document.body.removeChild(toast);
+            }, 300);
+        }, 2500);
+    };
+
+    // ----- Mofu Helper Bubble System -----
+    let mofuIsSpeaking = false; // Track if Mofu is showing a helper message
+    let helperMessagesEnabled = true; // Track if helper messages are enabled
+    
+    // Load helper messages setting from localStorage
+    const loadHelperMessagesSetting = () => {
+        const saved = Storehouse.getItem(localStorageNamespace, localStorageHelperMessagesKey);
+        helperMessagesEnabled = saved !== false; // Default to true if not set
+        return helperMessagesEnabled;
+    };
+    
+    // Save helper messages setting to localStorage
+    const saveHelperMessagesSetting = (enabled) => {
+        const expiredAt = new Date(2099, 1, 1);
+        Storehouse.setItem(localStorageNamespace, localStorageHelperMessagesKey, enabled, expiredAt);
+        helperMessagesEnabled = enabled;
+    };
+    
+    let showMofuHelper = (message) => {
+        // Make Mofu react (smile + look straight) even if messages are disabled
+        mofuIsSpeaking = true;
+        const mofuHead = document.querySelector('.mofu-head');
+        const mofuFeatures = document.querySelector('.mofu-face-features');
+        const mofuSmile = document.querySelector('.mofu-smile');
+        
+        if (mofuHead && mofuFeatures) {
+            // Reset to center position (looking straight)
+            mofuHead.style.transform = '';
+            mofuFeatures.style.transform = '';
+            
+            // Add attention animation
+            mofuHead.classList.add('mofu-attention');
+            
+            // Make it smile bigger
+            if (mofuSmile) {
+                mofuSmile.style.width = '10px';
+                mofuSmile.style.height = '5px';
+                mofuSmile.style.borderWidth = '2px';
+            }
+            
+            setTimeout(() => {
+                mofuHead.classList.remove('mofu-attention');
+            }, 600);
+        }
+        
+        // If messages are disabled, only do the animation, no bubble
+        if (!helperMessagesEnabled) {
+            setTimeout(() => {
+                mofuIsSpeaking = false;
+                // Reset smile to normal
+                if (mofuSmile) {
+                    mofuSmile.style.width = '7px';
+                    mofuSmile.style.height = '3.5px';
+                    mofuSmile.style.borderWidth = '1.5px';
+                }
+            }, 2000);
+            return;
+        }
+        
+        // Remove any existing bubble
+        const existingBubble = document.querySelector('.mofu-helper-bubble');
+        if (existingBubble) {
+            existingBubble.remove();
+        }
+
+        // Create bubble with message and checkbox
+        const bubble = document.createElement('div');
+        bubble.className = 'mofu-helper-bubble';
+        bubble.innerHTML = `
+            <div class="mofu-helper-message">${message}</div>
+            <label class="mofu-helper-footer">
+                <input type="checkbox" id="mofu-dont-show-again">
+                <span>Don't show again</span>
+            </label>
+        `;
+        
+        document.body.appendChild(bubble);
+        
+        // Handle checkbox click
+        const checkbox = bubble.querySelector('#mofu-dont-show-again');
+        if (checkbox) {
+            checkbox.addEventListener('change', (e) => {
+                if (e.target.checked) {
+                    saveHelperMessagesSetting(false);
+                    // Hide bubble immediately
+                    bubble.classList.add('hiding');
+                    setTimeout(() => {
+                        if (bubble.parentNode) {
+                            document.body.removeChild(bubble);
+                        }
+                        mofuIsSpeaking = false;
+                        // Reset smile to normal
+                        if (mofuSmile) {
+                            mofuSmile.style.width = '7px';
+                            mofuSmile.style.height = '3.5px';
+                            mofuSmile.style.borderWidth = '1.5px';
+                        }
+                    }, 200);
+                }
+            });
+        }
+        
+        // Auto-hide after 5 seconds
+        setTimeout(() => {
+            if (bubble.parentNode) {
+                bubble.classList.add('hiding');
+                setTimeout(() => {
+                    if (bubble.parentNode) {
+                        document.body.removeChild(bubble);
+                    }
+                    
+                    // Reset Mofu state
+                    mofuIsSpeaking = false;
+                    
+                    // Reset smile to normal
+                    if (mofuSmile) {
+                        mofuSmile.style.width = '7px';
+                        mofuSmile.style.height = '3.5px';
+                        mofuSmile.style.borderWidth = '1.5px';
+                    }
+                }, 200);
+            }
+        }, 5000);
+    };
+
     // ----- Option 2: Insert formatting buttons -----
     let setupInsertHeaderButton = () => {
         const button = document.querySelector('#insert-header-button');
@@ -2312,6 +3014,7 @@ This web site is using ${"`"}markedjs/marked${"`"}.
         button.addEventListener('click', (event) => {
             event.preventDefault();
             insertHeaderTemplate();
+            showMofuHelper('I\'ve added a <strong>header template</strong> for you! Replace the placeholders with your actual information.');
         });
     };
 
@@ -2322,6 +3025,7 @@ This web site is using ${"`"}markedjs/marked${"`"}.
         button.addEventListener('click', (event) => {
             event.preventDefault();
             insertFooterTemplate();
+            showMofuHelper('I\'ve added a <strong>footer template</strong> for you! Replace the placeholders with your actual information.');
         });
     };
 
@@ -2332,6 +3036,7 @@ This web site is using ${"`"}markedjs/marked${"`"}.
         button.addEventListener('click', (event) => {
             event.preventDefault();
             insertLineBreak();
+            showMofuHelper('I\'ve inserted a <strong>page break</strong>! This will create a new page in your PDF export.');
         });
     };
 
@@ -2369,9 +3074,6 @@ This web site is using ${"`"}markedjs/marked${"`"}.
             ));
             
             editor.focus();
-            
-            // Show helper message
-            showHelperMessage('Replace with your document title, then press Enter');
         }, 50);
     };
 
@@ -2416,53 +3118,7 @@ This web site is using ${"`"}markedjs/marked${"`"}.
             ));
             
             editor.focus();
-            
-            // Show helper message
-            showHelperMessage('Replace SIGNATURE and CLIENT labels, then edit Document Name');
         }, 50);
-    };
-
-    // Helper message display
-    let showHelperMessage = (message) => {
-        const helperPanel = document.querySelector('#helper-panel');
-        const canvas = document.getElementById('mofu-canvas');
-        const mouth = document.getElementById('mofu-mouth');
-        
-        if (!helperPanel) return;
-        
-        // Set message directly in panel
-        helperPanel.textContent = message;
-        
-        // Show panel
-        helperPanel.classList.remove('hidden');
-        
-        // Subtle blob reaction - just a gentle smile widening
-        if (canvas && mouth) {
-            const originalWidth = mouth.style.width || '7px';
-            mouth.style.width = '9px';
-            mouth.style.transition = 'width 0.3s ease';
-            
-            setTimeout(() => {
-                mouth.style.width = originalWidth;
-            }, 800);
-        }
-        
-        // Auto-hide after 4 seconds
-        setTimeout(() => {
-            helperPanel.classList.add('hidden');
-        }, 4000);
-    };
-
-    // Setup helper panel close button
-    let setupHelperPanel = () => {
-        const helperPanel = document.querySelector('#helper-panel');
-        
-        // Click to dismiss
-        if (helperPanel) {
-            helperPanel.addEventListener('click', () => {
-                helperPanel.classList.add('hidden');
-            });
-        }
     };
 
     // Setup dropdown menus to work reliably
@@ -2476,19 +3132,17 @@ This web site is using ${"`"}markedjs/marked${"`"}.
             let isOpen = false;
             let closeTimeout = null;
             
+            // Check if mouse is within dropdown area (parent or content)
+            const isMouseInDropdown = () => {
+                const rect = dropdown.getBoundingClientRect();
+                return true; // We'll use a different approach
+            };
+            
             // Open on hover
             dropdown.addEventListener('mouseenter', () => {
                 clearTimeout(closeTimeout);
                 isOpen = true;
                 dropdownContent.style.display = 'block';
-            });
-            
-            // Delay close when mouse leaves
-            dropdown.addEventListener('mouseleave', () => {
-                closeTimeout = setTimeout(() => {
-                    isOpen = false;
-                    dropdownContent.style.display = 'none';
-                }, 200);
             });
             
             // Keep open when hovering over dropdown content
@@ -2497,11 +3151,31 @@ This web site is using ${"`"}markedjs/marked${"`"}.
                 isOpen = true;
             });
             
-            dropdownContent.addEventListener('mouseleave', () => {
+            // Only close when mouse leaves BOTH parent AND content
+            const scheduleClose = () => {
                 closeTimeout = setTimeout(() => {
+                    if (!isOpen) return;
                     isOpen = false;
                     dropdownContent.style.display = 'none';
-                }, 200);
+                }, 150);
+            };
+            
+            dropdown.addEventListener('mouseleave', (e) => {
+                // Only close if we're actually leaving the dropdown area
+                const rect = dropdown.getBoundingClientRect();
+                if (e.clientX < rect.left || e.clientX > rect.right || 
+                    e.clientY < rect.top || e.clientY > rect.bottom) {
+                    scheduleClose();
+                }
+            });
+            
+            dropdownContent.addEventListener('mouseleave', (e) => {
+                // Only close if we're actually leaving the content area
+                const rect = dropdownContent.getBoundingClientRect();
+                if (e.clientX < rect.left || e.clientX > rect.right || 
+                    e.clientY < rect.top || e.clientY > rect.bottom) {
+                    scheduleClose();
+                }
             });
             
             // Toggle on click
@@ -2558,16 +3232,11 @@ This web site is using ${"`"}markedjs/marked${"`"}.
     };
 
     let toggleCheatSheet = () => {
-        // Don't allow opening cheatsheet in vertical mode
-        const container = document.querySelector('#container');
-        if (!cheatSheetVisible && container.classList.contains('vertical')) {
-            return;
-        }
-        
         cheatSheetVisible = !cheatSheetVisible;
         
         const panel = document.querySelector('#cheatsheet-panel');
         const divider = document.querySelector('#cheatsheet-divider');
+        const container = document.querySelector('#container');
         
         if (cheatSheetVisible) {
             panel.classList.remove('hidden');
@@ -2718,6 +3387,175 @@ This web site is using ${"`"}markedjs/marked${"`"}.
         editor.focus();
     };
 
+    // ----- TOC (Table of Contents) -----
+    
+    let tocVisible = false;
+    let currentTocData = [];
+    
+    let setupTocCheckbox = () => {
+        const checkbox = document.querySelector('#toc-checkbox');
+        if (!checkbox) return;
+        
+        // Load saved setting
+        const savedSetting = loadTocSettings();
+        
+        if (savedSetting !== null && savedSetting !== undefined && savedSetting !== false) {
+            tocEnabled = savedSetting;
+            checkbox.checked = savedSetting;
+            // Delay toggle to ensure editor is ready
+            setTimeout(() => {
+                if (savedSetting) {
+                    toggleToc();
+                }
+            }, 500);
+        }
+        
+        checkbox.addEventListener('change', (event) => {
+            tocEnabled = event.currentTarget.checked;
+            saveTocSettings(tocEnabled);
+            toggleToc();
+        });
+        
+        // Setup close button
+        const closeBtn = document.querySelector('#toc-close-btn');
+        if (closeBtn) {
+            closeBtn.addEventListener('click', () => {
+                tocEnabled = false;
+                checkbox.checked = false;
+                saveTocSettings(false);
+                toggleToc();
+            });
+        }
+    };
+    
+    let toggleToc = () => {
+        tocVisible = tocEnabled;
+        
+        const panel = document.querySelector('#toc-panel');
+        const container = document.querySelector('#container');
+        
+        if (tocVisible) {
+            panel.classList.remove('hidden');
+            container.classList.add('toc-visible');
+            updateToc();
+        } else {
+            panel.classList.add('hidden');
+            container.classList.remove('toc-visible');
+        }
+        
+        // Trigger Monaco editor resize
+        if (editor) {
+            setTimeout(() => {
+                editor.layout();
+            }, 350);
+        }
+    };
+    
+    let generateTocData = () => {
+        const content = editor ? editor.getValue() : '';
+        const lines = content.split('\n');
+        const tocItems = [];
+        let inCodeBlock = false;
+        let inYamlFrontMatter = false;
+        
+        lines.forEach((line, index) => {
+            // Track YAML front matter
+            if (index === 0 && line.trim() === '---') {
+                inYamlFrontMatter = true;
+                return;
+            }
+            if (inYamlFrontMatter && line.trim() === '---') {
+                inYamlFrontMatter = false;
+                return;
+            }
+            if (inYamlFrontMatter) return;
+            
+            // Track code blocks
+            if (line.trim().startsWith('```')) {
+                inCodeBlock = !inCodeBlock;
+                return;
+            }
+            
+            // Skip if in code block
+            if (inCodeBlock) return;
+            
+            // Match headers (# to ######) - allow optional space
+            const headerMatch = line.match(/^(#{1,6})\s*(.+)$/);
+            if (headerMatch) {
+                const level = headerMatch[1].length;
+                const text = headerMatch[2].trim();
+                
+                // Skip empty headings
+                if (!text) return;
+                
+                const id = text.toLowerCase()
+                    .replace(/[^\w\s-]/g, '')
+                    .replace(/\s+/g, '-')
+                    .replace(/-+/g, '-')
+                    .replace(/^-|-$/g, '');
+                
+                tocItems.push({
+                    level: level,
+                    text: text,
+                    id: id,
+                    line: index + 1
+                });
+            }
+        });
+        
+        return tocItems;
+    };
+    
+    let updateToc = () => {
+        if (!tocVisible) return;
+        
+        const tocContent = document.querySelector('#toc-content');
+        if (!tocContent) return;
+        
+        currentTocData = generateTocData();
+        
+        if (currentTocData.length === 0) {
+            tocContent.innerHTML = '<div class="toc-empty">No headings found in document</div>';
+            return;
+        }
+        
+        let html = '<ul class="toc-list">';
+        currentTocData.forEach(item => {
+            html += `<li class="toc-item toc-h${item.level}">
+                <a href="#" class="toc-link" data-line="${item.line}" data-id="${item.id}">
+                    ${item.text}
+                </a>
+            </li>`;
+        });
+        html += '</ul>';
+        
+        tocContent.innerHTML = html;
+        
+        // Add click handlers
+        tocContent.querySelectorAll('.toc-link').forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                const line = parseInt(e.target.getAttribute('data-line'));
+                if (editor && line) {
+                    editor.setPosition({ lineNumber: line, column: 1 });
+                    editor.revealLineInCenter(line);
+                    editor.focus();
+                    
+                    // Update active state
+                    tocContent.querySelectorAll('.toc-link').forEach(l => l.classList.remove('active'));
+                    e.target.classList.add('active');
+                }
+            });
+        });
+    };
+    
+    let getTocForPdf = () => {
+        const tocData = generateTocData();
+        if (tocData.length === 0) return null;
+        
+        return tocData;
+    };
+
     // ----- local state -----
 
     let loadLastContent = () => {
@@ -2810,6 +3648,16 @@ This web site is using ${"`"}markedjs/marked${"`"}.
         Storehouse.setItem(localStorageNamespace, localStorageVerticalLayoutKey, settings, expiredAt);
     };
 
+    let loadTocSettings = () => {
+        let last = Storehouse.getItem(localStorageNamespace, localStorageTocKey);
+        return last || false;
+    };
+
+    let saveTocSettings = (settings) => {
+        let expiredAt = new Date(2099, 1, 1);
+        Storehouse.setItem(localStorageNamespace, localStorageTocKey, settings, expiredAt);
+    };
+
     let setupDivider = () => {
         let lastLeftRatio = 0.5;
         let lastTopRatio = 0.5;
@@ -2818,7 +3666,7 @@ This web site is using ${"`"}markedjs/marked${"`"}.
         const previewPane = document.getElementById('preview');
         const container = document.getElementById('container');
 
-        let isDragging = false;
+        if (!divider || !editorPane || !previewPane) return;
 
         const isVerticalLayout = () => {
             return container.classList.contains('vertical');
@@ -2843,15 +3691,75 @@ This web site is using ${"`"}markedjs/marked${"`"}.
         });
 
         divider.addEventListener('mouseleave', () => {
-            if (!isDragging) {
-                divider.classList.remove('hover');
-            }
+            divider.classList.remove('hover');
         });
 
-        divider.addEventListener('mousedown', () => {
-            isDragging = true;
+        divider.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            
+            // Store initial divider position for delta calculation
+            const dividerRect = divider.getBoundingClientRect();
+            const containerRect = container.getBoundingClientRect();
+            const isVertical = isVerticalLayout();
+            
+            // Calculate initial left width (editor width in normal layout)
+            let initialLeftWidth, initialTopHeight, initialDividerPos;
+            
+            if (isVertical) {
+                // Vertical layout - use height and top position
+                if (isFlipped()) {
+                    initialTopHeight = previewPane.offsetHeight;
+                } else {
+                    initialTopHeight = editorPane.offsetHeight;
+                }
+                initialDividerPos = dividerRect.top - containerRect.top;
+            } else {
+                // Horizontal layout - use width and left position
+                if (isFlipped()) {
+                    initialLeftWidth = previewPane.offsetWidth;
+                } else {
+                    initialLeftWidth = editorPane.offsetWidth;
+                }
+                initialDividerPos = dividerRect.left - containerRect.left;
+            }
+            
+            console.log('MAIN DIVIDER MOUSEDOWN:', {
+                dividerId: divider.id,
+                isVertical: isVertical,
+                dividerRect: { left: dividerRect.left, top: dividerRect.top, width: dividerRect.width, height: dividerRect.height },
+                containerRect: { left: containerRect.left, top: containerRect.top, width: containerRect.width, height: containerRect.height },
+                initialDividerPos: initialDividerPos,
+                initialLeftWidth: initialLeftWidth,
+                initialTopHeight: initialTopHeight,
+                isFlipped: isFlipped(),
+                editorWidth: editorPane.offsetWidth,
+                editorHeight: editorPane.offsetHeight,
+                previewWidth: previewPane.offsetWidth,
+                previewHeight: previewPane.offsetHeight
+            });
+            
+            // Set up the active resizer with all needed references
+            activeResizer = {
+                divider: divider,
+                leftPane: isFlipped() ? previewPane : editorPane,
+                rightPane: isFlipped() ? editorPane : previewPane,
+                container: container,
+                lastLeftRatio: lastLeftRatio,
+                lastTopRatio: lastTopRatio,
+                isVertical: isVertical,
+                isFlipped: isFlipped(),
+                getAvailableWidth: getAvailableWidth,
+                getAvailableHeight: getAvailableHeight,
+                initialLeftWidth: initialLeftWidth || 0,
+                initialTopHeight: initialTopHeight || 0,
+                initialDividerX: isVertical ? 0 : initialDividerPos,
+                initialDividerY: isVertical ? initialDividerPos : 0
+            };
+            
+            document.body.classList.add('dragging');
             divider.classList.add('active');
-            if (isVerticalLayout()) {
+            
+            if (activeResizer.isVertical) {
                 document.body.style.cursor = 'row-resize';
             } else {
                 document.body.style.cursor = 'col-resize';
@@ -2881,126 +3789,57 @@ This web site is using ${"`"}markedjs/marked${"`"}.
                 previewPane.style.height = '';
             }
         });
+    };
 
-        document.addEventListener('mousemove', (e) => {
-            if (!isDragging) return;
-            document.body.style.userSelect = 'none';
+    let setupCheatsheetDivider = () => {
+        let lastCheatsheetWidth = 320;
+        const divider = document.getElementById('cheatsheet-divider');
+        const cheatsheetPane = document.querySelector('.cheatsheet-pane');
+        const container = document.getElementById('container');
+
+        if (!divider || !cheatsheetPane) return;
+
+        const getAvailableWidth = () => {
             const containerRect = container.getBoundingClientRect();
-
-            if (isVerticalLayout()) {
-                // Vertical layout - resize by height
-                const totalHeight = getAvailableHeight();
-                const offsetY = e.clientY - containerRect.top;
-                const dividerHeight = divider.offsetHeight;
-
-                const minHeight = 100;
-                const maxHeight = totalHeight - minHeight - dividerHeight;
-                
-                let topHeight;
-                if (isFlipped()) {
-                    // When flipped in vertical: preview is on top, editor on bottom
-                    topHeight = Math.max(minHeight, Math.min(offsetY, maxHeight));
-                    previewPane.style.height = topHeight + 'px';
-                    editorPane.style.height = (totalHeight - topHeight - dividerHeight) + 'px';
-                } else {
-                    // Normal vertical: editor on top, preview on bottom
-                    topHeight = Math.max(minHeight, Math.min(offsetY, maxHeight));
-                    editorPane.style.height = topHeight + 'px';
-                    previewPane.style.height = (totalHeight - topHeight - dividerHeight) + 'px';
-                }
-                
-                editorPane.style.width = '';
-                previewPane.style.width = '';
-                lastTopRatio = topHeight / (totalHeight - dividerHeight);
-            } else {
-                // Horizontal layout - resize by width
-                const totalWidth = getAvailableWidth();
-                const dividerWidth = divider.offsetWidth;
-                const minWidth = 100;
-                const maxWidth = totalWidth - minWidth - dividerWidth;
-
-                let leftWidth;
-                if (isFlipped()) {
-                    // When flipped: preview is on left, editor on right
-                    // offsetX from left edge represents preview width
-                    const offsetX = e.clientX - containerRect.left;
-                    leftWidth = Math.max(minWidth, Math.min(offsetX, maxWidth));
-                    previewPane.style.width = leftWidth + 'px';
-                    editorPane.style.width = (totalWidth - leftWidth - dividerWidth) + 'px';
-                } else {
-                    // Normal: editor on left, preview on right
-                    // offsetX from left edge represents editor width
-                    const offsetX = e.clientX - containerRect.left;
-                    leftWidth = Math.max(minWidth, Math.min(offsetX, maxWidth));
-                    editorPane.style.width = leftWidth + 'px';
-                    previewPane.style.width = (totalWidth - leftWidth - dividerWidth) + 'px';
-                }
-                
-                editorPane.style.height = '';
-                previewPane.style.height = '';
-                lastLeftRatio = leftWidth / (totalWidth - dividerWidth);
-            }
-        });
-
-        document.addEventListener('mouseup', () => {
-            if (isDragging) {
-                isDragging = false;
-                divider.classList.remove('active');
-                divider.classList.remove('hover');
-                document.body.style.cursor = 'default';
-                document.body.style.userSelect = '';
-            }
-        });
-
-        const updatePaneSizes = () => {
-            if (isVerticalLayout()) {
-                // Vertical layout
-                const totalHeight = getAvailableHeight();
-                const dividerHeight = divider.offsetHeight;
-                const availableHeight = totalHeight - dividerHeight;
-
-                const topSize = availableHeight * lastTopRatio;
-                const bottomSize = availableHeight * (1 - lastTopRatio);
-
-                if (isFlipped()) {
-                    previewPane.style.height = topSize + 'px';
-                    editorPane.style.height = bottomSize + 'px';
-                } else {
-                    editorPane.style.height = topSize + 'px';
-                    previewPane.style.height = bottomSize + 'px';
-                }
-                
-                editorPane.style.width = '';
-                previewPane.style.width = '';
-            } else {
-                // Horizontal layout
-                const totalWidth = getAvailableWidth();
-                const dividerWidth = divider.offsetWidth;
-                const availableWidth = totalWidth - dividerWidth;
-
-                const leftSize = availableWidth * lastLeftRatio;
-                const rightSize = availableWidth * (1 - lastLeftRatio);
-
-                if (isFlipped()) {
-                    previewPane.style.width = leftSize + 'px';
-                    editorPane.style.width = rightSize + 'px';
-                } else {
-                    editorPane.style.width = leftSize + 'px';
-                    previewPane.style.width = rightSize + 'px';
-                }
-                
-                editorPane.style.height = '';
-                previewPane.style.height = '';
-            }
+            return containerRect.width;
         };
 
-        window.addEventListener('resize', updatePaneSizes);
-
-        // Watch for layout changes (vertical/horizontal toggle)
-        const layoutObserver = new MutationObserver(() => {
-            updatePaneSizes();
+        divider.addEventListener('mouseenter', () => {
+            divider.classList.add('hover');
         });
-        layoutObserver.observe(container, { attributes: true, attributeFilter: ['class'] });
+
+        divider.addEventListener('mouseleave', () => {
+            divider.classList.remove('hover');
+        });
+
+        divider.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            
+            // Store initial positions for delta calculation
+            const dividerRect = divider.getBoundingClientRect();
+            const containerRect = container.getBoundingClientRect();
+            const initialCheatsheetWidth = cheatsheetPane.offsetWidth;
+            
+            // Set up the active resizer
+            activeResizer = {
+                divider: divider,
+                leftPane: cheatsheetPane,
+                rightPane: null,
+                container: container,
+                lastLeftRatio: lastCheatsheetWidth / getAvailableWidth(),
+                lastTopRatio: 0,
+                isVertical: false,
+                isFlipped: false,
+                getAvailableWidth: getAvailableWidth,
+                getAvailableHeight: () => 0,
+                initialLeftWidth: initialCheatsheetWidth,
+                initialDividerX: dividerRect.left - containerRect.left
+            };
+            
+            document.body.classList.add('dragging');
+            divider.classList.add('active');
+            document.body.style.cursor = 'col-resize';
+        });
     };
 
     // ----- entry point -----
@@ -3015,6 +3854,7 @@ This web site is using ${"`"}markedjs/marked${"`"}.
     setupPasteButton();
     setupCopyButton(editor);
     setupUndoButton();
+    setupBeautifyButton();
     setupExportButton();
     setupPrintPdfButton();
     setupExportHtmlButton();
@@ -3022,9 +3862,9 @@ This web site is using ${"`"}markedjs/marked${"`"}.
     setupInsertHeaderButton();
     setupInsertFooterButton();
     setupInsertBreakButton();
-    setupHelperPanel();
     setupDropdowns();
     setupCheatSheetButton();
+    setupTocCheckbox();
     
     // Load PDF settings
     loadPdfSettings();
@@ -3038,6 +3878,10 @@ This web site is using ${"`"}markedjs/marked${"`"}.
         cursorSyncSettings = true;
     }
     initCursorSync(cursorSyncSettings);
+
+    // initialize helper messages
+    let helperMessagesSettings = loadHelperMessagesSetting();
+    initHelperMessagesToggle(helperMessagesSettings);
 
     // initialize theme (dark/light)
     let themeSettings = loadThemeSettings();
@@ -3063,6 +3907,126 @@ This web site is using ${"`"}markedjs/marked${"`"}.
     initThemeToggle(themeSettings);
 
     setupDivider();
+    setupCheatsheetDivider();
+
+    // Global drag handler - only one resizer can be active at a time
+    document.addEventListener('mousemove', (e) => {
+        if (!activeResizer) return;
+        e.preventDefault();
+        
+        const containerRect = activeResizer.container.getBoundingClientRect();
+        const dividerWidth = activeResizer.divider.offsetWidth;
+        
+        if (activeResizer.isVertical) {
+            // Vertical layout - resize by height
+            const totalHeight = activeResizer.getAvailableHeight();
+            const containerRect = activeResizer.container.getBoundingClientRect();
+            const dividerHeight = activeResizer.divider.offsetHeight;
+            
+            // Calculate new top height based on delta from initial position
+            const currentDividerY = e.clientY - containerRect.top;
+            const deltaY = currentDividerY - activeResizer.initialDividerY;
+            let newTopHeight = activeResizer.initialTopHeight + deltaY;
+
+            const minHeight = 100;
+            const maxHeight = totalHeight - minHeight - dividerHeight;
+            newTopHeight = Math.max(minHeight, Math.min(newTopHeight, maxHeight));
+            
+            if (activeResizer.isFlipped) {
+                activeResizer.leftPane.style.height = newTopHeight + 'px';
+                activeResizer.rightPane.style.height = (totalHeight - newTopHeight - dividerHeight) + 'px';
+            } else {
+                activeResizer.leftPane.style.height = newTopHeight + 'px';
+                activeResizer.rightPane.style.height = (totalHeight - newTopHeight - dividerHeight) + 'px';
+            }
+            
+            activeResizer.lastTopRatio = newTopHeight / (totalHeight - dividerHeight);
+        } else {
+            // Horizontal layout - resize by width
+            const totalWidth = activeResizer.getAvailableWidth();
+            const containerRect = activeResizer.container.getBoundingClientRect();
+            const dividerWidth = activeResizer.divider.offsetWidth;
+            
+            // Calculate new left width based on delta from initial position
+            const currentDividerX = e.clientX - containerRect.left;
+            const deltaX = currentDividerX - activeResizer.initialDividerX;
+            let newLeftWidth = activeResizer.initialLeftWidth + deltaX;
+            
+            // Clamp to min/max
+            const minWidth = 100;
+            const maxWidth = totalWidth - minWidth - dividerWidth;
+            newLeftWidth = Math.max(minWidth, Math.min(newLeftWidth, maxWidth));
+            
+            // For cheatsheet divider (on the right), dragging left increases its width
+            if (activeResizer.divider.id === 'cheatsheet-divider') {
+                // Cheatsheet is on the RIGHT side
+                const minCheatsheetWidth = 250;
+                const maxCheatsheetWidth = 600;
+                
+                // Calculate cheatsheet width: distance from divider's right edge to container's right edge
+                const newCheatsheetWidth = totalWidth - currentDividerX - dividerWidth;
+                
+                // Clamp cheatsheet width to min/max
+                const clampedWidth = Math.max(minCheatsheetWidth, Math.min(newCheatsheetWidth, maxCheatsheetWidth));
+                
+                // Apply the width to cheatsheet
+                activeResizer.leftPane.style.width = clampedWidth + 'px';
+                
+                // Calculate remaining space for editor + preview + main divider
+                const mainDivider = document.getElementById('split-divider');
+                const mainDividerWidth = mainDivider ? mainDivider.offsetWidth : 5;
+                const remainingWidth = totalWidth - clampedWidth - dividerWidth;
+                
+                // Get editor and preview panes
+                const editorPane = document.getElementById('edit');
+                const previewPane = document.getElementById('preview');
+                
+                if (editorPane && previewPane) {
+                    // Distribute remaining width between editor and preview
+                    // Try to maintain their current ratio if possible
+                    const currentEditorWidth = editorPane.offsetWidth;
+                    const currentPreviewWidth = previewPane.offsetWidth;
+                    const currentTotal = currentEditorWidth + currentPreviewWidth + mainDividerWidth;
+                    
+                    if (currentTotal > 0) {
+                        const editorRatio = currentEditorWidth / currentTotal;
+                        const newEditorWidth = (remainingWidth - mainDividerWidth) * editorRatio;
+                        const newPreviewWidth = remainingWidth - mainDividerWidth - newEditorWidth;
+                        
+                        editorPane.style.width = newEditorWidth + 'px';
+                        previewPane.style.width = newPreviewWidth + 'px';
+                    }
+                }
+                
+                activeResizer.lastLeftRatio = clampedWidth / totalWidth;
+            } else {
+                // For main divider, both panes need explicit width
+                if (activeResizer.isFlipped) {
+                    // When flipped: preview is on left, editor on right
+                    // leftPane = preview, rightPane = editor
+                    activeResizer.leftPane.style.width = newLeftWidth + 'px';  // Preview on left
+                    activeResizer.rightPane.style.width = (totalWidth - newLeftWidth - dividerWidth) + 'px';  // Editor on right
+                } else {
+                    // Normal: editor on left, preview on right
+                    // leftPane = editor, rightPane = preview
+                    activeResizer.leftPane.style.width = newLeftWidth + 'px';  // Editor on left
+                    activeResizer.rightPane.style.width = (totalWidth - newLeftWidth - dividerWidth) + 'px';  // Preview on right
+                }
+                activeResizer.lastLeftRatio = newLeftWidth / (totalWidth - dividerWidth);
+            }
+        }
+    });
+
+    document.addEventListener('mouseup', () => {
+        if (activeResizer) {
+            activeResizer.divider.classList.remove('active');
+            activeResizer.divider.classList.remove('hover');
+            document.body.style.cursor = 'default';
+            document.body.classList.remove('dragging');
+            document.body.style.userSelect = '';
+            activeResizer = null;
+        }
+    });
 
     // ----- cursor synchronization -----
     // Listen for cursor position changes in editor
@@ -3241,7 +4205,7 @@ This web site is using ${"`"}markedjs/marked${"`"}.
 
         // Mouse tracking for 3D effect
         document.addEventListener('mousemove', (e) => {
-            if (isAnimating) return;
+            if (isAnimating || mofuIsSpeaking) return; // Don't follow mouse when speaking
             
             const rect = canvas.getBoundingClientRect();
             const centerX = rect.left + rect.width / 2;

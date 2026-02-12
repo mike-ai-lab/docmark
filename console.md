@@ -1,83 +1,125 @@
-08:31:41.745 main.js:1318 HR AFTER spacing: 0.5mm (reduced from 3mm)
-08:31:41.745 main.js:892 H2 BEFORE spacing: 0mm (REMOVED)
-08:31:41.746 main.js:895 H2 AFTER spacing: 0mm (REMOVED)
-08:31:41.747 main.js:1125 TABLE BEFORE spacing: 0mm (REMOVED)
-08:31:41.759 main.js:1309 TABLE AFTER spacing: 8mm
-08:31:41.761 main.js:1318 HR AFTER spacing: 0.5mm (reduced from 3mm)
-08:31:41.761 main.js:892 H2 BEFORE spacing: 0mm (REMOVED)
-08:31:41.762 main.js:895 H2 AFTER spacing: 0mm (REMOVED)
-08:31:41.762 main.js:1125 TABLE BEFORE spacing: 0mm (REMOVED)
-08:31:41.768 main.js:1309 TABLE AFTER spacing: 8mm
-08:31:41.770 main.js:1318 HR AFTER spacing: 0.5mm (reduced from 3mm)
-08:31:41.770 main.js:892 H2 BEFORE spacing: 0mm (REMOVED)
-08:31:41.771 main.js:895 H2 AFTER spacing: 0mm (REMOVED)
-08:31:41.771 main.js:1125 TABLE BEFORE spacing: 0mm (REMOVED)
-08:31:41.773 main.js:1309 TABLE AFTER spacing: 8mm
-08:31:41.775 main.js:1318 HR AFTER spacing: 0.5mm (reduced from 3mm)
-08:31:41.775 main.js:892 H2 BEFORE spacing: 0mm (REMOVED)
-08:31:41.776 main.js:895 H2 AFTER spacing: 0mm (REMOVED)
-08:31:41.776 main.js:1125 TABLE BEFORE spacing: 0mm (REMOVED)
-08:31:41.779 main.js:1309 TABLE AFTER spacing: 8mm
-08:31:41.781 main.js:1318 HR AFTER spacing: 0.5mm (reduced from 3mm)
-08:31:41.781 main.js:892 H2 BEFORE spacing: 0mm (REMOVED)
-08:31:41.782 main.js:895 H2 AFTER spacing: 0mm (REMOVED)
-08:31:41.782 main.js:1125 TABLE BEFORE spacing: 0mm (REMOVED)
-08:31:41.784 main.js:1309 TABLE AFTER spacing: 8mm
-08:31:41.786 main.js:1318 HR AFTER spacing: 0.5mm (reduced from 3mm)
-08:31:41.786 main.js:892 H2 BEFORE spacing: 0mm (REMOVED)
-08:31:41.787 main.js:895 H2 AFTER spacing: 0mm (REMOVED)
-08:31:41.787 main.js:1125 TABLE BEFORE spacing: 0mm (REMOVED)
-08:31:41.790 main.js:1309 TABLE AFTER spacing: 8mm
-08:31:41.792 main.js:1318 HR AFTER spacing: 0.5mm (reduced from 3mm)
-08:31:41.792 main.js:892 H2 BEFORE spacing: 0mm (REMOVED)
-08:31:41.793 main.js:895 H2 AFTER spacing: 0mm (REMOVED)
-08:31:41.793 main.js:1125 TABLE BEFORE spacing: 0mm (REMOVED)
-08:31:41.796 main.js:1309 TABLE AFTER spacing: 8mm
-08:31:41.797 main.js:1318 HR AFTER spacing: 0.5mm (reduced from 3mm)
-08:31:41.797 main.js:892 H2 BEFORE spacing: 0mm (REMOVED)
-08:31:41.798 main.js:895 H2 AFTER spacing: 0mm (REMOVED)
-08:31:41.798 main.js:1125 TABLE BEFORE spacing: 0mm (REMOVED)
-08:31:41.836  TABLE AFTER spacing: 8mm
-08:31:41.840  HR AFTER spacing: 0.5mm (reduced from 3mm)
-08:31:41.840  H2 BEFORE spacing: 0mm (REMOVED)
-08:31:41.841  H2 AFTER spacing: 0mm (REMOVED)
-08:31:41.841  TABLE BEFORE spacing: 0mm (REMOVED)
-08:31:41.843 main.js:1309 TABLE AFTER spacing: 8mm
-08:31:41.843 main.js:1318 HR AFTER spacing: 0.5mm (reduced from 3mm)
-08:31:41.843 main.js:892 H2 BEFORE spacing: 0mm (REMOVED)
-08:31:41.843 main.js:895 H2 AFTER spacing: 0mm (REMOVED)
-08:31:41.844 main.js:1125 TABLE BEFORE spacing: 0mm (REMOVED)
-08:31:41.845 main.js:1309 TABLE AFTER spacing: 8mm
-08:31:41.846 main.js:1318 HR AFTER spacing: 0.5mm (reduced from 3mm)
-08:31:41.846 main.js:892 H2 BEFORE spacing: 0mm (REMOVED)
-08:31:41.846 main.js:895 H2 AFTER spacing: 0mm (REMOVED)
-08:31:41.846 main.js:1125 TABLE BEFORE spacing: 0mm (REMOVED)
-08:31:41.849 main.js:1309 TABLE AFTER spacing: 8mm
-08:31:41.850 main.js:1318 HR AFTER spacing: 0.5mm (reduced from 3mm)
-08:31:41.850 main.js:892 H2 BEFORE spacing: 0mm (REMOVED)
-08:31:41.850 main.js:895 H2 AFTER spacing: 0mm (REMOVED)
-08:31:41.850 main.js:1125 TABLE BEFORE spacing: 0mm (REMOVED)
-08:31:41.852 main.js:1309 TABLE AFTER spacing: 8mm
-08:31:41.852 main.js:1318 HR AFTER spacing: 0.5mm (reduced from 3mm)
-08:31:41.852 main.js:892 H2 BEFORE spacing: 0mm (REMOVED)
-08:31:41.853 main.js:895 H2 AFTER spacing: 0mm (REMOVED)
-08:31:41.853 main.js:1125 TABLE BEFORE spacing: 0mm (REMOVED)
-08:31:41.855 main.js:1309 TABLE AFTER spacing: 8mm
-08:31:41.855 main.js:1318 HR AFTER spacing: 0.5mm (reduced from 3mm)
-08:31:41.855 main.js:892 H2 BEFORE spacing: 0mm (REMOVED)
-08:31:41.855 main.js:895 H2 AFTER spacing: 0mm (REMOVED)
-08:31:41.856 main.js:1125 TABLE BEFORE spacing: 0mm (REMOVED)
-08:31:41.857 main.js:1309 TABLE AFTER spacing: 8mm
-08:31:41.857 main.js:1318 HR AFTER spacing: 0.5mm (reduced from 3mm)
-08:31:41.857 main.js:892 H2 BEFORE spacing: 0mm (REMOVED)
-08:31:41.858 main.js:895 H2 AFTER spacing: 0mm (REMOVED)
-08:31:41.858 main.js:1125 TABLE BEFORE spacing: 0mm (REMOVED)
-08:31:41.860 main.js:1309 TABLE AFTER spacing: 8mm
-08:31:41.860 main.js:1318 HR AFTER spacing: 0.5mm (reduced from 3mm)
-08:31:41.860 main.js:892 H2 BEFORE spacing: 0mm (REMOVED)
-08:31:41.861 main.js:895 H2 AFTER spacing: 0mm (REMOVED)
-08:31:41.861 main.js:1125 TABLE BEFORE spacing: 0mm (REMOVED)
-08:31:41.863 main.js:1309 TABLE AFTER spacing: 8mm
-08:31:41.863 main.js:1318 HR AFTER spacing: 0.5mm (reduced from 3mm)
-08:31:41.863 main.js:892 H2 BEFORE spacing: 0mm (REMOVED)
-08:31:41.864 main.js:895 H2 AFTER spacing: 0mm (REMOVED)
+# BEFORE:
+
+`````
+---
+title:Quotation Test Template
+client:Test Client
+date:2026-02-12
+---
+
+#PROJECT REPORT
+###PROJECT INFO
+Some intro text without proper spacing.
+##Project Details
+- Client:Test Client
++ Location:Riyadh
+-Project Type:Commercial
++Quality Level:Mid Range
+
+
+----
+##Scope Breakdown
+###1.External Works
+|Supplier|Product|Unit|Price|Notes|
+|---|---|---|---|---|
+|ABC Co|Cement Plaster|Bag|25|Local|
+|XYZ Co|External Paint|18L|180|Weather resistant|
+>Important note without spacing
+```javascript
+const price=250;
+function calc(a,b){
+return a+b;
+}
+```
+-First item
++Second item
+- Third item
+Some text
+>Another quote
+| Item | Unit | Price |
+| --- | --- | --- |
+| Granite | m2 | 95 |
+| Marble | m2 | 120 |
+----
+##Financial Summary
+Subtotal:100000 SAR
+VAT:15000 SAR
+Total:115000 SAR
+
+
+###Approval
+Name:Client Representative
+Date:12-02-2026
+```yaml
+project: test
+status: draft
+```
+Extra line follows.
+`````
+
+------------------
+
+# AFTER:
+`````
+---
+title:Quotation Test Template
+client:Test Client
+date:2026-02-12
+---
+
+#PROJECT REPORT
+###PROJECT INFO
+Some intro text without proper spacing.
+##Project Details
+
+* Client:Test Client
+* Location:Riyadh
+-Project Type:Commercial
++Quality Level:Mid Range
+
+---
+##Scope Breakdown
+###1.External Works
+
+ | Supplier | Product | Unit | Price | Notes | 
+ | --- | --- | --- | --- | --- | 
+ | ABC Co | Cement Plaster | Bag | 25 | Local | 
+ | XYZ Co | External Paint | 18L | 180 | Weather resistant | 
+
+>Important note without spacing
+
+```javascript
+const price=250;
+function calc(a,b){
+return a+b;
+}
+```
+-First item
++Second item
+
+* Third item
+Some text
+
+>Another quote
+
+ | Item | Unit | Price | 
+ | --- | --- | --- | 
+ | Granite | m2 | 95 | 
+ | Marble | m2 | 120 | 
+
+---
+##Financial Summary
+Subtotal:100000 SAR
+VAT:15000 SAR
+Total:115000 SAR
+
+###Approval
+Name:Client Representative
+Date:12-02-2026
+
+```yaml
+project: test
+status: draft
+```
+Extra line follows.
+`````
