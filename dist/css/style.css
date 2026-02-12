@@ -384,6 +384,39 @@ header a:hover {
   justify-content: flex-end;
 }
 
+/* Icon buttons for import/export */
+.icon-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: none;
+  background-color: transparent;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: #64748b;
+}
+
+.icon-button:hover {
+  background-color: #f1f5f9;
+  color: #2563eb;
+}
+
+.icon-button:active {
+  transform: scale(0.95);
+}
+
+[data-theme="dark"] .icon-button {
+  color: #94a3b8;
+}
+
+[data-theme="dark"] .icon-button:hover {
+  background-color: #1e293b;
+  color: #60a5fa;
+}
+
 .controls-group {
   display: flex;
   gap: 12px;

@@ -2837,6 +2837,84 @@ let performBeautify = (content) => {
         }
     };
     
+    // Setup export markdown button
+    let setupExportMarkdownButton = (editorInstance) => {
+        const exportMdButton = document.querySelector('#export-md-button');
+        if (exportMdButton) {
+            exportMdButton.addEventListener('click', () => {
+                if (!editorInstance) {
+                    console.log('Editor not initialized');
+                    return;
+                }
+                
+                const content = editorInstance.getValue();
+                
+                // Extract title from YAML front matter or first heading
+                let documentTitle = 'document';
+                const yamlMatch = content.match(/^---\s*\ntitle:\s*(.+?)\s*\n/m);
+                if (yamlMatch) {
+                    documentTitle = yamlMatch[1].trim().replace(/[^a-z0-9]/gi, '_').toLowerCase();
+                } else {
+                    const headingMatch = content.match(/^#\s+(.+)$/m);
+                    if (headingMatch) {
+                        documentTitle = headingMatch[1].trim().replace(/[^a-z0-9]/gi, '_').toLowerCase();
+                    }
+                }
+                
+                // Generate timestamp
+                const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+                
+                // Create filename
+                const filename = `${documentTitle}_docmark_${timestamp}.md`;
+                
+                // Create blob and download
+                const blob = new Blob([content], { type: 'text/markdown;charset=utf-8' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                
+                showToast(`Markdown exported: ${filename}`, 'success');
+            });
+        }
+    };
+    
+    // Setup import markdown button
+    let setupImportMarkdownButton = (editorInstance) => {
+        const importMdButton = document.querySelector('#import-md-button');
+        const importMdInput = document.querySelector('#import-md-input');
+        
+        if (importMdButton && importMdInput) {
+            importMdButton.addEventListener('click', () => {
+                importMdInput.click();
+            });
+            
+            importMdInput.addEventListener('change', (event) => {
+                const file = event.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        const content = e.target.result;
+                        if (editorInstance) {
+                            editorInstance.setValue(content);
+                            showToast(`Imported: ${file.name}`, 'success');
+                        }
+                    };
+                    reader.onerror = () => {
+                        showToast('Failed to read file', 'error');
+                    };
+                    reader.readAsText(file);
+                }
+                // Reset input so same file can be imported again
+                event.target.value = '';
+            });
+        }
+    };
+    
     let setupPdfSettingsButton = () => {
         let pdfSettingsLink = document.querySelector('#pdf-settings-link');
         if (pdfSettingsLink) {
@@ -3935,6 +4013,8 @@ let performBeautify = (content) => {
     setupExportButton();
     setupPrintPdfButton();
     setupExportHtmlButton();
+    setupExportMarkdownButton(editor);
+    setupImportMarkdownButton(editor);
     setupPdfSettingsButton();
     setupInsertHeaderButton();
     setupInsertFooterButton();
