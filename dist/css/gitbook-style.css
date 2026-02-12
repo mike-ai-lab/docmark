@@ -3,12 +3,9 @@
 .markdown-body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
   font-size: 16px;
-  line-height: 1.7;
+  line-height: 1.8;
   color: #333;
   background-color: #fff;
-  padding: 40px 60px;
-  max-width: 900px;
-  margin: 0 auto;
 }
 
 /* Headings */
@@ -59,8 +56,9 @@
 /* Paragraphs */
 .markdown-body p {
   margin-top: 0;
-  margin-bottom: 16px;
-  line-height: 1.7;
+  margin-bottom: 18px;
+  line-height: 1.8;
+  text-align: justify;
 }
 
 /* Links */
@@ -227,7 +225,7 @@
 /* Dark Theme */
 [data-theme="dark"] .markdown-body {
   color: #c9d1d9;
-  background-color: #0d1117;
+  background-color: #1a1a1a;
 }
 
 [data-theme="dark"] .markdown-body h1,

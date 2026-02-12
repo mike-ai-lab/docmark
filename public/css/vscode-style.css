@@ -5,6 +5,8 @@
     font-size: 14px;
     line-height: 1.6;
     padding: 20px;
+    background-color: #ffffff;
+    color: #24292f;
 }
 
 /* Headings - VSCode style */
@@ -209,8 +211,8 @@
 
 /* Dark mode support */
 [data-theme="dark"] .markdown-body {
-    color: #c9d1d9;
-    background-color: transparent;
+    color: #cccccc;
+    background-color: #1e1e1e;
 }
 
 [data-theme="dark"] .markdown-body h1,
@@ -219,11 +221,18 @@
 }
 
 [data-theme="dark"] .markdown-body pre {
-    background-color: #161b22;
+    background-color: #1e1e1e;
+    border: 1px solid #3c3c3c;
+}
+
+[data-theme="dark"] .markdown-body pre code {
+    background-color: transparent;
+    color: #cccccc;
 }
 
 [data-theme="dark"] .markdown-body code {
     background-color: rgba(110, 118, 129, 0.4);
+    color: #cccccc;
 }
 
 [data-theme="dark"] .markdown-body table tr {

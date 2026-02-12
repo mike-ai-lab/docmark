@@ -1422,30 +1422,104 @@ let performBeautify = (content) => {
         const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
         const css = await getStyleCss(currentStyle, isDark);
         
+        // Style-specific configurations for paper layout
+        let paperStyles = '';
+        if (currentStyle === 'gitbook') {
+            paperStyles = `
+                body {
+                    background-color: ${isDark ? '#0d1117' : '#f5f5f5'};
+                    padding: 40px 20px;
+                }
+                .paper-container {
+                    max-width: 860px;
+                    margin: 0 auto;
+                    background-color: ${isDark ? '#1a1a1a' : '#ffffff'};
+                    padding: 50px 70px;
+                    box-shadow: 0 0 20px rgba(0, 0, 0, ${isDark ? '0.5' : '0.1'});
+                    min-height: 100vh;
+                }
+                .markdown-body {
+                    padding: 0;
+                    background-color: transparent;
+                }
+            `;
+        } else if (currentStyle === 'vscode') {
+            paperStyles = `
+                body {
+                    background-color: ${isDark ? '#1e1e1e' : '#f3f3f3'};
+                    padding: 40px 20px;
+                }
+                .paper-container {
+                    max-width: 900px;
+                    margin: 0 auto;
+                    background-color: ${isDark ? '#1e1e1e' : '#ffffff'};
+                    padding: 40px 50px;
+                    box-shadow: 0 0 15px rgba(0, 0, 0, ${isDark ? '0.4' : '0.1'});
+                    min-height: 100vh;
+                    border: 1px solid ${isDark ? '#3c3c3c' : '#e1e4e8'};
+                }
+                .markdown-body {
+                    padding: 0;
+                    background-color: transparent;
+                }
+            `;
+        } else {
+            // GitHub style
+            paperStyles = `
+                body {
+                    background-color: ${isDark ? '#0d1117' : '#f6f8fa'};
+                    padding: 40px 20px;
+                    margin: 0;
+                }
+                .paper-container {
+                    max-width: 980px;
+                    margin: 0 auto;
+                    background-color: ${isDark ? '#0d1117' : '#ffffff'};
+                    padding: 40px 50px;
+                    box-shadow: 0 0 10px rgba(0, 0, 0, ${isDark ? '0.3' : '0.08'});
+                    min-height: 100vh;
+                    border: 1px solid ${isDark ? '#30363d' : '#d0d7de'};
+                }
+                .markdown-body {
+                    padding: 0;
+                    margin: 0;
+                    background-color: transparent;
+                    max-width: 100%;
+                    width: 100%;
+                }
+            `;
+        }
+        
         const htmlContent = `<!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="${isDark ? 'dark' : 'light'}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Exported Markdown</title>
+    <title>Exported Markdown - ${currentStyle.charAt(0).toUpperCase() + currentStyle.slice(1)} Style</title>
     <style>
-        body {
-            margin: 0;
-            padding: 20px;
-            background-color: ${isDark ? '#1E1E1E' : '#ffffff'};
-            color: ${isDark ? '#e6edf3' : '#24292f'};
+        * {
+            box-sizing: border-box;
         }
-        .markdown-body {
-            max-width: 900px;
-            margin: 0 auto;
-            color: ${isDark ? '#e6edf3' : '#24292f'};
+        ${paperStyles}
+        @media print {
+            body {
+                background-color: white;
+                padding: 0;
+            }
+            .paper-container {
+                box-shadow: none;
+                border: none;
+                max-width: 100%;
+            }
         }
         ${css}
     </style>
 </head>
 <body>
-    <div class="markdown-body">
-        ${outputElement.innerHTML}
+    <div class="paper-container">
+        <div class="markdown-body">
+            ${outputElement.innerHTML}
+        </div>
     </div>
 </body>
 </html>`;
@@ -1459,12 +1533,15 @@ let performBeautify = (content) => {
         // Generate filename with style and timestamp
         const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
         const styleName = currentStyle.charAt(0).toUpperCase() + currentStyle.slice(1);
-        a.download = `Marco_${styleName}_${timestamp}.html`;
+        const themeMode = isDark ? 'Dark' : 'Light';
+        a.download = `DocMark_${styleName}_${themeMode}_${timestamp}.html`;
         
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
+        
+        showToast(`HTML exported successfully (${styleName} - ${themeMode} mode)`, 'success');
     };
 
     let getLightMarkdownCss = () => {
