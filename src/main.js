@@ -11,6 +11,11 @@ const init = () => {
 
     // Global drag state - only one resizer can be active at a time
     let activeResizer = null;
+    
+    // Manual undo history stack (10 steps)
+    let undoHistory = [];
+    let undoHistoryIndex = -1;
+    const MAX_UNDO_STEPS = 10;
 
     const localStorageNamespace = 'com.markdownlivepreview';
     const localStorageKey = 'last_state';
@@ -24,6 +29,66 @@ const init = () => {
     const localStorageHelperMessagesKey = 'helper_messages_settings';
     const localStorageTocKey = 'toc_settings';
     const confirmationMessage = 'Are you sure you want to reset? Your changes will be lost.';
+    
+    // Manual undo history management
+    const saveToUndoHistory = (content) => {
+        // Remove any future history if we're not at the end
+        if (undoHistoryIndex < undoHistory.length - 1) {
+            undoHistory = undoHistory.slice(0, undoHistoryIndex + 1);
+        }
+        
+        // Add new state
+        undoHistory.push(content);
+        
+        // Keep only last MAX_UNDO_STEPS
+        if (undoHistory.length > MAX_UNDO_STEPS) {
+            undoHistory.shift();
+        } else {
+            undoHistoryIndex++;
+        }
+    };
+    
+    const performUndo = () => {
+        if (undoHistoryIndex > 0) {
+            undoHistoryIndex--;
+            const previousContent = undoHistory[undoHistoryIndex];
+            
+            // Use executeEdits to preserve undo stack
+            const model = editor.getModel();
+            const fullRange = model.getFullModelRange();
+            editor.executeEdits('undo-operation', [{
+                range: fullRange,
+                text: previousContent
+            }]);
+            
+            showMofuHelper(`Undo successful! (${undoHistoryIndex + 1}/${undoHistory.length} states)`);
+            return true;
+        } else {
+            showMofuHelper('Nothing to undo!');
+            return false;
+        }
+    };
+    
+    const performRedo = () => {
+        if (undoHistoryIndex < undoHistory.length - 1) {
+            undoHistoryIndex++;
+            const nextContent = undoHistory[undoHistoryIndex];
+            
+            // Use executeEdits to preserve undo stack
+            const model = editor.getModel();
+            const fullRange = model.getFullModelRange();
+            editor.executeEdits('redo-operation', [{
+                range: fullRange,
+                text: nextContent
+            }]);
+            
+            showMofuHelper(`Redo successful! (${undoHistoryIndex + 1}/${undoHistory.length} states)`);
+            return true;
+        } else {
+            showMofuHelper('Nothing to redo!');
+            return false;
+        }
+    };
     
     // PDF Font Settings - configurable
     let pdfFontSettings = {
@@ -600,9 +665,14 @@ This web site is using ${"`"}markedjs/marked${"`"}.
 
     // Clear editor content
     let clearEditor = () => {
+        // Save current state to undo history before clearing
+        saveToUndoHistory(editor.getValue());
+        
         editor.setValue('');
         editor.focus();
         hasEdited = false;
+        
+        showMofuHelper('Editor cleared! Use <strong>Undo</strong> to restore.');
     };
 
     // Beautify markdown - format and clean up markdown text
@@ -836,8 +906,16 @@ This web site is using ${"`"}markedjs/marked${"`"}.
         
         // Apply button handler
         document.getElementById('diff-apply-btn').addEventListener('click', () => {
-            // Apply to main editor
-            editor.setValue(modified);
+            // Save current state to undo history before applying
+            saveToUndoHistory(editor.getValue());
+            
+            // Apply to main editor using executeEdits to preserve undo
+            const model = editor.getModel();
+            const fullRange = model.getFullModelRange();
+            editor.executeEdits('beautify-apply', [{
+                range: fullRange,
+                text: modified
+            }]);
             
             // Clean up temp editor
             tempEditor.dispose();
@@ -845,7 +923,7 @@ This web site is using ${"`"}markedjs/marked${"`"}.
             originalEditorDiv.style.display = 'block';
             
             editor.focus();
-            showMofuHelper('Changes <strong>applied</strong>! Your markdown has been beautified.');
+            showMofuHelper('Changes <strong>applied</strong>! Your markdown has been beautified. Use <strong>Undo</strong> to revert.');
         });
         
         // Cancel button handler
@@ -980,25 +1058,32 @@ let performBeautify = (content) => {
             i++; continue;
         }
 
-        // 6. Lists (Normalized to *)
-        const listMatch = line.match(/^(\s*)([*+-]|\d+\.)\s*(.*)/);
+        // 6. Lists (Keep numbered lists, normalize bullets to *)
+        const listMatch = line.match(/^(\s*)([*+-]|\d+\.)\s+(.*)$/);
         if (listMatch) {
             if (previousType !== 'list' && previousType !== 'start') ensureSpacing();
+            let indent = listMatch[1];
             let bullet = listMatch[2];
-            // Normalize all list markers to *
-            if (['+', '-'].includes(bullet) || /^\d+\.$/.test(bullet)) {
+            let content = listMatch[3].trim();
+            
+            // Only normalize bullet markers (*, +, -) to *, keep numbered lists as-is
+            if (['+', '-', '*'].includes(bullet)) {
                 bullet = '*';
             }
-            let content = listMatch[3].trim();
+            
             // Fix key-value pairs in list items: "Key:Value" -> "Key: Value"
             content = content.replace(/^([A-Za-z][A-Za-z0-9\s]*):(\S)/, '$1: $2');
-            beautified.push(`${listMatch[1]}${bullet} ${content}`);
+            
+            // Preserve indentation (convert tabs to 4 spaces for consistency)
+            indent = indent.replace(/\t/g, '    ');
+            
+            beautified.push(`${indent}${bullet} ${content}`);
             previousType = 'list';
             i++; continue;
         }
 
-        // 7. Horizontal Rules
-        if (/^([-*_])\1{2,}$/.test(trimmed)) {
+        // 7. Horizontal Rules (Must come AFTER list check to avoid conflict)
+        if (/^[-*_]{3,}$/.test(trimmed)) {
             ensureSpacing();
             beautified.push('---');
             previousType = 'hr';
@@ -1612,34 +1697,34 @@ let performBeautify = (content) => {
             const sanitizeForPdf = (text) => {
                 if (!text) return '';
                 
-                // Map of Unicode characters to ASCII equivalents
+                // 1. Map known special characters to ASCII equivalents
                 const charMap = {
-                    '≈': '~',           // approximately equal
-                    '→': '->',          // right arrow
-                    '←': '<-',          // left arrow
-                    '↔': '<->',         // left-right arrow
-                    '²': '2',           // superscript 2
-                    '³': '3',           // superscript 3
-                    '×': 'x',           // multiplication
-                    '÷': '/',           // division
-                    'Ø': 'O',           // diameter
-                    'ø': 'o',           // diameter lowercase
-                    '°': ' deg',        // degree
-                    '±': '+/-',         // plus-minus
-                    '–': '-',           // en dash
-                    '—': '--',          // em dash
+                    '\u2248': '~',      // approximately equal
+                    '\u2192': '->',     // right arrow
+                    '\u2190': '<-',     // left arrow
+                    '\u2194': '<->',    // left-right arrow
+                    '\u00B2': '2',      // superscript 2
+                    '\u00B3': '3',      // superscript 3
+                    '\u00D7': 'x',      // multiplication sign
+                    '\u00F7': '/',      // division
+                    '\u00D8': 'O',      // diameter
+                    '\u00F8': 'o',      // diameter lowercase
+                    '\u00B0': ' deg',   // degree
+                    '\u00B1': '+/-',    // plus-minus
+                    '\u2013': '-',      // en dash
+                    '\u2014': '--',     // em dash
+                    '\u2011': '-',      // non-breaking hyphen
                     '\u2018': "'",      // left single quote
                     '\u2019': "'",      // right single quote
                     '\u201C': '"',      // left double quote
                     '\u201D': '"',      // right double quote
-                    '…': '...',         // ellipsis
-                    '•': '*',           // bullet
-                    '€': 'EUR',         // euro
-                    '£': 'GBP',         // pound
-                    '¥': 'JPY',         // yen
-                    'ط': 'm.l',         // Arabic letter (linear meter)
-                    'م': 'm',           // Arabic letter
-                    // Add more as needed
+                    '\u2026': '...',    // ellipsis
+                    '\u2022': '*',      // bullet
+                    '\u20AC': 'EUR',    // euro
+                    '\u00A3': 'GBP',    // pound
+                    '\u00A5': 'JPY',    // yen
+                    '\u0637': 'm.l',    // Arabic letter
+                    '\u0645': 'm'       // Arabic letter
                 };
                 
                 let result = text;
@@ -1647,8 +1732,22 @@ let performBeautify = (content) => {
                     result = result.split(unicode).join(ascii);
                 }
                 
-                // Remove any remaining non-ASCII characters
-                result = result.replace(/[^\x00-\x7F]/g, '?');
+                // 2. Normalize ALL Unicode spaces to a standard space (Fixes "2400 mm" spacing issues)
+                result = result.replace(/[\u00A0\u2000-\u200A\u202F\u205F\u3000]/g, ' ');
+                
+                // 3. Normalize ALL Unicode dashes/hyphens to a standard minus sign
+                result = result.replace(/[\u2010-\u2015\u2212]/g, '-');
+                
+                // 4. CRITICAL FIX: Strip all invisible Bidirectional (RTL/LTR) & formatting marks
+                // These are injected by AI and completely break jsPDF text generation
+                result = result.replace(/[\u200B-\u200F\u202A-\u202E\u2060-\u2064\uFEFF]/g, '');
+                
+                // 5. Strip standard non-printable control characters
+                result = result.replace(/[\x00-\x08\x0B-\x0C\x0E-\x1F\x7F-\x9F]/g, '');
+                
+                // 6. Ultimate Fallback: Remove any remaining non-ASCII characters
+                // (jsPDF's default Helvetica only supports standard Latin characters. This stops the "&" garbling entirely)
+                result = result.replace(/[^\x20-\x7E]/g, '');
                 
                 return result;
             };
@@ -1888,8 +1987,8 @@ let performBeautify = (content) => {
                         
                         if (isDateDiv) {
                             // Render H1 and date side-by-side
-                            const h1Text = element.textContent;
-                            const dateText = nextSibling.textContent;
+                            const h1Text = sanitizeForPdf(element.textContent);
+                            const dateText = sanitizeForPdf(nextSibling.textContent);
                             
                             doc.setFont('helvetica', 'bold');
                             doc.setFontSize(fontSizes.h1);
@@ -1942,9 +2041,9 @@ let performBeautify = (content) => {
                             doc.setFontSize(10);
                             doc.setTextColor(100, 100, 100);
                             
-                            let imageText = `[Image: ${alt}]`;
-                            if (title) imageText += ` - ${title}`;
-                            if (src) imageText += `\n${src}`;
+                            let imageText = `[Image: ${sanitizeForPdf(alt)}]`;
+                            if (title) imageText += ` - ${sanitizeForPdf(title)}`;
+                            if (src) imageText += `\n${sanitizeForPdf(src)}`;
                             
                             const lines = doc.splitTextToSize(imageText, maxWidth);
                             lines.forEach(line => {
@@ -2135,7 +2234,7 @@ let performBeautify = (content) => {
                                 doc.addPage();
                                 yPosition = margin;
                             }
-                            doc.text(line || ' ', margin + 5, yPosition);
+                            doc.text(sanitizeForPdf(line || ' '), margin + 5, yPosition);
                             yPosition += codeLineHeight;
                         });
                         doc.setFont('helvetica', 'normal');
@@ -2401,7 +2500,7 @@ let performBeautify = (content) => {
                                 doc.setFontSize(fontSizes.paragraph);
                                 const leftStrong = leftDiv.querySelector('strong');
                                 if (leftStrong) {
-                                    doc.text(leftStrong.textContent, margin, yPosition);
+                                    doc.text(sanitizeForPdf(leftStrong.textContent), margin, yPosition);
                                     yPosition += fontSizes.paragraph * 0.5;
                                 }
                                 
@@ -2409,7 +2508,7 @@ let performBeautify = (content) => {
                                 doc.setTextColor(100, 100, 100);
                                 const leftSpan = leftDiv.querySelector('span');
                                 if (leftSpan) {
-                                    doc.text(leftSpan.textContent, margin, yPosition);
+                                    doc.text(sanitizeForPdf(leftSpan.textContent), margin, yPosition);
                                 }
                                 doc.setTextColor(0, 0, 0);
                                 
@@ -2418,16 +2517,18 @@ let performBeautify = (content) => {
                                 doc.setFont('helvetica', 'bold');
                                 const rightStrong = rightDiv.querySelector('strong');
                                 if (rightStrong) {
-                                    const rightStrongWidth = doc.getTextWidth(rightStrong.textContent);
-                                    doc.text(rightStrong.textContent, pageWidth - margin - rightStrongWidth, rightY);
+                                    const sanitizedRightStrong = sanitizeForPdf(rightStrong.textContent);
+                                    const rightStrongWidth = doc.getTextWidth(sanitizedRightStrong);
+                                    doc.text(sanitizedRightStrong, pageWidth - margin - rightStrongWidth, rightY);
                                 }
                                 
                                 doc.setFont('helvetica', 'normal');
                                 doc.setTextColor(100, 100, 100);
                                 const rightSpan = rightDiv.querySelector('span');
                                 if (rightSpan) {
-                                    const rightSpanWidth = doc.getTextWidth(rightSpan.textContent);
-                                    doc.text(rightSpan.textContent, pageWidth - margin - rightSpanWidth, yPosition);
+                                    const sanitizedRightSpan = sanitizeForPdf(rightSpan.textContent);
+                                    const rightSpanWidth = doc.getTextWidth(sanitizedRightSpan);
+                                    doc.text(sanitizedRightSpan, pageWidth - margin - rightSpanWidth, yPosition);
                                 }
                                 doc.setTextColor(0, 0, 0);
                                 
@@ -2900,8 +3001,19 @@ let performBeautify = (content) => {
                     reader.onload = (e) => {
                         const content = e.target.result;
                         if (editorInstance) {
-                            editorInstance.setValue(content);
+                            // Save current state before importing
+                            saveToUndoHistory(editorInstance.getValue());
+                            
+                            // Use executeEdits to preserve undo
+                            const model = editorInstance.getModel();
+                            const fullRange = model.getFullModelRange();
+                            editorInstance.executeEdits('import-markdown', [{
+                                range: fullRange,
+                                text: content
+                            }]);
+                            
                             showToast(`Imported: ${file.name}`, 'success');
+                            showMofuHelper(`File imported! Use <strong>Undo</strong> to restore previous content.`);
                         }
                     };
                     reader.onerror = () => {
@@ -2934,7 +3046,10 @@ let performBeautify = (content) => {
         undoButton.addEventListener('click', (event) => {
             event.preventDefault();
             if (editor) {
-                editor.trigger('keyboard', 'undo', null);
+                // Try custom undo first, fallback to Monaco's undo
+                if (!performUndo()) {
+                    editor.trigger('keyboard', 'undo', null);
+                }
                 editor.focus();
             }
         });
@@ -4005,6 +4120,37 @@ let performBeautify = (content) => {
     } else {
         presetValue(defaultInput);
     }
+    
+    // Initialize undo history with current content
+    saveToUndoHistory(editor.getValue());
+    
+    // Add keyboard shortcuts for custom undo/redo
+    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyZ, () => {
+        performUndo();
+    });
+    
+    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.KeyZ, () => {
+        performRedo();
+    });
+    
+    // Also support Ctrl+Y for redo on Windows
+    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyY, () => {
+        performRedo();
+    });
+    
+    // Save to history periodically (every 5 seconds of typing)
+    let typingTimer;
+    editor.onDidChangeModelContent(() => {
+        clearTimeout(typingTimer);
+        typingTimer = setTimeout(() => {
+            const currentContent = editor.getValue();
+            // Only save if content actually changed from last history entry
+            if (undoHistory.length === 0 || undoHistory[undoHistoryIndex] !== currentContent) {
+                saveToUndoHistory(currentContent);
+            }
+        }, 5000);
+    });
+    
     setupClearButton();
     setupPasteButton();
     setupCopyButton(editor);

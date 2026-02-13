@@ -96,12 +96,20 @@ function sanitizeForPdf(text) {
         'ø': 'o',           // diameter lowercase
         '°': ' deg',        // degree
         '±': '+/-',         // plus-minus
-        '–': '-',           // en dash
-        '—': '--',          // em dash
+        '–': '-',           // en dash (U+2013)
+        '—': '--',          // em dash (U+2014)
+        '‑': '-',           // non-breaking hyphen (U+2011)
+        '\u2010': '-',      // hyphen (U+2010)
+        '\u2012': '-',      // figure dash (U+2012)
+        '\u2013': '-',      // en dash (U+2013)
+        '\u2014': '--',     // em dash (U+2014)
+        '\u2015': '--',     // horizontal bar (U+2015)
         '\u2018': "'",      // left single quote
         '\u2019': "'",      // right single quote
         '\u201C': '"',      // left double quote
         '\u201D': '"',      // right double quote
+        '\u201A': ',',      // single low-9 quotation mark
+        '\u201E': ',,',     // double low-9 quotation mark
         '…': '...',         // ellipsis
         '•': '*',           // bullet
         '€': 'EUR',         // euro
@@ -109,6 +117,18 @@ function sanitizeForPdf(text) {
         '¥': 'JPY',         // yen
         'ط': 'm.l',         // Arabic letter (linear meter)
         'م': 'm',           // Arabic letter
+        '\u00A0': ' ',      // non-breaking space
+        '\u2000': ' ',      // en quad
+        '\u2001': ' ',      // em quad
+        '\u2002': ' ',      // en space
+        '\u2003': ' ',      // em space
+        '\u2004': ' ',      // three-per-em space
+        '\u2005': ' ',      // four-per-em space
+        '\u2006': ' ',      // six-per-em space
+        '\u2007': ' ',      // figure space
+        '\u2008': ' ',      // punctuation space
+        '\u2009': ' ',      // thin space
+        '\u200A': ' ',      // hair space
         // Add more as needed
     };
     
@@ -117,8 +137,9 @@ function sanitizeForPdf(text) {
         result = result.split(unicode).join(ascii);
     }
     
-    // Remove any remaining non-ASCII characters
-    result = result.replace(/[^\x00-\x7F]/g, '?');
+    // Instead of removing all non-ASCII, try to preserve what we can
+    // Only replace truly problematic characters
+    result = result.replace(/[\x00-\x08\x0B-\x0C\x0E-\x1F\x7F-\x9F]/g, '');
     
     return result;
 }

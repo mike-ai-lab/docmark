@@ -15,7 +15,12 @@
     "type": "git",
     "url": "git+https://github.com/mike-ai-lab/docmark.git"
   },
-  "keywords": ["markdown", "editor", "live-preview", "syntax-highlighting"],
+  "keywords": [
+    "markdown",
+    "editor",
+    "live-preview",
+    "syntax-highlighting"
+  ],
   "author": "mike-ai-lab",
   "license": "MIT",
   "bugs": {
@@ -29,8 +34,10 @@
   "dependencies": {
     "dompurify": "^3.2.5",
     "github-markdown-css": "^5.8.1",
+    "jspdf": "^4.1.0",
     "marked": "^15.0.7",
     "monaco-editor": "^0.52.2",
     "storehouse-js": "github:tanabe/Storehouse-js"
-  }
+  },
+  "type": "commonjs"
 }
