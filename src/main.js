@@ -215,8 +215,34 @@ This web site is using ${"`"}markedjs/marked${"`"}.
         }
     });
 
+    // Status bar update function (defined at init scope so it can be used everywhere)
+    let editor; // Will be set by setupEditor
+    const updateStatusBar = () => {
+        if (!editor) return; // Guard against early calls
+        const content = editor.getValue();
+        const lines = content.split('\n');
+        
+        // Word count
+        const words = content.trim() ? content.trim().split(/\s+/).length : 0;
+        document.getElementById('status-word-count').textContent = words;
+        
+        // Character count
+        document.getElementById('status-char-count').textContent = content.length;
+        
+        // Line count
+        document.getElementById('status-line-count').textContent = lines.length;
+        
+        // Reading time (200 words per minute)
+        const readingMinutes = Math.ceil(words / 200);
+        document.getElementById('status-reading-time').textContent = readingMinutes + ' min';
+        
+        // PDF page estimate (500 words per page)
+        const pdfPages = Math.max(1, Math.ceil(words / 500));
+        document.getElementById('status-pdf-pages').textContent = '~' + pdfPages;
+    };
+
     let setupEditor = () => {
-        let editor = monaco.editor.create(document.querySelector('#editor'), {
+        editor = monaco.editor.create(document.querySelector('#editor'), {
             fontSize: 14,
             language: 'markdown',
             minimap: { enabled: false },
@@ -315,6 +341,9 @@ This web site is using ${"`"}markedjs/marked${"`"}.
             if (tocVisible) {
                 updateToc();
             }
+            
+            // Update status bar
+            updateStatusBar();
         });
 
         // Scroll sync is now handled in the consolidated section at the bottom
@@ -6491,7 +6520,7 @@ let performBeautify = (content) => {
 
     // ----- entry point -----
     let lastContent = loadLastContent();
-    let editor = setupEditor();
+    editor = setupEditor(); // editor already declared at top scope
     
     // Expose editor globally for testing
     window.editor = editor;
@@ -6608,6 +6637,410 @@ let performBeautify = (content) => {
 
     // initialize theme (dark/light)
     let themeSettings = loadThemeSettings();
+
+    // ============================================================================
+    // STATUS BAR FUNCTIONALITY
+    // ============================================================================
+    
+    // PDF estimate click handler
+    document.getElementById('status-pdf-estimate').addEventListener('click', () => {
+        const words = parseInt(document.getElementById('status-word-count').textContent);
+        const pages = Math.max(1, Math.ceil(words / 500));
+        const message = `PDF Page Estimate\n\nBased on approximately 500 words per page:\n${words} words ≈ ${pages} page${pages !== 1 ? 's' : ''}\n\nNote: Actual page count may vary based on:\n• Font size and family\n• Line height\n• Images and tables\n• Margins and spacing`;
+        alert(message);
+    });
+    
+    // Initial status bar update
+    updateStatusBar();
+    
+    // ============================================================================
+    // VERSION HISTORY FUNCTIONALITY
+    // ============================================================================
+    
+    const localStorageVersionsKey = 'versions';
+    const AUTO_SAVE_INTERVAL_MS = 10 * 60 * 1000; // 10 minutes
+    const MAX_VERSIONS = 15; // Maximum stored versions (FIFO retention)
+    let versions = [];
+    let autoSaveTimer = null;
+    
+    // Load versions from localStorage
+    const loadVersions = () => {
+        try {
+            const stored = localStorage.getItem(`${localStorageNamespace}.${localStorageVersionsKey}`);
+            if (stored) {
+                versions = JSON.parse(stored);
+                // Convert timestamp strings back to Date objects
+                versions.forEach(v => v.timestamp = new Date(v.timestamp));
+                updateVersionsPanel();
+            }
+        } catch (e) {
+            console.error('Failed to load versions:', e);
+            versions = [];
+        }
+    };
+    
+    // Save versions to localStorage
+    const saveVersionsToStorage = () => {
+        try {
+            localStorage.setItem(`${localStorageNamespace}.${localStorageVersionsKey}`, JSON.stringify(versions));
+        } catch (e) {
+            console.error('Failed to save versions:', e);
+        }
+    };
+    
+    // Save current content as a version
+    const saveVersion = () => {
+        const content = editor.getValue();
+        const words = content.trim() ? content.trim().split(/\s+/).length : 0;
+        const timestamp = new Date();
+        
+        const version = {
+            id: Date.now(),
+            content: content,
+            timestamp: timestamp,
+            words: words,
+            preview: content.substring(0, 100) + (content.length > 100 ? '...' : '')
+        };
+        
+        // Add to beginning of array
+        versions.unshift(version);
+        
+        // Keep only last MAX_VERSIONS
+        if (versions.length > MAX_VERSIONS) {
+            versions = versions.slice(0, MAX_VERSIONS);
+        }
+        
+        saveVersionsToStorage();
+        updateVersionsPanel();
+        updateStatusBar();
+        
+        // Update save indicator
+        const saveIndicator = document.getElementById('status-save-indicator');
+        if (saveIndicator) {
+            saveIndicator.textContent = 'Saved';
+            setTimeout(() => {
+                saveIndicator.textContent = 'Saved';
+            }, 2000);
+        }
+    };
+    
+    // Format timestamp for display
+    const formatTimestamp = (date) => {
+        const now = new Date();
+        const diff = now - date;
+        const minutes = Math.floor(diff / 60000);
+        const hours = Math.floor(diff / 3600000);
+        const days = Math.floor(diff / 86400000);
+        
+        if (minutes < 1) return 'Just now';
+        if (minutes < 60) return `${minutes} min ago`;
+        if (hours < 24) return `${hours} hour${hours > 1 ? 's' : ''} ago`;
+        if (days < 7) return `${days} day${days > 1 ? 's' : ''} ago`;
+        
+        return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+    };
+    
+    // Update versions panel UI
+    const updateVersionsPanel = () => {
+        const versionsList = document.getElementById('version-history-list');
+        const versionsCount = document.getElementById('status-versions-count');
+        const totalVersionsDisplay = document.getElementById('total-versions-display');
+        
+        if (versionsCount) versionsCount.textContent = versions.length;
+        if (totalVersionsDisplay) totalVersionsDisplay.textContent = versions.length;
+        
+        if (!versionsList) return;
+        
+        if (versions.length === 0) {
+            versionsList.innerHTML = '<p class="version-empty-state">No versions saved yet. Versions are auto-saved every 10 minutes.</p>';
+            return;
+        }
+        
+        versionsList.innerHTML = versions.map(version => `
+            <div class="version-item">
+                <div class="version-timestamp">${formatTimestamp(version.timestamp)}</div>
+                <div class="version-meta">
+                    <span>${version.words} words</span>
+                    <span>${Math.ceil(version.words / 500)} pages</span>
+                </div>
+                <div class="version-preview">${version.preview}</div>
+                <div class="version-actions">
+                    <button class="version-btn" onclick="window.previewVersion(${version.id})">Preview</button>
+                    <button class="version-btn" onclick="window.compareVersion(${version.id})">Compare</button>
+                    <button class="version-btn restore" onclick="window.restoreVersion(${version.id})">Restore</button>
+                    <button class="version-btn" onclick="window.deleteVersion(${version.id})">Delete</button>
+                </div>
+            </div>
+        `).join('');
+    };
+    
+    // Restore a version
+    window.restoreVersion = (id) => {
+        const version = versions.find(v => v.id === id);
+        if (version && confirm('Restore this version? Current content will be replaced.')) {
+            editor.setValue(version.content);
+            closeVersionModal();
+            const panel = document.getElementById('version-history-panel');
+            if (panel) panel.classList.remove('visible');
+        }
+    };
+    
+    // Delete a version
+    window.deleteVersion = (id) => {
+        if (confirm('Delete this version?')) {
+            versions = versions.filter(v => v.id !== id);
+            saveVersionsToStorage();
+            updateVersionsPanel();
+            updateStatusBar();
+        }
+    };
+    
+    // Preview a version
+    window.previewVersion = (id) => {
+        const version = versions.find(v => v.id === id);
+        if (!version) return;
+        
+        const modalTitle = document.getElementById('version-modal-title');
+        const modalBody = document.getElementById('version-modal-body');
+        const restoreBtn = document.getElementById('version-modal-restore-btn');
+        
+        if (modalTitle) modalTitle.textContent = 'Version Preview - ' + formatTimestamp(version.timestamp);
+        
+        if (modalBody) {
+            const html = marked.parse(version.content);
+            const sanitized = DOMPurify.sanitize(html);
+            
+            modalBody.innerHTML = `
+                <div style="max-width: 800px; margin: 0 auto;">
+                    <div style="margin-bottom: 16px; padding: 12px; background: #f8fafc; border-radius: 8px; font-size: 12px; color: #64748b;">
+                        <strong>${version.words}</strong> words • <strong>${Math.ceil(version.words / 500)}</strong> pages • Saved ${formatTimestamp(version.timestamp)}
+                    </div>
+                    <div class="markdown-body" style="padding: 20px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px;">
+                        ${sanitized}
+                    </div>
+                </div>
+            `;
+        }
+        
+        if (restoreBtn) {
+            restoreBtn.style.display = 'block';
+            restoreBtn.onclick = () => {
+                window.restoreVersion(id);
+            };
+        }
+        
+        openVersionModal();
+    };
+    
+    // Compare versions
+    window.compareVersion = (id) => {
+        const version = versions.find(v => v.id === id);
+        if (!version) return;
+        
+        const currentContent = editor.getValue();
+        const versionContent = version.content;
+        
+        const modalTitle = document.getElementById('version-modal-title');
+        const modalBody = document.getElementById('version-modal-body');
+        const restoreBtn = document.getElementById('version-modal-restore-btn');
+        
+        if (modalTitle) modalTitle.textContent = 'Compare Versions';
+        
+        if (modalBody) {
+            modalBody.innerHTML = `
+                <div class="version-compare-view">
+                    <div class="compare-pane">
+                        <div class="compare-pane-header">Current Version</div>
+                        <div class="compare-pane-content">${highlightDiff(currentContent, versionContent, 'current')}</div>
+                    </div>
+                    <div class="compare-pane">
+                        <div class="compare-pane-header">Version from ${formatTimestamp(version.timestamp)}</div>
+                        <div class="compare-pane-content">${highlightDiff(versionContent, currentContent, 'version')}</div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        if (restoreBtn) {
+            restoreBtn.style.display = 'block';
+            restoreBtn.onclick = () => {
+                window.restoreVersion(id);
+            };
+        }
+        
+        openVersionModal();
+    };
+    
+    // Improved diff highlighting using LCS (Longest Common Subsequence) algorithm
+    const highlightDiff = (text1, text2, mode) => {
+        const lines1 = text1.split('\n');
+        const lines2 = text2.split('\n');
+        
+        // Calculate LCS to find matching lines
+        const lcs = calculateLCS(lines1, lines2);
+        
+        // Build diff result based on LCS
+        let result = '';
+        let i = 0, j = 0;
+        let lcsIndex = 0;
+        
+        while (i < lines1.length || j < lines2.length) {
+            // Check if current lines are in LCS (unchanged)
+            if (lcsIndex < lcs.length && 
+                i < lines1.length && 
+                j < lines2.length && 
+                lines1[i] === lcs[lcsIndex] && 
+                lines2[j] === lcs[lcsIndex]) {
+                // Unchanged line
+                result += escapeHtml(lines1[i]) + '\n';
+                i++;
+                j++;
+                lcsIndex++;
+            } else if (mode === 'current') {
+                // In current mode, show additions from text1
+                if (i < lines1.length && (lcsIndex >= lcs.length || lines1[i] !== lcs[lcsIndex])) {
+                    result += `<span class="diff-added">${escapeHtml(lines1[i])}</span>\n`;
+                    i++;
+                } else {
+                    j++;
+                }
+            } else {
+                // In saved mode, show deletions from text2
+                if (j < lines2.length && (lcsIndex >= lcs.length || lines2[j] !== lcs[lcsIndex])) {
+                    result += `<span class="diff-removed">${escapeHtml(lines2[j])}</span>\n`;
+                    j++;
+                } else {
+                    i++;
+                }
+            }
+        }
+        
+        return result || escapeHtml(mode === 'current' ? text1 : text2);
+    };
+    
+    // Calculate Longest Common Subsequence for diff
+    const calculateLCS = (arr1, arr2) => {
+        const m = arr1.length;
+        const n = arr2.length;
+        
+        // Create DP table
+        const dp = Array(m + 1).fill(null).map(() => Array(n + 1).fill(0));
+        
+        // Fill DP table
+        for (let i = 1; i <= m; i++) {
+            for (let j = 1; j <= n; j++) {
+                if (arr1[i - 1] === arr2[j - 1]) {
+                    dp[i][j] = dp[i - 1][j - 1] + 1;
+                } else {
+                    dp[i][j] = Math.max(dp[i - 1][j], dp[i][j - 1]);
+                }
+            }
+        }
+        
+        // Backtrack to find LCS
+        const lcs = [];
+        let i = m, j = n;
+        while (i > 0 && j > 0) {
+            if (arr1[i - 1] === arr2[j - 1]) {
+                lcs.unshift(arr1[i - 1]);
+                i--;
+                j--;
+            } else if (dp[i - 1][j] > dp[i][j - 1]) {
+                i--;
+            } else {
+                j--;
+            }
+        }
+        
+        return lcs;
+    };
+    
+    // Open version modal
+    const openVersionModal = () => {
+        const modal = document.getElementById('version-modal');
+        if (modal) modal.classList.add('visible');
+    };
+    
+    // Close version modal
+    const closeVersionModal = () => {
+        const modal = document.getElementById('version-modal');
+        const restoreBtn = document.getElementById('version-modal-restore-btn');
+        if (modal) modal.classList.remove('visible');
+        if (restoreBtn) restoreBtn.style.display = 'none';
+    };
+    
+    // Version history panel toggle
+    const versionHistoryPanel = document.getElementById('version-history-panel');
+    const versionHistoryCloseBtn = document.getElementById('version-history-close-btn');
+    const statusVersionsBtn = document.getElementById('status-versions');
+    
+    if (statusVersionsBtn) {
+        statusVersionsBtn.addEventListener('click', () => {
+            if (versionHistoryPanel) {
+                versionHistoryPanel.classList.toggle('visible');
+            }
+        });
+    }
+    
+    if (versionHistoryCloseBtn) {
+        versionHistoryCloseBtn.addEventListener('click', () => {
+            if (versionHistoryPanel) {
+                versionHistoryPanel.classList.remove('visible');
+            }
+        });
+    }
+    
+    // Save version now button
+    const saveVersionNowBtn = document.getElementById('save-version-now-btn');
+    if (saveVersionNowBtn) {
+        saveVersionNowBtn.addEventListener('click', () => {
+            saveVersion();
+        });
+    }
+    
+    // Modal close handlers
+    const versionModalCloseBtn = document.getElementById('version-modal-close-btn');
+    const versionModalCancelBtn = document.getElementById('version-modal-cancel-btn');
+    const versionModal = document.getElementById('version-modal');
+    
+    if (versionModalCloseBtn) {
+        versionModalCloseBtn.addEventListener('click', closeVersionModal);
+    }
+    
+    if (versionModalCancelBtn) {
+        versionModalCancelBtn.addEventListener('click', closeVersionModal);
+    }
+    
+    // Close modal on background click
+    if (versionModal) {
+        versionModal.addEventListener('click', (e) => {
+            if (e.target === versionModal) {
+                closeVersionModal();
+            }
+        });
+    }
+    
+    // Start auto-save timer
+    const startAutoSave = () => {
+        if (autoSaveTimer) {
+            clearInterval(autoSaveTimer);
+        }
+        autoSaveTimer = setInterval(() => {
+            saveVersion();
+        }, AUTO_SAVE_INTERVAL_MS);
+    };
+    
+    // Initialize version history
+    loadVersions();
+    startAutoSave();
+    
+    // Save initial version after a short delay
+    setTimeout(() => {
+        if (versions.length === 0) {
+            saveVersion();
+        }
+    }, 2000);
+
     // normalize to boolean (Storehouse may return string or boolean)
     if (themeSettings === 'true' || themeSettings === true) {
         themeSettings = true;
@@ -7002,3 +7435,4 @@ let performBeautify = (content) => {
 window.addEventListener("load", () => {
     init();
 });
+
