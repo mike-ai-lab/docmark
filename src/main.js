@@ -524,20 +524,27 @@ This web site is using ${"`"}markedjs/marked${"`"}.
                 
                 // Check for link issues (consolidated)
                 const linkPattern = /\[([^\]]+)\]\(([^)]+)\)/g;
-                // Match broken links: [text( OR [text] without closing )
-                const linkBrokenPattern = /\[.*\([^)]*$/;
+                // Match broken links: [text( OR [text] without closing ) - but only at end of line or before whitespace
+                const linkBrokenPattern = /\[[^\]]*\([^)]*$/;
                 
                 if (linkBrokenPattern.test(line) && !linkPattern.test(line) && !processedLines.has(lineNumber)) {
-                    markers.push({
-                        severity: monaco.MarkerSeverity.Error,
-                        startLineNumber: lineNumber,
-                        startColumn: line.indexOf('[') + 1,
-                        endLineNumber: lineNumber,
-                        endColumn: line.length + 1,
-                        message: 'Broken link syntax: Missing closing bracket ] or parenthesis )',
-                        source: 'markdown-validator'
-                    });
-                    processedLines.add(lineNumber);
+                    // Check if this is truly a broken link or just incomplete at end of line
+                    const lastBracketPos = line.lastIndexOf('[');
+                    const hasParenAfter = line.indexOf('(', lastBracketPos) > -1;
+                    
+                    // Only flag if there's a ( after the [ (indicating intent to create link)
+                    if (hasParenAfter) {
+                        markers.push({
+                            severity: monaco.MarkerSeverity.Error,
+                            startLineNumber: lineNumber,
+                            startColumn: lastBracketPos + 1,
+                            endLineNumber: lineNumber,
+                            endColumn: line.length + 1,
+                            message: 'Broken link syntax: Missing closing bracket ] or parenthesis )',
+                            source: 'markdown-validator'
+                        });
+                        processedLines.add(lineNumber);
+                    }
                 }
                 
                 // Check for empty link
@@ -555,8 +562,8 @@ This web site is using ${"`"}markedjs/marked${"`"}.
                     });
                 }
                 
-                // Check for unclosed bold (skip horizontal rules and list items)
-                if (!isHorizontalRule && !trimmed.match(/^[\*\-\+]\s/)) {
+                // Check for unclosed bold
+                if (!isHorizontalRule) {
                     const boldMatches = line.match(/\*\*/g);
                     if (boldMatches && boldMatches.length % 2 !== 0) {
                         const lastBoldPos = line.lastIndexOf('**');
@@ -572,32 +579,38 @@ This web site is using ${"`"}markedjs/marked${"`"}.
                     }
                 }
                 
-                // Check for unclosed italic (skip horizontal rules and list items)
-                if (!isHorizontalRule && !trimmed.match(/^[\*\-\+]\s/)) {
-                    // Only check for emphasis if there's actual text content after the *
-                    const italicPattern = /\*([^\*\s][^\*]*)\*/g;
-                    const singleStars = line.match(/(?<!\*)\*(?!\*)/g);
+                // Check for unclosed italic
+                if (!isHorizontalRule) {
+                    // Count all asterisks, then subtract bold markers
+                    const allStars = (line.match(/\*/g) || []).length;
+                    const boldMarkers = (line.match(/\*\*/g) || []).length;
+                    const singleStars = allStars - (boldMarkers * 2);
                     
-                    if (singleStars && singleStars.length % 2 !== 0) {
-                        // Check if this is actually emphasis and not a list or other markdown
-                        const starPos = line.indexOf('*');
-                        const beforeStar = line.substring(0, starPos).trim();
-                        const afterStar = line.substring(starPos + 1, starPos + 2);
-                        
-                        // Only flag if it looks like emphasis (has text before or after, not at line start)
-                        if (beforeStar.length > 0 && afterStar && afterStar !== ' ' && afterStar !== '*') {
-                            const lastItalicPos = line.lastIndexOf('*');
-                            if (line[lastItalicPos + 1] !== '*' && line[lastItalicPos - 1] !== '*') {
-                                markers.push({
-                                    severity: monaco.MarkerSeverity.Warning,
-                                    startLineNumber: lineNumber,
-                                    startColumn: lastItalicPos + 1,
-                                    endLineNumber: lineNumber,
-                                    endColumn: line.length + 1,
-                                    message: 'Unclosed italic: Add closing * (e.g., *italic text*)',
-                                    source: 'markdown-validator'
-                                });
+                    // If odd number of single stars, we have unclosed italic
+                    if (singleStars % 2 !== 0 && singleStars > 0) {
+                        // Find the last single * (not part of **)
+                        let lastSingleStarPos = -1;
+                        for (let i = line.length - 1; i >= 0; i--) {
+                            if (line[i] === '*') {
+                                // Check if it's part of **
+                                const isPartOfBold = (i > 0 && line[i-1] === '*') || (i < line.length - 1 && line[i+1] === '*');
+                                if (!isPartOfBold) {
+                                    lastSingleStarPos = i;
+                                    break;
+                                }
                             }
+                        }
+                        
+                        if (lastSingleStarPos !== -1) {
+                            markers.push({
+                                severity: monaco.MarkerSeverity.Warning,
+                                startLineNumber: lineNumber,
+                                startColumn: lastSingleStarPos + 1,
+                                endLineNumber: lineNumber,
+                                endColumn: line.length + 1,
+                                message: 'Unclosed italic: Add closing * (e.g., *italic text*)',
+                                source: 'markdown-validator'
+                            });
                         }
                     }
                 }
@@ -1036,43 +1049,58 @@ This web site is using ${"`"}markedjs/marked${"`"}.
             }
             // Unclosed bold
             else if (marker.message.includes('Unclosed bold')) {
-                // Check where to place the closing **
                 const trimmedLine = line.trimEnd();
+                const lastBoldPos = line.lastIndexOf('**');
                 
-                // Priority 1: Inside a link [text] - close before ]
-                if (trimmedLine.match(/\[.*\*\*[^\]]*\]/)) {
-                    // Bold is inside link text - close before the ]
-                    suggestedFix = trimmedLine.replace(/\]/, '**]');
+                // Find where to close
+                let closePos = trimmedLine.length;
+                
+                // Look for table cell boundary (| with optional space before it)
+                const tableCellMatch = trimmedLine.match(/\s+\|/);
+                if (tableCellMatch) {
+                    const pipePos = trimmedLine.indexOf(tableCellMatch[0]);
+                    if (pipePos > lastBoldPos) {
+                        closePos = pipePos;
+                    }
                 }
-                // Priority 2: Inside a table cell - close before |
-                else if (trimmedLine.endsWith('|')) {
-                    suggestedFix = trimmedLine.replace(/\s*\|$/, '**|');
-                }
-                // Priority 3: End of line
-                else {
-                    suggestedFix = line + '**';
-                }
+                
+                // Insert ** at the close position
+                suggestedFix = trimmedLine.substring(0, closePos) + '**' + trimmedLine.substring(closePos);
                 fixDescription = 'Add closing **';
             }
             // Unclosed italic
             else if (marker.message.includes('Unclosed italic')) {
-                // Check where to place the closing *
                 const trimmedLine = line.trimEnd();
                 
-                // Priority 1: Inside a link [text] - close before ]
-                if (trimmedLine.match(/\[.*\*[^\]]*\]/)) {
-                    // Italic is inside link text - close before the ]
-                    suggestedFix = trimmedLine.replace(/\]/, '*]');
+                // Find the last single * (not part of **)
+                let lastSingleStarPos = -1;
+                for (let i = trimmedLine.length - 1; i >= 0; i--) {
+                    if (trimmedLine[i] === '*') {
+                        const isPartOfBold = (i > 0 && trimmedLine[i-1] === '*') || (i < trimmedLine.length - 1 && trimmedLine[i+1] === '*');
+                        if (!isPartOfBold) {
+                            lastSingleStarPos = i;
+                            break;
+                        }
+                    }
                 }
-                // Priority 2: Inside a table cell - close before |
-                else if (trimmedLine.endsWith('|')) {
-                    suggestedFix = trimmedLine.replace(/\s*\|$/, '*|');
+                
+                if (lastSingleStarPos !== -1) {
+                    // Find where to close
+                    let closePos = trimmedLine.length;
+                    
+                    // Look for table cell boundary (| with optional space before it)
+                    const tableCellMatch = trimmedLine.match(/\s+\|/);
+                    if (tableCellMatch) {
+                        const pipePos = trimmedLine.indexOf(tableCellMatch[0]);
+                        if (pipePos > lastSingleStarPos) {
+                            closePos = pipePos;
+                        }
+                    }
+                    
+                    // Insert * at the close position
+                    suggestedFix = trimmedLine.substring(0, closePos) + '*' + trimmedLine.substring(closePos);
+                    fixDescription = 'Add closing *';
                 }
-                // Priority 3: End of line
-                else {
-                    suggestedFix = line + '*';
-                }
-                fixDescription = 'Add closing *';
             }
             // Missing blank line after heading
             else if (marker.message.includes('Missing blank line after heading')) {
@@ -1116,34 +1144,50 @@ This web site is using ${"`"}markedjs/marked${"`"}.
                     console.log('[generateFix] Broken image fix:', suggestedFix);
                 }
             }
-            // Broken link syntax - COMPLETELY REWRITTEN
+            // Broken link syntax - IMPROVED: Only fix the actual broken link, not the whole line
             else if (marker.message.includes('Broken link syntax')) {
-                console.log('[generateFix] Broken link - testing regex');
-                // Handle two cases:
-                // 1. [text( - missing ] and )
-                // 2. [text]( - missing )
+                console.log('[generateFix] Broken link - Line:', line);
+                console.log('[generateFix] Marker startColumn:', marker.startColumn);
                 
-                // CRITICAL: Match the LAST [ before (, not the first!
-                // Also capture everything after ( to discard it
+                // Find the last [ in the line (most likely the broken link)
+                const lastBracketPos = line.lastIndexOf('[');
                 
-                // Try pattern with ] first - capture text after ( to discard
-                let brokenPattern = /\[([^\]]*)\]\s*\(.*$/;
-                let match = line.match(brokenPattern);
-                
-                if (!match) {
-                    // Try pattern without ] - match LAST [ before (
-                    // Capture everything from last [ to end of line
-                    brokenPattern = /.*\[([^\[]*)\(.*$/;
-                    match = line.match(brokenPattern);
-                }
-                
-                console.log('[generateFix] Broken link match:', match);
-                if (match) {
-                    const linkText = match[1].trim();
-                    // Replace the ENTIRE matched pattern (including trailing text)
-                    suggestedFix = line.replace(brokenPattern, `[${linkText}](URL_FIX!)`);
-                    fixDescription = 'Add missing brackets/parenthesis and placeholder URL';
-                    console.log('[generateFix] Broken link fix:', suggestedFix);
+                if (lastBracketPos !== -1) {
+                    const beforeBrokenLink = line.substring(0, lastBracketPos);
+                    const brokenLinkPart = line.substring(lastBracketPos);
+                    
+                    console.log('[generateFix] Before broken link:', beforeBrokenLink);
+                    console.log('[generateFix] Broken link part:', brokenLinkPart);
+                    
+                    // Try to extract link text from the broken part
+                    // Pattern 1: [text]( with missing )
+                    let match = brokenLinkPart.match(/^\[([^\]]+)\]\s*\(/);
+                    if (match) {
+                        const linkText = match[1].trim();
+                        suggestedFix = beforeBrokenLink + `[${linkText}](URL_FIX!)`;
+                        fixDescription = 'Add missing closing parenthesis and placeholder URL';
+                        console.log('[generateFix] Pattern 1 - Fix:', suggestedFix);
+                    }
+                    // Pattern 2: [text( with missing ] and )
+                    else {
+                        match = brokenLinkPart.match(/^\[([^\[\(]+)\(/);
+                        if (match) {
+                            const linkText = match[1].trim();
+                            suggestedFix = beforeBrokenLink + `[${linkText}](URL_FIX!)`;
+                            fixDescription = 'Add missing bracket and parenthesis with placeholder URL';
+                            console.log('[generateFix] Pattern 2 - Fix:', suggestedFix);
+                        }
+                        // Pattern 3: Just [text at end of line (no parenthesis at all)
+                        else {
+                            match = brokenLinkPart.match(/^\[([^\]]+)$/);
+                            if (match) {
+                                const linkText = match[1].trim();
+                                suggestedFix = beforeBrokenLink + `[${linkText}](URL_FIX!)`;
+                                fixDescription = 'Complete link with closing bracket, parenthesis and URL';
+                                console.log('[generateFix] Pattern 3 - Fix:', suggestedFix);
+                            }
+                        }
+                    }
                 }
             }
             // Empty image URL
@@ -2078,6 +2122,48 @@ This web site is using ${"`"}markedjs/marked${"`"}.
     };
     
     // Show inline diff view in Monaco editor
+    // Helper: Calculate word-level diff for inline highlighting
+    const getWordDiff = (oldText, newText) => {
+        const oldWords = oldText.split(/(\s+)/);
+        const newWords = newText.split(/(\s+)/);
+        
+        // Simple LCS-based word diff
+        const dp = Array(oldWords.length + 1).fill(null).map(() => 
+            Array(newWords.length + 1).fill(0)
+        );
+        
+        for (let i = 1; i <= oldWords.length; i++) {
+            for (let j = 1; j <= newWords.length; j++) {
+                if (oldWords[i-1] === newWords[j-1]) {
+                    dp[i][j] = dp[i-1][j-1] + 1;
+                } else {
+                    dp[i][j] = Math.max(dp[i-1][j], dp[i][j-1]);
+                }
+            }
+        }
+        
+        // Backtrack to find diff
+        const removed = [];
+        const added = [];
+        const common = [];
+        
+        let i = oldWords.length, j = newWords.length;
+        while (i > 0 || j > 0) {
+            if (i > 0 && j > 0 && oldWords[i-1] === newWords[j-1]) {
+                common.unshift({ type: 'common', text: oldWords[i-1] });
+                i--; j--;
+            } else if (j > 0 && (i === 0 || dp[i][j-1] >= dp[i-1][j])) {
+                common.unshift({ type: 'added', text: newWords[j-1] });
+                j--;
+            } else if (i > 0) {
+                common.unshift({ type: 'removed', text: oldWords[i-1] });
+                i--;
+            }
+        }
+        
+        return common;
+    };
+
     let showInlineDiff = (original, modified) => {
         // Hide the regular editor
         const editorWrapper = document.getElementById('editor-wrapper');
@@ -2086,86 +2172,93 @@ This web site is using ${"`"}markedjs/marked${"`"}.
         // Create diff editor container
         const diffContainer = document.createElement('div');
         diffContainer.id = 'diff-editor-container';
-        diffContainer.style.cssText = 'width: 100%; height: 100%; position: relative;';
+        diffContainer.style.cssText = 'width: 100%; height: 100%; position: relative; display: flex; flex-direction: column;';
+        
+        // Create header with stats
+        const headerBar = document.createElement('div');
+        headerBar.style.cssText = `
+            padding: 12px 16px;
+            background: var(--bg-color, white);
+            border-bottom: 1px solid #ddd;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 13px;
+            color: var(--text-color, black);
+        `;
         
         // Create action buttons overlay
         const actionsBar = document.createElement('div');
         actionsBar.style.cssText = `
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            z-index: 100;
             display: flex;
-            flex-direction: column;
             gap: 8px;
         `;
         
         actionsBar.innerHTML = `
             <button id="diff-copy-btn" title="Copy Diff" style="
-                width: 40px;
-                height: 40px;
+                height: 32px;
+                padding: 0 12px;
                 background: var(--bg-color, white);
                 color: var(--text-color, black);
                 border: 1px solid #ddd;
                 border-radius: 4px;
                 cursor: pointer;
-                font-size: 18px;
+                font-size: 13px;
                 display: flex;
                 align-items: center;
-                justify-content: center;
-                padding: 0;
+                gap: 6px;
             ">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <rect width="14" height="14" x="8" y="8" rx="2" ry="2"/>
                     <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>
                 </svg>
+                Copy
             </button>
             <button id="diff-discard-btn" title="Cancel" style="
-                width: 40px;
-                height: 40px;
+                height: 32px;
+                padding: 0 12px;
                 background: var(--bg-color, white);
                 color: var(--text-color, black);
                 border: 1px solid #ddd;
                 border-radius: 4px;
                 cursor: pointer;
-                font-size: 18px;
+                font-size: 13px;
                 display: flex;
                 align-items: center;
-                justify-content: center;
-                padding: 0;
+                gap: 6px;
             ">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M18 6 6 18"/>
                     <path d="m6 6 12 12"/>
                 </svg>
+                Cancel
             </button>
             <button id="diff-apply-btn" title="Apply Changes" style="
-                width: 40px;
-                height: 40px;
+                height: 32px;
+                padding: 0 12px;
                 background: #28a745;
                 color: white;
                 border: none;
                 border-radius: 4px;
                 cursor: pointer;
-                font-size: 18px;
+                font-size: 13px;
                 display: flex;
                 align-items: center;
-                justify-content: center;
-                padding: 0;
+                gap: 6px;
             ">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M20 6 9 17l-5-5"/>
                 </svg>
+                Apply Changes
             </button>
         `;
         
-        diffContainer.appendChild(actionsBar);
+        diffContainer.appendChild(headerBar);
         
-        // Create diff editor div
-        const diffEditorDiv = document.createElement('div');
-        diffEditorDiv.id = 'diff-editor';
-        diffEditorDiv.style.cssText = 'width: 100%; height: 100%;';
-        diffContainer.appendChild(diffEditorDiv);
+        // Create scrollable diff view
+        const diffScrollContainer = document.createElement('div');
+        diffScrollContainer.style.cssText = 'flex: 1; overflow-y: auto; background: var(--bg-color, white);';
+        diffContainer.appendChild(diffScrollContainer);
         
         // Hide original editor and show diff container
         originalEditorDiv.style.display = 'none';
@@ -2177,110 +2270,175 @@ This web site is using ${"`"}markedjs/marked${"`"}.
         // Get current theme
         const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
         
-        // Generate unified diff format with +/- prefixes
+        // Generate compact diff with only changed lines + context
         const originalLines = original.split('\n');
         const modifiedLines = modified.split('\n');
-        const diffLines = [];
-        const decorations = [];
+        const diffBlocks = [];
         
-        let lineNumber = 1;
+        let changedCount = 0;
+        let addedCount = 0;
+        let removedCount = 0;
+        
         const maxLines = Math.max(originalLines.length, modifiedLines.length);
+        const CONTEXT_LINES = 2; // Show 2 lines of context around changes
         
+        // Find all changed line indices
+        const changedIndices = new Set();
         for (let i = 0; i < maxLines; i++) {
-            const origLine = originalLines[i];
-            const modLine = modifiedLines[i];
-            
-            if (origLine === modLine) {
-                // Unchanged line - show as context
-                if (origLine !== undefined) {
-                    diffLines.push('  ' + origLine);
-                    lineNumber++;
-                }
-            } else {
-                // Line changed
-                if (origLine !== undefined && modLine !== undefined) {
-                    // Both exist - show deletion then addition
-                    diffLines.push('- ' + origLine);
-                    decorations.push({
-                        range: new monaco.Range(lineNumber, 1, lineNumber, 1),
-                        options: {
-                            isWholeLine: true,
-                            className: 'diff-line-deleted',
-                            glyphMarginClassName: 'diff-glyph-deleted'
-                        }
-                    });
-                    lineNumber++;
-                    
-                    diffLines.push('+ ' + modLine);
-                    decorations.push({
-                        range: new monaco.Range(lineNumber, 1, lineNumber, 1),
-                        options: {
-                            isWholeLine: true,
-                            className: 'diff-line-added',
-                            glyphMarginClassName: 'diff-glyph-added'
-                        }
-                    });
-                    lineNumber++;
-                } else if (origLine !== undefined) {
-                    // Only original exists - deletion
-                    diffLines.push('- ' + origLine);
-                    decorations.push({
-                        range: new monaco.Range(lineNumber, 1, lineNumber, 1),
-                        options: {
-                            isWholeLine: true,
-                            className: 'diff-line-deleted',
-                            glyphMarginClassName: 'diff-glyph-deleted'
-                        }
-                    });
-                    lineNumber++;
-                } else if (modLine !== undefined) {
-                    // Only modified exists - addition
-                    diffLines.push('+ ' + modLine);
-                    decorations.push({
-                        range: new monaco.Range(lineNumber, 1, lineNumber, 1),
-                        options: {
-                            isWholeLine: true,
-                            className: 'diff-line-added',
-                            glyphMarginClassName: 'diff-glyph-added'
-                        }
-                    });
-                    lineNumber++;
+            if (originalLines[i] !== modifiedLines[i]) {
+                changedIndices.add(i);
+                // Add context lines
+                for (let j = Math.max(0, i - CONTEXT_LINES); j <= Math.min(maxLines - 1, i + CONTEXT_LINES); j++) {
+                    changedIndices.add(j);
                 }
             }
         }
         
-        const diffText = diffLines.join('\n');
+        // Group consecutive changed lines into blocks
+        const sortedIndices = Array.from(changedIndices).sort((a, b) => a - b);
+        let currentBlock = [];
         
-        // Create editor with diff content
-        const tempEditor = monaco.editor.create(diffEditorDiv, {
-            value: diffText,
-            language: 'markdown',
-            theme: isDark ? 'custom-dark' : 'custom-light',
-            fontSize: 14,
-            minimap: { enabled: false },
-            scrollBeyondLastLine: false,
-            automaticLayout: true,
-            wordWrap: 'off',
-            lineNumbers: 'on',
-            glyphMargin: true,
-            folding: false,
-            readOnly: true
+        for (let i = 0; i < sortedIndices.length; i++) {
+            const idx = sortedIndices[i];
+            
+            if (currentBlock.length === 0 || idx === currentBlock[currentBlock.length - 1] + 1) {
+                currentBlock.push(idx);
+            } else {
+                diffBlocks.push(currentBlock);
+                currentBlock = [idx];
+            }
+        }
+        if (currentBlock.length > 0) {
+            diffBlocks.push(currentBlock);
+        }
+        
+        // Build HTML diff view
+        let diffHTML = '<div style="font-family: monospace; font-size: 13px; line-height: 1.5;">';
+        
+        diffBlocks.forEach((block, blockIdx) => {
+            if (blockIdx > 0) {
+                diffHTML += '<div style="padding: 8px 16px; background: #f0f0f0; color: #666; border-top: 1px solid #ddd; border-bottom: 1px solid #ddd; margin: 8px 0;">...</div>';
+            }
+            
+            block.forEach(i => {
+                const origLine = originalLines[i];
+                const modLine = modifiedLines[i];
+                const lineNum = i + 1;
+                
+                if (origLine === modLine) {
+                    // Unchanged context line
+                    diffHTML += `<div style="padding: 2px 16px; background: transparent; color: var(--text-color, #666);">
+                        <span style="display: inline-block; width: 40px; text-align: right; margin-right: 16px; color: #999;">${lineNum}</span>
+                        <span style="color: #999; margin-right: 8px;"> </span>
+                        ${escapeHtml(origLine || '')}
+                    </div>`;
+                } else {
+                    // Changed line
+                    changedCount++;
+                    
+                    if (origLine !== undefined && modLine !== undefined) {
+                        // Line modified - show inline diff
+                        const wordDiff = getWordDiff(origLine, modLine);
+                        
+                        // Build removed line with strikethrough
+                        let removedHTML = '';
+                        wordDiff.forEach(part => {
+                            if (part.type === 'removed') {
+                                removedHTML += `<span style="background: #ffeef0; color: #d73a49; text-decoration: line-through;">${escapeHtml(part.text)}</span>`;
+                                removedCount++;
+                            } else if (part.type === 'common') {
+                                removedHTML += escapeHtml(part.text);
+                            }
+                        });
+                        
+                        // Build added line with green highlight
+                        let addedHTML = '';
+                        wordDiff.forEach(part => {
+                            if (part.type === 'added') {
+                                addedHTML += `<span style="background: #e6ffed; color: #22863a; font-weight: 500;">${escapeHtml(part.text)}</span>`;
+                                addedCount++;
+                            } else if (part.type === 'common') {
+                                addedHTML += escapeHtml(part.text);
+                            }
+                        });
+                        
+                        diffHTML += `<div style="padding: 2px 16px; background: #ffeef0;">
+                            <span style="display: inline-block; width: 40px; text-align: right; margin-right: 16px; color: #d73a49;">${lineNum}</span>
+                            <span style="color: #d73a49; margin-right: 8px;">-</span>
+                            ${removedHTML}
+                        </div>`;
+                        
+                        diffHTML += `<div style="padding: 2px 16px; background: #e6ffed;">
+                            <span style="display: inline-block; width: 40px; text-align: right; margin-right: 16px; color: #22863a;">${lineNum}</span>
+                            <span style="color: #22863a; margin-right: 8px;">+</span>
+                            ${addedHTML}
+                        </div>`;
+                    } else if (origLine !== undefined) {
+                        // Line deleted
+                        removedCount++;
+                        diffHTML += `<div style="padding: 2px 16px; background: #ffeef0;">
+                            <span style="display: inline-block; width: 40px; text-align: right; margin-right: 16px; color: #d73a49;">${lineNum}</span>
+                            <span style="color: #d73a49; margin-right: 8px;">-</span>
+                            <span style="color: #d73a49; text-decoration: line-through;">${escapeHtml(origLine)}</span>
+                        </div>`;
+                    } else if (modLine !== undefined) {
+                        // Line added
+                        addedCount++;
+                        diffHTML += `<div style="padding: 2px 16px; background: #e6ffed;">
+                            <span style="display: inline-block; width: 40px; text-align: right; margin-right: 16px; color: #22863a;">${lineNum}</span>
+                            <span style="color: #22863a; margin-right: 8px;">+</span>
+                            <span style="color: #22863a; font-weight: 500;">${escapeHtml(modLine)}</span>
+                        </div>`;
+                    }
+                }
+            });
         });
         
-        // Apply decorations
-        tempEditor.deltaDecorations([], decorations);
+        diffHTML += '</div>';
         
-        // Copy button handler - copy the diff text with +/- prefixes
+        // Update header with stats
+        headerBar.innerHTML = `
+            <div style="display: flex; gap: 16px; align-items: center;">
+                <span style="font-weight: 600;">Beautify Changes</span>
+                <span style="color: #22863a;">+${addedCount} additions</span>
+                <span style="color: #d73a49;">-${removedCount} deletions</span>
+                <span style="color: #666;">${changedCount} lines changed</span>
+            </div>
+        `;
+        headerBar.appendChild(actionsBar);
+        
+        // Set diff HTML
+        diffScrollContainer.innerHTML = diffHTML;
+        
+        // Generate plain text diff for copying
+        const plainDiff = diffBlocks.map(block => {
+            return block.map(i => {
+                const origLine = originalLines[i];
+                const modLine = modifiedLines[i];
+                
+                if (origLine === modLine) {
+                    return '  ' + (origLine || '');
+                } else if (origLine !== undefined && modLine !== undefined) {
+                    return '- ' + origLine + '\n+ ' + modLine;
+                } else if (origLine !== undefined) {
+                    return '- ' + origLine;
+                } else {
+                    return '+ ' + modLine;
+                }
+            }).join('\n');
+        }).join('\n...\n');
+        
+        // Copy button handler
         document.getElementById('diff-copy-btn').addEventListener('click', async () => {
             try {
-                await navigator.clipboard.writeText(diffText);
+                await navigator.clipboard.writeText(plainDiff);
                 const btn = document.getElementById('diff-copy-btn');
                 const originalBg = btn.style.background;
                 btn.style.background = '#28a745';
-                btn.querySelector('svg').style.stroke = 'white';
+                btn.style.color = 'white';
                 setTimeout(() => {
                     btn.style.background = originalBg;
-                    btn.querySelector('svg').style.stroke = 'currentColor';
+                    btn.style.color = 'var(--text-color, black)';
                 }, 1500);
             } catch (err) {
                 showMofuHelper('Failed to copy to clipboard');
@@ -2300,8 +2458,7 @@ This web site is using ${"`"}markedjs/marked${"`"}.
                 text: modified
             }]);
             
-            // Clean up temp editor
-            tempEditor.dispose();
+            // Clean up
             diffContainer.remove();
             originalEditorDiv.style.display = 'block';
             
@@ -2311,8 +2468,7 @@ This web site is using ${"`"}markedjs/marked${"`"}.
         
         // Cancel button handler
         document.getElementById('diff-discard-btn').addEventListener('click', () => {
-            // Clean up temp editor
-            tempEditor.dispose();
+            // Clean up
             diffContainer.remove();
             originalEditorDiv.style.display = 'block';
             
@@ -2324,10 +2480,18 @@ This web site is using ${"`"}markedjs/marked${"`"}.
         });
     };
     
+    // Helper function to escape HTML
+    const escapeHtml = (text) => {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    };
+    
 /**
  * Robust Markdown Beautifier
  * Features: YAML safety, Code block protection, Table alignment, 
  * List normalization, and Recursive Blockquote beautification.
+ * CRITICAL: Preserves indentation and document structure.
  * * Reference: CommonMark & GitHub Flavored Markdown (GFM) Specifications.
  */
 let performBeautify = (content) => {
@@ -2338,7 +2502,7 @@ let performBeautify = (content) => {
     let i = 0;
     let previousType = 'start';
 
-    // Helper: Consistent spacing between different blocks
+    // Helper: Consistent spacing between different blocks (only for top-level)
     const ensureSpacing = () => {
         if (beautified.length > 0 && beautified[beautified.length - 1] !== '') {
             beautified.push('');
@@ -2372,6 +2536,10 @@ let performBeautify = (content) => {
     while (i < lines.length) {
         let line = lines[i];
         let trimmed = line.trim();
+        
+        // Detect indentation (preserve it!)
+        const indentMatch = line.match(/^(\s*)/);
+        const indent = indentMatch ? indentMatch[1] : '';
 
         // 1. YAML Front Matter (Preserve as-is)
         if (i === 0 && trimmed === '---') {
@@ -2400,24 +2568,17 @@ let performBeautify = (content) => {
             i++; continue;
         }
 
-        // 3. Blockquotes (Recursive Beautification)
+        // 3. Blockquotes (PRESERVE INDENTATION - can be nested in lists)
         if (trimmed.startsWith('>')) {
-            if (previousType !== 'blockquote') ensureSpacing();
-            let quoteLines = [];
-            while (i < lines.length && lines[i].trim().startsWith('>')) {
-                // Strip the leading '>' and one space to process inner content
-                quoteLines.push(lines[i].trim().replace(/^>\s?/, ''));
-                i++;
-            }
-            // Recursively beautify the inner content of the blockquote
-            const innerBeautified = performBeautify(quoteLines.join('\n'));
-            innerBeautified.split('\n').forEach(qLine => beautified.push(`> ${qLine}`));
+            // Preserve the original indentation + blockquote
+            const quoteContent = trimmed.substring(1).trim();
+            beautified.push(`${indent}> ${quoteContent}`);
             previousType = 'blockquote';
-            continue;
+            i++; continue;
         }
 
-        // 4. Tables
-        if (trimmed.startsWith('|')) {
+        // 4. Tables (only at top level, not indented)
+        if (trimmed.startsWith('|') && indent === '') {
             ensureSpacing();
             let tableLines = [];
             while (i < lines.length && lines[i].trim().startsWith('|')) {
@@ -2429,9 +2590,9 @@ let performBeautify = (content) => {
             continue;
         }
 
-        // 5. Headers
+        // 5. Headers (only at top level)
         const headerMatch = trimmed.match(/^(#{1,6})\s*(.*)/);
-        if (headerMatch) {
+        if (headerMatch && indent === '') {
             ensureSpacing();
             let headerText = headerMatch[2].replace(/\s+#*$/, '').trim();
             // Fix numbered headings: "1.Text" -> "1. Text"
@@ -2440,33 +2601,53 @@ let performBeautify = (content) => {
             previousType = 'header';
             i++; continue;
         }
+        
+        // 5b. Detect numbered sections that look like headings (e.g., "52. Title")
+        // Convert to proper heading format
+        const numberedSectionMatch = trimmed.match(/^(\d+)\.\s+([A-Z].*)/);
+        if (numberedSectionMatch && indent === '' && previousType !== 'list') {
+            ensureSpacing();
+            const sectionNum = numberedSectionMatch[1];
+            const sectionTitle = numberedSectionMatch[2];
+            // Convert to h3 heading (### 52. Title)
+            beautified.push(`### ${sectionNum}. ${sectionTitle}`);
+            previousType = 'header';
+            i++; continue;
+        }
 
-        // 6. Lists (Keep numbered lists, normalize bullets to *)
+        // 6. Lists (PRESERVE INDENTATION - this is critical for nested lists)
         const listMatch = line.match(/^(\s*)([*+-]|\d+\.)\s+(.*)$/);
         if (listMatch) {
-            if (previousType !== 'list' && previousType !== 'start') ensureSpacing();
-            let indent = listMatch[1];
+            if (previousType !== 'list' && previousType !== 'start' && indent === '') {
+                ensureSpacing();
+            }
+            let listIndent = listMatch[1];
             let bullet = listMatch[2];
             let content = listMatch[3].trim();
             
-            // Only normalize bullet markers (*, +, -) to *, keep numbered lists as-is
-            if (['+', '-', '*'].includes(bullet)) {
-                bullet = '*';
+            // DEBUG: Log indentation preservation
+            if (listIndent.length > 0) {
+                console.log('[BEAUTIFY] Preserving list indent:', listIndent.length, 'spaces for:', content.substring(0, 30));
+            }
+            
+            // Only normalize bullet markers (*, +, -) to -, keep numbered lists as-is
+            if (['+', '*'].includes(bullet)) {
+                bullet = '-';
             }
             
             // Fix key-value pairs in list items: "Key:Value" -> "Key: Value"
             content = content.replace(/^([A-Za-z][A-Za-z0-9\s]*):(\S)/, '$1: $2');
             
-            // Preserve indentation (convert tabs to 4 spaces for consistency)
-            indent = indent.replace(/\t/g, '    ');
+            // CRITICAL: Preserve indentation (convert tabs to 4 spaces for consistency)
+            listIndent = listIndent.replace(/\t/g, '    ');
             
-            beautified.push(`${indent}${bullet} ${content}`);
+            beautified.push(`${listIndent}${bullet} ${content}`);
             previousType = 'list';
             i++; continue;
         }
 
         // 7. Horizontal Rules (Must come AFTER list check to avoid conflict)
-        if (/^[-*_]{3,}$/.test(trimmed)) {
+        if (/^[-*_]{3,}$/.test(trimmed) && indent === '') {
             ensureSpacing();
             beautified.push('---');
             previousType = 'hr';
@@ -2482,13 +2663,21 @@ let performBeautify = (content) => {
             i++; continue;
         }
 
-        // 9. Standard Text
-        if (['header', 'hr', 'code-end', 'table'].includes(previousType)) {
+        // 9. Standard Text (preserve indentation if present)
+        if (['header', 'hr', 'code-end', 'table'].includes(previousType) && indent === '') {
             ensureSpacing();
         }
+        
         // Fix key-value pairs: "Key:Value" -> "Key: Value"
         let processedText = trimmed.replace(/^([A-Za-z][A-Za-z0-9\s]*):(\S)/, '$1: $2');
-        beautified.push(processedText);
+        
+        // If line has indentation, preserve it (could be continuation of list/blockquote)
+        if (indent) {
+            beautified.push(`${indent}${processedText}`);
+        } else {
+            beautified.push(processedText);
+        }
+        
         previousType = 'text';
         i++;
     }
@@ -2501,6 +2690,12 @@ let performBeautify = (content) => {
  * 1. Pass your raw Markdown string into `performBeautify(yourString)`.
  * 2. The function returns the cleaned, aligned, and professional Markdown.
  * 3. Use this for your architecture business documentation or AI-generated design notes.
+ * 
+ * IMPORTANT: This beautifier is STRUCTURE-PRESERVING:
+ * - Preserves indentation for nested lists
+ * - Preserves indented blockquotes in lists
+ * - Preserves hierarchy and nesting
+ * - Only normalizes formatting, not structure
  */
 
     // Paste from clipboard

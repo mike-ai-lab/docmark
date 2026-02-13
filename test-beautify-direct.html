@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Beautify Test</title>
+</head>
+<body>
+    <h1>Beautify Direct Test</h1>
+    <pre id="input"></pre>
+    <button onclick="runTest()">Run Beautify</button>
+    <pre id="output"></pre>
+
+    <script type="module">
+        // Import the beautify function from the built file
+        import('./dist/assets/index-dO1sDOVR.js').then(module => {
+            window.testModule = module;
+            console.log('Module loaded');
+        });
+
+        window.runTest = () => {
+            const input = `### 51. The Indentation Guard Test
+
+- Phase 1: Site Visit
+    - [ ] Check boundary wall
+    - [ ] Measure height @ 3.5m
+- Phase 2: Design
+    - > Quote from Client: "We need **bold accents
+      > and specific materials"`;
+
+            document.getElementById('input').textContent = input;
+            
+            // The beautify function should be available in the module
+            // But since it's not exported, we can't test it directly
+            // Let's just show the input for now
+            document.getElementById('output').textContent = 'Cannot test - function not exported';
+        };
+    </script>
+</body>
+</html>
