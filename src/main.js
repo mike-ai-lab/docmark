@@ -800,12 +800,25 @@ This web site is using ${"`"}markedjs/marked${"`"}.
             let suggestedFix = null;
             let fixDescription = '';
             
+            // DEBUG: Log every fix attempt
+            console.log('[generateFix] Message:', marker.message);
+            console.log('[generateFix] Line:', line);
+            
             // Header missing space
             if (marker.message.includes('Header missing space')) {
                 const match = line.match(/^(#{1,6})([^\s#].+)/);
                 if (match) {
                     suggestedFix = match[1] + ' ' + match[2];
                     fixDescription = 'Add space after #';
+                    console.log('[generateFix] Header fix:', suggestedFix);
+                }
+            }
+            // Invalid header (too many #)
+            else if (marker.message.includes('Invalid header')) {
+                const match = line.match(/^(#{7,})(.+)/);
+                if (match) {
+                    suggestedFix = '###### ' + match[2].trim();
+                    fixDescription = 'Convert to h6 (maximum level)';
                 }
             }
             // Blockquote missing space
@@ -816,14 +829,14 @@ This web site is using ${"`"}markedjs/marked${"`"}.
                     fixDescription = 'Add space after >';
                 }
             }
-            // Mixed list markers - IMPROVED: Always use dash
+            // Mixed list markers - PRESERVE INDENTATION
             else if (marker.message.includes('Mixed list markers')) {
                 // Match: optional indent, marker (+*-), optional space, rest of line
                 const match = line.match(/^(\s*)([+*-])(\s*.+)/);
                 if (match) {
-                    // Ensure there's a space after the dash
+                    // PRESERVE the original indentation
                     const indent = match[1];
-                    const content = match[3].trimStart(); // Remove leading spaces
+                    const content = match[3].trimStart(); // Remove leading spaces from content only
                     suggestedFix = indent + '- ' + content;
                     fixDescription = 'Standardize to - marker';
                 }
@@ -867,7 +880,37 @@ This web site is using ${"`"}markedjs/marked${"`"}.
                     }
                 }
             }
-            // Unclosed HTML tags - NEW
+            // Horizontal rule format
+            else if (marker.message.includes('Horizontal rule format')) {
+                suggestedFix = '---';
+                fixDescription = 'Standardize to ---';
+            }
+            // Malformed table separator - FIXED: Use header row column count
+            else if (marker.message.includes('Malformed table separator')) {
+                // Look at the previous line to get the correct column count
+                const lineNumber = marker.startLineNumber;
+                const model = editor.getModel();
+                const prevLine = lineNumber > 1 ? model.getLineContent(lineNumber - 1).trim() : '';
+                
+                if (prevLine.includes('|')) {
+                    // Count columns from header row
+                    const headerCols = prevLine.split('|').filter(c => c.trim()).length;
+                    suggestedFix = '| ' + Array(headerCols).fill('---').join(' | ') + ' |';
+                    fixDescription = `Fix separator to match ${headerCols} columns`;
+                } else {
+                    // Fallback: count from current line pipes
+                    const pipeCount = (line.match(/\|/g) || []).length;
+                    const colCount = Math.max(3, pipeCount - 1);
+                    suggestedFix = '| ' + Array(colCount).fill('---').join(' | ') + ' |';
+                    fixDescription = 'Fix table separator format';
+                }
+            }
+            // Empty alt text
+            else if (marker.message.includes('Empty alt text')) {
+                suggestedFix = line.replace(/!\[\]/, '![Image description]');
+                fixDescription = 'Add placeholder alt text';
+            }
+            // Unclosed HTML tags
             else if (marker.message.includes('Unclosed HTML tag')) {
                 const tagMatch = marker.message.match(/Unclosed HTML tag: <(\w+)>/);
                 if (tagMatch) {
@@ -905,20 +948,35 @@ This web site is using ${"`"}markedjs/marked${"`"}.
                 suggestedFix = '\n' + line;
                 fixDescription = 'Insert blank line above';
             }
-            // Broken image syntax
+            // Broken image syntax - COMPLETELY REWRITTEN
             else if (marker.message.includes('Broken image syntax')) {
-                const match = line.match(/!\[([^\]]*)\]\s*\(/);
+                console.log('[generateFix] Broken image - testing regex');
+                // Find the broken ![...]( pattern and fix it
+                // Use a more robust approach that handles the actual broken syntax
+                const brokenPattern = /!\[([^\]]*)\]\s*\([^)]*$/;
+                const match = line.match(brokenPattern);
+                console.log('[generateFix] Broken image match:', match);
                 if (match) {
-                    suggestedFix = line.replace(/!\[([^\]]*)\]\s*\(/, '![$1](image.png)');
-                    fixDescription = 'Add closing ) and placeholder URL';
+                    const altText = match[1];
+                    // Replace the entire broken pattern with fixed version
+                    suggestedFix = line.replace(brokenPattern, `![${altText}](<span style="color:red">IMAGE_URL_FIX!</span>)`);
+                    fixDescription = 'Add closing ) and red placeholder URL';
+                    console.log('[generateFix] Broken image fix:', suggestedFix);
                 }
             }
-            // Broken link syntax
+            // Broken link syntax - COMPLETELY REWRITTEN
             else if (marker.message.includes('Broken link syntax')) {
-                const match = line.match(/\[([^\]]+)\]\s*\(/);
+                console.log('[generateFix] Broken link - testing regex');
+                // Find the broken [...]( pattern and fix it
+                const brokenPattern = /\[([^\]]+)\]\s*\([^)]*$/;
+                const match = line.match(brokenPattern);
+                console.log('[generateFix] Broken link match:', match);
                 if (match) {
-                    suggestedFix = line.replace(/\[([^\]]+)\]\s*\(/, '[$1](url)');
-                    fixDescription = 'Add closing ) and placeholder URL';
+                    const linkText = match[1];
+                    // Replace the entire broken pattern with fixed version
+                    suggestedFix = line.replace(brokenPattern, `[${linkText}](<span style="color:red">URL_FIX!</span>)`);
+                    fixDescription = 'Add closing ) and red placeholder URL';
+                    console.log('[generateFix] Broken link fix:', suggestedFix);
                 }
             }
             // Empty image URL
@@ -928,11 +986,78 @@ This web site is using ${"`"}markedjs/marked${"`"}.
             }
             // Empty link
             else if (marker.message.includes('Empty link')) {
-                suggestedFix = line.replace(/\[\]\(\s*\)/, '[Link text](url)');
-                fixDescription = 'Add link text and URL';
+                // Handle both []() and [text]()
+                if (line.includes('[]()')) {
+                    suggestedFix = line.replace(/\[\]\(\s*\)/, '[Link text](url)');
+                    fixDescription = 'Add link text and URL';
+                } else {
+                    // [text]() - just add URL
+                    suggestedFix = line.replace(/\[([^\]]+)\]\(\s*\)/, '[$1](url)');
+                    fixDescription = 'Add URL';
+                }
             }
             
             return { suggestedFix, fixDescription };
+        };
+        
+        // NEW: Apply multiple fixes to the same line
+        const applyMultipleFixesToLine = (lineNumber, markers) => {
+            const model = editor.getModel();
+            let currentLine = model.getLineContent(lineNumber);
+            let fixDescriptions = [];
+            
+            console.log('[applyMultiple] Line', lineNumber, '- Markers:', markers.length);
+            console.log('[applyMultiple] BEFORE:', currentLine);
+            
+            // Sort markers by priority (structural fixes first, then formatting)
+            const priorityOrder = [
+                'Header missing space',
+                'Invalid header',
+                'Blockquote missing space',
+                'Mixed list markers',
+                'Broken image syntax',
+                'Broken link syntax',
+                'Empty image URL',
+                'Empty link',
+                'Empty alt text',
+                'Unclosed bold',
+                'Unclosed italic',
+                'Unclosed inline code'
+            ];
+            
+            const sortedMarkers = markers.sort((a, b) => {
+                const aPriority = priorityOrder.findIndex(p => a.message.includes(p));
+                const bPriority = priorityOrder.findIndex(p => b.message.includes(p));
+                return (aPriority === -1 ? 999 : aPriority) - (bPriority === -1 ? 999 : bPriority);
+            });
+            
+            console.log('[applyMultiple] Sorted markers:', sortedMarkers.map(m => m.message));
+            
+            // Apply each fix sequentially to the evolving line
+            for (const marker of sortedMarkers) {
+                const { suggestedFix, fixDescription } = generateFix(marker, currentLine);
+                if (suggestedFix) {
+                    console.log('[applyMultiple] Applying:', fixDescription);
+                    console.log('[applyMultiple] From:', currentLine);
+                    console.log('[applyMultiple] To:', suggestedFix);
+                    currentLine = suggestedFix;
+                    fixDescriptions.push(fixDescription);
+                }
+            }
+            
+            console.log('[applyMultiple] AFTER:', currentLine);
+            
+            // Apply the final combined fix
+            if (currentLine !== model.getLineContent(lineNumber)) {
+                const range = new monaco.Range(lineNumber, 1, lineNumber, model.getLineContent(lineNumber).length + 1);
+                editor.executeEdits('validation-fix-multiple', [{
+                    range: range,
+                    text: currentLine
+                }]);
+                return { fixed: true, description: fixDescriptions.join(', ') };
+            }
+            
+            return { fixed: false, description: '' };
         };
         
         const positionInlineBar = (lineNumber) => {
@@ -1077,46 +1202,96 @@ This web site is using ${"`"}markedjs/marked${"`"}.
         
         const applyAllFixes = () => {
             const model = editor.getModel();
-            let fixedCount = 0;
+            let totalFixedCount = 0;
+            let iterationCount = 0;
+            const maxIterations = 10;
             
-            // Sort issues by line number in DESCENDING order (bottom to top)
-            // This prevents line number shifts from affecting subsequent fixes
-            const pendingIssues = validationIssues
-                .map((issue, index) => ({ issue, index }))
-                .filter(item => item.issue.state === 'pending' && item.issue.suggestedFix)
-                .sort((a, b) => b.issue.marker.startLineNumber - a.issue.marker.startLineNumber);
-            
-            // Apply all fixes from bottom to top
-            pendingIssues.forEach(({ issue, index }) => {
-                const lineNumber = issue.marker.startLineNumber;
-                const line = model.getLineContent(lineNumber);
+            const applyFixesIteration = () => {
+                iterationCount++;
+                console.log('[applyAll] ========== ITERATION', iterationCount, '==========');
                 
-                const range = new monaco.Range(lineNumber, 1, lineNumber, line.length + 1);
-                editor.executeEdits('validation-fix-all', [{
-                    range: range,
-                    text: issue.suggestedFix
-                }]);
+                // Group pending issues by line number
+                const issuesByLine = new Map();
+                validationIssues.forEach((issue, index) => {
+                    if (issue.state === 'pending' && issue.suggestedFix) {
+                        const lineNum = issue.marker.startLineNumber;
+                        if (!issuesByLine.has(lineNum)) {
+                            issuesByLine.set(lineNum, []);
+                        }
+                        issuesByLine.get(lineNum).push({ issue, index });
+                    }
+                });
                 
-                issue.state = 'fixed';
-                updateLineDecoration(lineNumber, 'fixed');
-                fixedCount++;
-            });
-            
-            // Check if all done
-            const allDone = validationIssues.every(iss => iss.state !== 'pending');
-            if (allDone) {
-                closeSuggestionBar();
-                showMofuHelper(`Excellent! All ${fixedCount} fixes applied ✔`);
-            } else {
-                // Show first remaining pending issue
-                const nextPending = validationIssues.findIndex(iss => iss.state === 'pending');
-                if (nextPending !== -1) {
-                    showSuggestionForIssue(nextPending);
+                console.log('[applyAll] Issues by line:', issuesByLine.size);
+                console.log('[applyAll] Line numbers:', Array.from(issuesByLine.keys()));
+                
+                if (issuesByLine.size === 0) {
+                    closeSuggestionBar();
+                    if (totalFixedCount > 0) {
+                        console.log('[applyAll] ✓ COMPLETE - Fixed', totalFixedCount, 'issues');
+                        showMofuHelper(`Excellent! All ${totalFixedCount} fixes applied ✔`);
+                    } else {
+                        showMofuHelper('No issues found to fix!');
+                    }
+                    return;
+                }
+                
+                // Sort line numbers in DESCENDING order (bottom to top)
+                const sortedLines = Array.from(issuesByLine.keys()).sort((a, b) => b - a);
+                console.log('[applyAll] Processing lines (bottom to top):', sortedLines);
+                
+                // Apply all fixes for each line (from bottom to top)
+                sortedLines.forEach(lineNumber => {
+                    const lineIssues = issuesByLine.get(lineNumber);
+                    const markers = lineIssues.map(item => item.issue.marker);
+                    
+                    console.log('[applyAll] Processing line', lineNumber);
+                    
+                    // Apply multiple fixes to this line at once
+                    const result = applyMultipleFixesToLine(lineNumber, markers);
+                    
+                    if (result.fixed) {
+                        // Mark all issues on this line as fixed
+                        lineIssues.forEach(({ issue }) => {
+                            issue.state = 'fixed';
+                        });
+                        updateLineDecoration(lineNumber, 'fixed');
+                        totalFixedCount += lineIssues.length;
+                        console.log('[applyAll] ✓ Fixed line', lineNumber, '-', lineIssues.length, 'issues');
+                    } else {
+                        console.log('[applyAll] ✗ Failed to fix line', lineNumber);
+                    }
+                });
+                
+                console.log('[applyAll] Total fixed so far:', totalFixedCount);
+                
+                // Re-run validation to detect new issues
+                if (iterationCount < maxIterations) {
+                    setTimeout(() => {
+                        console.log('[applyAll] Re-validating...');
+                        validationIssues = [];
+                        validateMarkdown();
+                        
+                        const newPendingIssues = validationIssues.filter(iss => iss.state === 'pending' && iss.suggestedFix);
+                        console.log('[applyAll] New pending issues:', newPendingIssues.length);
+                        
+                        if (newPendingIssues.length > 0) {
+                            console.log('[applyAll] Continuing to next iteration...');
+                            applyFixesIteration();
+                        } else {
+                            closeSuggestionBar();
+                            console.log('[applyAll] ✓ ALL DONE - Fixed', totalFixedCount, 'issues total');
+                            showMofuHelper(`Excellent! All ${totalFixedCount} fixes applied ✔`);
+                        }
+                    }, 150);
                 } else {
                     closeSuggestionBar();
-                    showMofuHelper(`Applied ${fixedCount} fixes! Review the highlighted changes.`);
+                    console.log('[applyAll] ⚠ Max iterations reached');
+                    showMofuHelper(`Applied ${totalFixedCount} fixes! Some issues may remain.`);
                 }
-            }
+            };
+            
+            applyFixesIteration();
         };
         
         const skipCurrentIssue = () => {
