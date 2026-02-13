@@ -352,6 +352,8 @@ This web site is using ${"`"}markedjs/marked${"`"}.
                         codeBlockStarts.push(lineNumber);
                         inCodeBlock = true;
                     } else {
+                        // Closing code block - remove the last opening from the stack
+                        codeBlockStarts.pop();
                         inCodeBlock = false;
                     }
                 }
@@ -427,17 +429,18 @@ This web site is using ${"`"}markedjs/marked${"`"}.
                 
                 // Check for image/link issues (consolidated to avoid duplicates)
                 const imagePattern = /!\[([^\]]*)\]\(([^)]*)\)/g;
-                const imageBrokenPattern = /!\[([^\]]*)\]\s*\(/;
+                // Match broken images: ![text( OR ![text] without closing )
+                const imageBrokenPattern = /!\[.*\([^)]*$/;
                 
                 if (imageBrokenPattern.test(line) && !imagePattern.test(line)) {
-                    // Broken image syntax
+                    // Broken image syntax - missing ] or missing )
                     markers.push({
                         severity: monaco.MarkerSeverity.Error,
                         startLineNumber: lineNumber,
                         startColumn: line.indexOf('![') + 1,
                         endLineNumber: lineNumber,
                         endColumn: line.length + 1,
-                        message: 'Broken image syntax: Missing closing parenthesis or URL',
+                        message: 'Broken image syntax: Missing closing bracket ] or parenthesis )',
                         source: 'markdown-validator'
                     });
                     processedLines.add(lineNumber);
@@ -476,7 +479,8 @@ This web site is using ${"`"}markedjs/marked${"`"}.
                 
                 // Check for link issues (consolidated)
                 const linkPattern = /\[([^\]]+)\]\(([^)]+)\)/g;
-                const linkBrokenPattern = /\[([^\]]+)\]\s*\(/;
+                // Match broken links: [text( OR [text] without closing )
+                const linkBrokenPattern = /\[.*\([^)]*$/;
                 
                 if (linkBrokenPattern.test(line) && !linkPattern.test(line) && !processedLines.has(lineNumber)) {
                     markers.push({
@@ -485,7 +489,7 @@ This web site is using ${"`"}markedjs/marked${"`"}.
                         startColumn: line.indexOf('[') + 1,
                         endLineNumber: lineNumber,
                         endColumn: line.length + 1,
-                        message: 'Broken link syntax: Missing closing parenthesis or URL',
+                        message: 'Broken link syntax: Missing closing bracket ] or parenthesis )',
                         source: 'markdown-validator'
                     });
                     processedLines.add(lineNumber);
@@ -665,17 +669,28 @@ This web site is using ${"`"}markedjs/marked${"`"}.
                             inTable = true;
                         }
                     } else if (inTable && tableHeaderCols > 0) {
-                        // Check column count consistency
-                        if (cells.length !== tableHeaderCols) {
-                            markers.push({
-                                severity: monaco.MarkerSeverity.Warning,
-                                startLineNumber: lineNumber,
-                                startColumn: 1,
-                                endLineNumber: lineNumber,
-                                endColumn: line.length + 1,
-                                message: `Table column mismatch: Expected ${tableHeaderCols} columns, got ${cells.length}`,
-                                source: 'markdown-validator'
-                            });
+                        // CRITICAL: Check if next line is a separator (new table starting)
+                        const nextLine = index < lines.length - 1 ? lines[index + 1].trim() : '';
+                        const separatorPattern = /^\|?\s*[-:]+\s*(\|\s*[-:]+\s*)+\|?\s*$/;
+                        
+                        if (nextLine && separatorPattern.test(nextLine)) {
+                            // This is a NEW table header, not a data row!
+                            // Close current table and let next iteration handle the new one
+                            inTable = false;
+                            tableHeaderCols = 0;
+                        } else {
+                            // This is a data row - check column count consistency
+                            if (cells.length !== tableHeaderCols) {
+                                markers.push({
+                                    severity: monaco.MarkerSeverity.Warning,
+                                    startLineNumber: lineNumber,
+                                    startColumn: 1,
+                                    endLineNumber: lineNumber,
+                                    endColumn: line.length + 1,
+                                    message: `Table column mismatch: Expected ${tableHeaderCols} columns, got ${cells.length}`,
+                                    source: 'markdown-validator'
+                                });
+                            }
                         }
                     }
                 } else if (inTable && trimmed) {
@@ -705,7 +720,8 @@ This web site is using ${"`"}markedjs/marked${"`"}.
             });
             
             // Check for unclosed code blocks (global check)
-            if (codeBlockStarts.length % 2 !== 0) {
+            // After processing, if there are any unclosed blocks left in the stack
+            if (codeBlockStarts.length > 0) {
                 const lastBlockLine = codeBlockStarts[codeBlockStarts.length - 1];
                 markers.push({
                     severity: monaco.MarkerSeverity.Error,
@@ -948,34 +964,61 @@ This web site is using ${"`"}markedjs/marked${"`"}.
                 suggestedFix = '\n' + line;
                 fixDescription = 'Insert blank line above';
             }
+            // Unclosed code block
+            else if (marker.message.includes('Unclosed code block')) {
+                // Add closing ``` on a new line after the current line
+                suggestedFix = line + '\n```';
+                fixDescription = 'Add closing ``` on new line';
+            }
             // Broken image syntax - COMPLETELY REWRITTEN
             else if (marker.message.includes('Broken image syntax')) {
                 console.log('[generateFix] Broken image - testing regex');
-                // Find the broken ![...]( pattern and fix it
-                // Use a more robust approach that handles the actual broken syntax
-                const brokenPattern = /!\[([^\]]*)\]\s*\([^)]*$/;
-                const match = line.match(brokenPattern);
+                // Handle two cases:
+                // 1. ![text( - missing ] and )
+                // 2. ![text]( - missing )
+                
+                // Try pattern with ] first
+                let brokenPattern = /!\[([^\]]*)\]\s*\([^)]*$/;
+                let match = line.match(brokenPattern);
+                
+                if (!match) {
+                    // Try pattern without ] (e.g., ![text()
+                    brokenPattern = /!\[([^\(]*)\(/;
+                    match = line.match(brokenPattern);
+                }
+                
                 console.log('[generateFix] Broken image match:', match);
                 if (match) {
-                    const altText = match[1];
+                    const altText = match[1].trim();
                     // Replace the entire broken pattern with fixed version
-                    suggestedFix = line.replace(brokenPattern, `![${altText}](<span style="color:red">IMAGE_URL_FIX!</span>)`);
-                    fixDescription = 'Add closing ) and red placeholder URL';
+                    suggestedFix = line.replace(brokenPattern, `![${altText}](IMAGE_URL_FIX!)`);
+                    fixDescription = 'Add missing brackets/parenthesis and placeholder URL';
                     console.log('[generateFix] Broken image fix:', suggestedFix);
                 }
             }
             // Broken link syntax - COMPLETELY REWRITTEN
             else if (marker.message.includes('Broken link syntax')) {
                 console.log('[generateFix] Broken link - testing regex');
-                // Find the broken [...]( pattern and fix it
-                const brokenPattern = /\[([^\]]+)\]\s*\([^)]*$/;
-                const match = line.match(brokenPattern);
+                // Handle two cases:
+                // 1. [text( - missing ] and )
+                // 2. [text]( - missing )
+                
+                // Try pattern with ] first
+                let brokenPattern = /\[([^\]]*)\]\s*\([^)]*$/;
+                let match = line.match(brokenPattern);
+                
+                if (!match) {
+                    // Try pattern without ] (e.g., [text()
+                    brokenPattern = /\[([^\(]*)\(/;
+                    match = line.match(brokenPattern);
+                }
+                
                 console.log('[generateFix] Broken link match:', match);
                 if (match) {
-                    const linkText = match[1];
+                    const linkText = match[1].trim();
                     // Replace the entire broken pattern with fixed version
-                    suggestedFix = line.replace(brokenPattern, `[${linkText}](<span style="color:red">URL_FIX!</span>)`);
-                    fixDescription = 'Add closing ) and red placeholder URL';
+                    suggestedFix = line.replace(brokenPattern, `[${linkText}](URL_FIX!)`);
+                    fixDescription = 'Add missing brackets/parenthesis and placeholder URL';
                     console.log('[generateFix] Broken link fix:', suggestedFix);
                 }
             }
