@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Validation Blank Line Test</title>
+    <style>
+        body { font-family: monospace; padding: 20px; }
+        #editor { width: 800px; height: 400px; border: 1px solid #ccc; }
+        .controls { margin: 20px 0; }
+        button { padding: 10px 20px; margin: 5px; font-size: 14px; }
+        pre { background: #f5f5f5; padding: 10px; margin: 10px 0; }
+        .log { max-height: 300px; overflow-y: auto; }
+    </style>
+</head>
+<body>
+    <h1>Validation Blank Line Insertion Test</h1>
+    
+    <div class="controls">
+        <button onclick="testBlankLineInsertion()">Test Blank Line Insertion</button>
+        <button onclick="showContent()">Show Editor Content</button>
+        <button onclick="clearLogs()">Clear Logs</button>
+    </div>
+    
+    <div id="editor"></div>
+    
+    <h3>Console Logs:</h3>
+    <pre id="logs" class="log"></pre>
+    
+    <h3>Editor Content:</h3>
+    <pre id="content"></pre>
+
+    <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.52.2/min/vs/loader.js"></script>
+    <script>
+        let editor;
+        let logs = [];
+        
+        function log(message) {
+            const timestamp = new Date().toLocaleTimeString();
+            const logMessage = `[${timestamp}] ${message}`;
+            logs.push(logMessage);
+            console.log(logMessage);
+            document.getElementById('logs').textContent = logs.join('\n');
+        }
+        
+        function clearLogs() {
+            logs = [];
+            document.getElementById('logs').textContent = '';
+        }
+        
+        function showContent() {
+            const content = editor.getModel().getValue();
+            document.getElementById('content').textContent = content;
+            log('Content displayed');
+        }
+        
+        function insertBlankLineAbove(lineNumber) {
+            log(`insertBlankLineAbove called for line ${lineNumber}`);
+            const model = editor.getModel();
+            
+            // Check if previous line is already blank
+            if (lineNumber > 1) {
+                const prevLine = model.getLineContent(lineNumber - 1);
+                log(`Previous line (${lineNumber - 1}): "${prevLine}"`);
+                if (prevLine.trim() === '') {
+                    log('Previous line is blank, skipping');
+                    return;
+                }
+            }
+            
+            log(`Inserting blank line before line ${lineNumber}`);
+            const range = new monaco.Range(lineNumber, 1, lineNumber, 1);
+            const lineContent = model.getLineContent(lineNumber);
+            log(`Current line content: "${lineContent}"`);
+            log(`Range: (${lineNumber}, 1, ${lineNumber}, 1)`);
+            
+            editor.executeEdits('insert-blank-line', [{
+                range: range,
+                text: '\n'
+            }]);
+            
+            log('executeEdits called');
+            
+            // Verify the edit was applied
+            setTimeout(() => {
+                const lineCount = model.getLineCount();
+                log(`Line count after edit: ${lineCount}`);
+                
+                const newLine = model.getLineContent(lineNumber);
+                const nextLine = model.getLineContent(lineNumber + 1);
+                log(`Line ${lineNumber} after edit: "${newLine}"`);
+                log(`Line ${lineNumber + 1} after edit: "${nextLine}"`);
+                
+                showContent();
+            }, 100);
+        }
+        
+        function testBlankLineInsertion() {
+            log('=== TEST: Blank Line Insertion ===');
+            
+            const testContent = `### 42. Professional Protocol Check
+- Visit our Riyadh Office: [Google Maps](www.google.com/maps)
+- Reference Document: [Project Plan](http://insecure-site.com)
+
+### 43. List-Table Conflict
+1. This is a list item
+| Table | Inside | List? |
+| --- | --- | --- |
+| This | often | breaks |
+2. This is the next list item`;
+            
+            editor.getModel().setValue(testContent);
+            log('Test content loaded');
+            showContent();
+            
+            setTimeout(() => {
+                log('\n--- Test 1: Insert blank line after heading (line 2) ---');
+                insertBlankLineAbove(2);
+            }, 500);
+            
+            setTimeout(() => {
+                log('\n--- Test 2: Insert blank line before table (line 7) ---');
+                insertBlankLineAbove(7);
+            }, 2000);
+        }
+        
+        require.config({ paths: { vs: 'https://cdn.jsdelivr.net/npm/monaco-editor@0.52.2/min/vs' } });
+        
+        require(['vs/editor/editor.main'], function() {
+            editor = monaco.editor.create(document.getElementById('editor'), {
+                value: '# Ready for testing\n\nClick "Test Blank Line Insertion" button above.',
+                language: 'markdown',
+                theme: 'vs',
+                minimap: { enabled: false }
+            });
+            
+            log('Monaco editor initialized');
+        });
+    </script>
+</body>
+</html>

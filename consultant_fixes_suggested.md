@@ -1,151 +1,83 @@
-You are about to break tables and links again for the same reason as before.
+# Markdown Fix Engine – Inconsistent Behavior Report
 
-### Critical Design Problem
+## Original Input
 
-You are injecting:
+```markdown
+### 42. Professional Protocol Check
+- Visit our Riyadh Office: [Google Maps](www.google.com/maps)
+- Reference Document: [Project Plan](http://insecure-site.com)
+- Internal Note: [See Appendix](appendix) (Missing # or ./)
 
-```
-<span style="color:red">URL_FIX!</span>
-```
-
-inside link/image URLs:
-
-```
-![Broken image](<span ...>)
-[Broken link](<span ...>)
-```
-
-That is **invalid Markdown URL syntax** in many parsers.
-
-Markdown expects:
-
-```
-[text](URL)
-```
-
-Not HTML inside `()`.
-
-Some renderers tolerate it. Many don’t.
-That’s why tables broke earlier — parser reflowed.
-
----
-
-# Correct Architectural Fix
-
-### DO NOT inject HTML inside link parentheses.
-
-Instead use:
-
-```
-![Broken image](IMAGE_URL_FIX!)
-[Broken link](URL_FIX!)
-```
-
-Then color via renderer layer (CSS).
-
-Example:
-
-```css
-a[href="URL_FIX!"],
-img[src="IMAGE_URL_FIX!"] {
-  color: red;
-  outline: 1px solid red;
-}
-```
-
-Cleaner. Stable. Parser-safe.
-
----
-
-# Now About Your Regex
-
-### 1️⃣ Broken Image Regex
-
-Your pattern:
-
-```
-/!\[([^\]]*)\]\s*\([^)]*$/
-```
-
-Will NOT match:
-
-```
-![Broken image (
-```
-
-Because it expects `](`.
-
-You need a second fallback regex:
-
-```
-/!\[([^\]]*)\s*\([^)]*$/
-```
-
-For missing closing bracket before `(`.
-
----
-
-### 2️⃣ Broken Link Regex
-
-Same issue.
-
-Current:
-
-```
-/\[([^\]]+)\]\s*\([^)]*$/
-```
-
-Fails on:
-
-```
-[Broken link (
-```
-
-Add fallback:
-
-```
-/\[([^\]]+)\s*\([^)]*$/
+### 43. List-Table Conflict
+1. This is a list item
+| Table | Inside | List? |
+| --- | --- | --- |
+| This | often | breaks |
+2. This is the next list item
 ```
 
 ---
 
-### 3️⃣ Nested List Rule
+## Output – Apply All Fixes
 
-Your indentation rule is correct:
+```markdown
+### 42. Professional Protocol Check
 
+- Visit our Riyadh Office: [Google Maps](www.google.com/maps)
+- Reference Document: [Project Plan](http://insecure-site.com)
+- Internal Note: [See Appendix](appendix) (Missing # or ./)
+
+### 43. List-Table Conflict
+
+1. This is a list item
+| Table | Inside | List? |
+| --- | --- | --- |
+| This | often | breaks |
+2. This is the next list item
 ```
-^(\s*)([+*-])(\s+.+)
-```
-
-Then reconstruct:
-
-```
-indent + "- " + trimmedContent
-```
-
-Do NOT touch indentation.
 
 ---
 
-### 4️⃣ Table Separator Fix
+## Output – Apply Individually
 
-Correct approach:
+```markdown
+### 42. Professional Protocol Check
 
-* Count pipes in header line
-* Count header columns
-* Regenerate separator with same count
+- Visit our Riyadh Office: [Google Maps](www.google.com/maps)
+- Reference Document: [Project Plan](http://insecure-site.com)
+- Internal Note: [See Appendix](appendix) (Missing # or ./)
 
-Never try to “patch” separator — regenerate entirely.
+1. This is a list item
+1. This is a list item
+| Table | Inside | List? |
+| --- | --- | --- |
+| This | often | breaks |
+2. This is the next list item
+```
 
 ---
 
-# Final Recommendation
+## Observed Problems
 
-Remove HTML injection from markdown mutation layer.
+1. **Apply Individually duplicates the list item**
+   `1. This is a list item` appears twice.
 
-Validation layer = pure markdown-safe output
-Rendering layer = visual highlighting
+2. **Apply All does not resolve List–Table separation**
+   A blank line should exist between the list and the table for CommonMark compliance.
 
-If you keep injecting HTML inside structural markdown tokens, you will continue breaking tables and links.
+3. The console shows only:
 
-Fix this at architecture level now.
+   * “Missing blank line after heading”
+   * No detection of list–table structural conflict.
+
+---
+
+## Request
+
+
+1. Fix the duplication bug in individual mode.
+2. Ensure Apply All and Apply Individually produce identical structural results.
+3. Add detection for list–table conflicts and insert required blank lines.
+4. Guarantee idempotency (running fixes twice should not change output).
+
+Return a corrected final Markdown output for the original input that is fully CommonMark-compliant and stable across multiple passes.

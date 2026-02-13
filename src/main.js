@@ -330,6 +330,33 @@ This web site is using ${"`"}markedjs/marked${"`"}.
             const markers = [];
             const processedLines = new Set(); // Track lines already flagged to avoid duplicates
             
+            // Helper function: Split table cells by | but ignore pipes inside backticks
+            const splitTableCells = (line) => {
+                const cells = [];
+                let currentCell = '';
+                let inCode = false;
+                
+                for (let i = 0; i < line.length; i++) {
+                    const char = line[i];
+                    
+                    if (char === '`') {
+                        inCode = !inCode;
+                        currentCell += char;
+                    } else if (char === '|' && !inCode) {
+                        cells.push(currentCell);
+                        currentCell = '';
+                    } else {
+                        currentCell += char;
+                    }
+                }
+                
+                // Add the last cell
+                cells.push(currentCell);
+                
+                // Filter out empty cells (from leading/trailing pipes)
+                return cells.filter(c => c.trim());
+            };
+            
             // Track code blocks
             let inCodeBlock = false;
             let codeBlockStarts = [];
@@ -393,6 +420,24 @@ This web site is using ${"`"}markedjs/marked${"`"}.
                             endLineNumber: lineNumber,
                             endColumn: 1,
                             message: 'Missing blank line after heading: Add blank line for better readability',
+                            source: 'markdown-validator'
+                        });
+                    }
+                }
+                
+                // Check for list-table conflict
+                if (index > 0 && trimmed.includes('|')) {
+                    const prevLine = lines[index - 1].trim();
+                    const isListItem = /^(\d+\.|\*|\+|-)\s/.test(prevLine);
+                    const isTableRow = /^\|.*\|/.test(trimmed);
+                    if (isListItem && isTableRow) {
+                        markers.push({
+                            severity: monaco.MarkerSeverity.Warning,
+                            startLineNumber: lineNumber,
+                            startColumn: 1,
+                            endLineNumber: lineNumber,
+                            endColumn: 1,
+                            message: 'List-table conflict: Add blank line between list and table',
                             source: 'markdown-validator'
                         });
                     }
@@ -635,7 +680,7 @@ This web site is using ${"`"}markedjs/marked${"`"}.
                 
                 // Check for table structure
                 if (trimmed.includes('|')) {
-                    const cells = trimmed.split('|').filter(c => c.trim());
+                    const cells = splitTableCells(trimmed);
                     const isSeparator = /^[\s:-]+$/.test(cells.join(''));
                     
                     if (isSeparator) {
@@ -665,7 +710,23 @@ This web site is using ${"`"}markedjs/marked${"`"}.
                                 source: 'markdown-validator'
                             });
                         } else {
-                            tableHeaderCols = prevLine.split('|').filter(c => c.trim()).length;
+                            const headerCols = splitTableCells(prevLine).length;
+                            const separatorCols = cells.length;
+                            
+                            // CRITICAL: Check if separator column count matches header
+                            if (separatorCols !== headerCols) {
+                                markers.push({
+                                    severity: monaco.MarkerSeverity.Warning,
+                                    startLineNumber: lineNumber,
+                                    startColumn: 1,
+                                    endLineNumber: lineNumber,
+                                    endColumn: line.length + 1,
+                                    message: `Table separator column mismatch: Expected ${headerCols} columns, got ${separatorCols}`,
+                                    source: 'markdown-validator'
+                                });
+                            }
+                            
+                            tableHeaderCols = headerCols;
                             inTable = true;
                         }
                     } else if (inTable && tableHeaderCols > 0) {
@@ -921,6 +982,15 @@ This web site is using ${"`"}markedjs/marked${"`"}.
                     fixDescription = 'Fix table separator format';
                 }
             }
+            // Table separator column mismatch - NEW FIX
+            else if (marker.message.includes('Table separator column mismatch')) {
+                const expectedMatch = marker.message.match(/Expected (\d+) columns/);
+                if (expectedMatch) {
+                    const headerCols = parseInt(expectedMatch[1]);
+                    suggestedFix = '| ' + Array(headerCols).fill('---').join(' | ') + ' |';
+                    fixDescription = `Update separator to match ${headerCols} columns`;
+                }
+            }
             // Empty alt text
             else if (marker.message.includes('Empty alt text')) {
                 suggestedFix = line.replace(/!\[\]/, '![Image description]');
@@ -946,22 +1016,72 @@ This web site is using ${"`"}markedjs/marked${"`"}.
             }
             // Unclosed inline code
             else if (marker.message.includes('Unclosed inline code')) {
-                suggestedFix = line + '`';
+                // Check where to place the closing `
+                const trimmedLine = line.trimEnd();
+                
+                // Priority 1: Inside a link [text] - close before ]
+                if (trimmedLine.match(/\[.*`[^\]]*\]/)) {
+                    // Code is inside link text - close before the ]
+                    suggestedFix = trimmedLine.replace(/\]/, '`]');
+                }
+                // Priority 2: Inside a table cell - close before |
+                else if (trimmedLine.endsWith('|')) {
+                    suggestedFix = trimmedLine.replace(/\s*\|$/, '`|');
+                }
+                // Priority 3: End of line
+                else {
+                    suggestedFix = line + '`';
+                }
                 fixDescription = 'Add closing backtick';
             }
             // Unclosed bold
             else if (marker.message.includes('Unclosed bold')) {
-                suggestedFix = line + '**';
+                // Check where to place the closing **
+                const trimmedLine = line.trimEnd();
+                
+                // Priority 1: Inside a link [text] - close before ]
+                if (trimmedLine.match(/\[.*\*\*[^\]]*\]/)) {
+                    // Bold is inside link text - close before the ]
+                    suggestedFix = trimmedLine.replace(/\]/, '**]');
+                }
+                // Priority 2: Inside a table cell - close before |
+                else if (trimmedLine.endsWith('|')) {
+                    suggestedFix = trimmedLine.replace(/\s*\|$/, '**|');
+                }
+                // Priority 3: End of line
+                else {
+                    suggestedFix = line + '**';
+                }
                 fixDescription = 'Add closing **';
             }
             // Unclosed italic
             else if (marker.message.includes('Unclosed italic')) {
-                suggestedFix = line + '*';
+                // Check where to place the closing *
+                const trimmedLine = line.trimEnd();
+                
+                // Priority 1: Inside a link [text] - close before ]
+                if (trimmedLine.match(/\[.*\*[^\]]*\]/)) {
+                    // Italic is inside link text - close before the ]
+                    suggestedFix = trimmedLine.replace(/\]/, '*]');
+                }
+                // Priority 2: Inside a table cell - close before |
+                else if (trimmedLine.endsWith('|')) {
+                    suggestedFix = trimmedLine.replace(/\s*\|$/, '*|');
+                }
+                // Priority 3: End of line
+                else {
+                    suggestedFix = line + '*';
+                }
                 fixDescription = 'Add closing *';
             }
             // Missing blank line after heading
             else if (marker.message.includes('Missing blank line after heading')) {
-                suggestedFix = '\n' + line;
+                suggestedFix = '__INSERT_BLANK_LINE__';
+                fixDescription = 'Insert blank line above';
+            }
+            // List-table conflict
+            else if (marker.message.includes('List-table conflict')) {
+                suggestedFix = '__INSERT_BLANK_LINE__';
                 fixDescription = 'Insert blank line above';
             }
             // Unclosed code block
@@ -977,20 +1097,20 @@ This web site is using ${"`"}markedjs/marked${"`"}.
                 // 1. ![text( - missing ] and )
                 // 2. ![text]( - missing )
                 
-                // Try pattern with ] first
-                let brokenPattern = /!\[([^\]]*)\]\s*\([^)]*$/;
+                // Try pattern with ] first - capture everything after ( to discard
+                let brokenPattern = /!\[([^\]]*)\]\s*\(.*$/;
                 let match = line.match(brokenPattern);
                 
                 if (!match) {
-                    // Try pattern without ] (e.g., ![text()
-                    brokenPattern = /!\[([^\(]*)\(/;
+                    // Try pattern without ] (e.g., ![text( with trailing text)
+                    brokenPattern = /!\[([^\(]*)\(.*$/;
                     match = line.match(brokenPattern);
                 }
                 
                 console.log('[generateFix] Broken image match:', match);
                 if (match) {
                     const altText = match[1].trim();
-                    // Replace the entire broken pattern with fixed version
+                    // Replace the ENTIRE matched pattern (including trailing text)
                     suggestedFix = line.replace(brokenPattern, `![${altText}](IMAGE_URL_FIX!)`);
                     fixDescription = 'Add missing brackets/parenthesis and placeholder URL';
                     console.log('[generateFix] Broken image fix:', suggestedFix);
@@ -1003,20 +1123,24 @@ This web site is using ${"`"}markedjs/marked${"`"}.
                 // 1. [text( - missing ] and )
                 // 2. [text]( - missing )
                 
-                // Try pattern with ] first
-                let brokenPattern = /\[([^\]]*)\]\s*\([^)]*$/;
+                // CRITICAL: Match the LAST [ before (, not the first!
+                // Also capture everything after ( to discard it
+                
+                // Try pattern with ] first - capture text after ( to discard
+                let brokenPattern = /\[([^\]]*)\]\s*\(.*$/;
                 let match = line.match(brokenPattern);
                 
                 if (!match) {
-                    // Try pattern without ] (e.g., [text()
-                    brokenPattern = /\[([^\(]*)\(/;
+                    // Try pattern without ] - match LAST [ before (
+                    // Capture everything from last [ to end of line
+                    brokenPattern = /.*\[([^\[]*)\(.*$/;
                     match = line.match(brokenPattern);
                 }
                 
                 console.log('[generateFix] Broken link match:', match);
                 if (match) {
                     const linkText = match[1].trim();
-                    // Replace the entire broken pattern with fixed version
+                    // Replace the ENTIRE matched pattern (including trailing text)
                     suggestedFix = line.replace(brokenPattern, `[${linkText}](URL_FIX!)`);
                     fixDescription = 'Add missing brackets/parenthesis and placeholder URL';
                     console.log('[generateFix] Broken link fix:', suggestedFix);
@@ -1076,10 +1200,20 @@ This web site is using ${"`"}markedjs/marked${"`"}.
             
             console.log('[applyMultiple] Sorted markers:', sortedMarkers.map(m => m.message));
             
-            // Apply each fix sequentially to the evolving line
-            for (const marker of sortedMarkers) {
+            // Separate blank line insertion markers from content fixes
+            const blankLineMarkers = sortedMarkers.filter(m => 
+                m.message.includes('Missing blank line after heading') || 
+                m.message.includes('List-table conflict')
+            );
+            const contentMarkers = sortedMarkers.filter(m => 
+                !m.message.includes('Missing blank line after heading') && 
+                !m.message.includes('List-table conflict')
+            );
+            
+            // Apply content fixes sequentially to the evolving line
+            for (const marker of contentMarkers) {
                 const { suggestedFix, fixDescription } = generateFix(marker, currentLine);
-                if (suggestedFix) {
+                if (suggestedFix && suggestedFix !== '__INSERT_BLANK_LINE__') {
                     console.log('[applyMultiple] Applying:', fixDescription);
                     console.log('[applyMultiple] From:', currentLine);
                     console.log('[applyMultiple] To:', suggestedFix);
@@ -1097,10 +1231,51 @@ This web site is using ${"`"}markedjs/marked${"`"}.
                     range: range,
                     text: currentLine
                 }]);
-                return { fixed: true, description: fixDescriptions.join(', ') };
             }
             
-            return { fixed: false, description: '' };
+            // Handle blank line insertions separately
+            if (blankLineMarkers.length > 0) {
+                insertBlankLineAbove(lineNumber);
+                fixDescriptions.push('Insert blank line above');
+            }
+            
+            return { fixed: fixDescriptions.length > 0, description: fixDescriptions.join(', ') };
+        };
+        
+        // Insert blank line above a line (idempotent)
+        const insertBlankLineAbove = (lineNumber) => {
+            console.log(`[insertBlankLineAbove] Called for line ${lineNumber}`);
+            const model = editor.getModel();
+            
+            // Check if previous line is already blank
+            if (lineNumber > 1) {
+                const prevLine = model.getLineContent(lineNumber - 1);
+                console.log(`[insertBlankLineAbove] Previous line (${lineNumber - 1}): "${prevLine}"`);
+                if (prevLine.trim() === '') {
+                    console.log(`[insertBlankLineAbove] Previous line is blank, skipping`);
+                    return; // Already has blank line
+                }
+            }
+            
+            console.log(`[insertBlankLineAbove] Inserting blank line before line ${lineNumber}`);
+            // Insert blank line at the start of current line
+            const range = new monaco.Range(lineNumber, 1, lineNumber, 1);
+            const lineContent = model.getLineContent(lineNumber);
+            console.log(`[insertBlankLineAbove] Current line content: "${lineContent}"`);
+            console.log(`[insertBlankLineAbove] Range: (${lineNumber}, 1, ${lineNumber}, 1)`);
+            
+            editor.executeEdits('insert-blank-line', [{
+                range: range,
+                text: '\n'
+            }]);
+            
+            // Verify the edit was applied
+            setTimeout(() => {
+                const newPrevLine = model.getLineContent(lineNumber);
+                const newCurrentLine = model.getLineContent(lineNumber + 1);
+                console.log(`[insertBlankLineAbove] After edit - Line ${lineNumber}: "${newPrevLine}"`);
+                console.log(`[insertBlankLineAbove] After edit - Line ${lineNumber + 1}: "${newCurrentLine}"`);
+            }, 100);
         };
         
         const positionInlineBar = (lineNumber) => {
@@ -1217,27 +1392,50 @@ This web site is using ${"`"}markedjs/marked${"`"}.
             const lineNumber = issue.marker.startLineNumber;
             const line = model.getLineContent(lineNumber);
             
-            const range = new monaco.Range(lineNumber, 1, lineNumber, line.length + 1);
-            editor.executeEdits('validation-fix', [{
-                range: range,
-                text: issue.suggestedFix
-            }]);
+            // Check if this is a blank line insertion fix
+            if (issue.suggestedFix === '__INSERT_BLANK_LINE__') {
+                console.log('[applyCurrentFix] Blank line insertion detected for line', lineNumber);
+                insertBlankLineAbove(lineNumber);
+            } else {
+                // Regular content fix
+                const range = new monaco.Range(lineNumber, 1, lineNumber, line.length + 1);
+                editor.executeEdits('validation-fix', [{
+                    range: range,
+                    text: issue.suggestedFix
+                }]);
+            }
             
             // Mark as fixed
             issue.state = 'fixed';
             updateLineDecoration(lineNumber, 'fixed');
             
-            // Move to next pending issue or stay
-            const nextPending = validationIssues.findIndex((iss, idx) => idx > currentFixIndex && iss.state === 'pending');
-            if (nextPending !== -1) {
-                showSuggestionForIssue(nextPending);
+            // Move to next pending issue without closing the bar
+            const nextPendingIndex = validationIssues.findIndex((iss, idx) => idx > currentFixIndex && iss.state === 'pending');
+            
+            if (nextPendingIndex !== -1) {
+                // Show next pending issue
+                console.log('[applyCurrentFix] Moving to next pending issue at index:', nextPendingIndex);
+                showSuggestionForIssue(nextPendingIndex);
             } else {
-                // No more pending, check if all done
-                const allDone = validationIssues.every(iss => iss.state !== 'pending');
-                if (allDone) {
+                // No more pending issues - check if we should close or stay
+                const allProcessed = validationIssues.every(iss => iss.state !== 'pending');
+                
+                if (allProcessed) {
+                    // All done - close and show summary
+                    const fixedCount = validationIssues.filter(iss => iss.state === 'fixed').length;
+                    const skippedCount = validationIssues.filter(iss => iss.state === 'skipped').length;
+                    
                     closeSuggestionBar();
-                    showMofuHelper('Excellent! All fixes applied ✔');
+                    
+                    let summaryMessage = `Validation complete! Fixed ${fixedCount} issue${fixedCount !== 1 ? 's' : ''}`;
+                    if (skippedCount > 0) {
+                        summaryMessage += `, skipped ${skippedCount}`;
+                    }
+                    summaryMessage += ' ✔';
+                    
+                    showMofuHelper(summaryMessage);
                 } else {
+                    // Stay on current issue (now marked as fixed)
                     showSuggestionForIssue(currentFixIndex);
                 }
             }
@@ -6186,6 +6384,25 @@ let performBeautify = (content) => {
         cursorSyncSettings = true;
     }
     initCursorSync(cursorSyncSettings);
+
+    // initialize word wrap
+    let wordWrapSettings = localStorage.getItem('com.markdownlivepreview.word_wrap');
+    if (wordWrapSettings === null) {
+        wordWrapSettings = true; // Default to enabled
+    } else {
+        wordWrapSettings = wordWrapSettings === 'true';
+    }
+    const wordWrapCheckbox = document.querySelector('#word-wrap-checkbox');
+    if (wordWrapCheckbox) {
+        wordWrapCheckbox.checked = wordWrapSettings;
+        editor.updateOptions({ wordWrap: wordWrapSettings ? 'on' : 'off' });
+        
+        wordWrapCheckbox.addEventListener('change', (event) => {
+            const enabled = event.currentTarget.checked;
+            editor.updateOptions({ wordWrap: enabled ? 'on' : 'off' });
+            localStorage.setItem('com.markdownlivepreview.word_wrap', enabled);
+        });
+    }
 
     // initialize helper messages
     let helperMessagesSettings = loadHelperMessagesSetting();
