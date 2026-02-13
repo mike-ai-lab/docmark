@@ -1,698 +1,379 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Markdown Renderer</title>
-  <script src="https://unpkg.com/lucide@latest"></script>
-  <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DocMark Studio | Muhamad Studio</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=JetBrains+Mono&display=swap');
+        
+        body { font-family: 'Inter', sans-serif; }
+        .font-mono { font-family: 'JetBrains Mono', monospace; }
+        
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
+        
+        .preview-page {
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+            position: relative;
+        }
 
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-      overflow: hidden;
-    }
+        [contenteditable="true"] {
+            outline: none;
+            transition: background 0.1s;
+            border-radius: 2px;
+            min-height: 1em;
+        }
+        [contenteditable="true"]:hover {
+            background: rgba(37, 99, 235, 0.03);
+        }
+        [contenteditable="true"]:focus {
+            background: rgba(37, 99, 235, 0.05);
+        }
 
-    .container {
-      width: 100vw;
-      height: 100vh;
-      background: #18181b;
-      color: #fafafa;
-      display: flex;
-      position: relative;
-    }
-
-    .preview-panel {
-      overflow: auto;
-      scroll-behavior: smooth;
-    }
-
-    .preview-content {
-      padding: 2rem;
-      cursor: pointer;
-    }
-
-    .divider {
-      width: 4px;
-      background: #3f3f46;
-      cursor: col-resize;
-      transition: background-color 0.2s;
-      position: relative;
-      z-index: 10;
-    }
-
-    .divider:hover {
-      background: #71717a;
-    }
-
-    .editor-panel {
-      position: relative;
-    }
-
-    .editor-wrapper {
-      width: 100%;
-      height: 100%;
-      position: relative;
-      overflow: hidden;
-    }
-
-    .editor {
-      width: 100%;
-      height: 100%;
-      background: transparent;
-      color: transparent;
-      padding: 2rem;
-      font-family: 'Courier New', monospace;
-      font-size: 14px;
-      resize: none;
-      border: none;
-      outline: none;
-      line-height: 1.5em;
-      position: absolute;
-      top: 0;
-      left: 0;
-      z-index: 1;
-      caret-color: #fafafa;
-      white-space: pre-wrap;
-      word-wrap: break-word;
-      overflow-wrap: break-word;
-      overflow: auto;
-    }
-
-    .editor::selection {
-      background: rgba(59, 130, 246, 0.3);
-    }
-
-    .editor-highlight {
-      width: 100%;
-      height: 100%;
-      background: #27272a;
-      padding: 2rem;
-      font-family: 'Courier New', monospace;
-      font-size: 14px;
-      line-height: 1.5em;
-      position: absolute;
-      top: 0;
-      left: 0;
-      z-index: 0;
-      pointer-events: none;
-      white-space: pre-wrap;
-      word-wrap: break-word;
-      overflow-wrap: break-word;
-      overflow: auto;
-    }
-
-    .editor::placeholder {
-      color: #71717a;
-    }
-
-    /* Syntax highlighting colors */
-    .hl-header { color: #60a5fa; font-weight: bold; }
-    .hl-bold { color: #fbbf24; font-weight: bold; }
-    .hl-italic { color: #a78bfa; font-style: italic; }
-    .hl-code { color: #34d399; background: #18181b; padding: 2px 4px; border-radius: 3px; }
-    .hl-code-block { color: #86efac; background: #18181b; display: block; }
-    .hl-link { color: #60a5fa; text-decoration: underline; }
-    .hl-quote { color: #a1a1aa; border-left: 3px solid #52525b; padding-left: 0.5em; }
-    .hl-list { color: #fb923c; }
-    .hl-comment { color: #71717a; }
-
-    .drag-overlay {
-      position: absolute;
-      inset: 0;
-      background: rgba(24, 24, 27, 0.9);
-      display: none;
-      align-items: center;
-      justify-content: center;
-      border: 2px dashed #71717a;
-      flex-direction: column;
-      gap: 1rem;
-    }
-
-    .drag-overlay.active {
-      display: flex;
-    }
-
-    .drag-overlay-icon {
-      color: #a1a1aa;
-    }
-
-    .drag-overlay-text {
-      color: #d4d4d8;
-    }
-
-    .toolbar {
-      position: fixed;
-      bottom: 1.5rem;
-      right: 1.5rem;
-      display: flex;
-      flex-direction: column;
-      gap: 0.75rem;
-      z-index: 1000;
-    }
-
-    .toolbar-btn {
-      background: #27272a;
-      border: none;
-      padding: 0.75rem;
-      border-radius: 9999px;
-      cursor: pointer;
-      transition: background-color 0.2s;
-      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
-      color: #fafafa;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .toolbar-btn:hover {
-      background: #3f3f46;
-    }
-
-    .hidden {
-      display: none;
-    }
-
-    /* Markdown Styles */
-    .prose h1 { font-size: 2em; font-weight: bold; margin: 1em 0 0.5em; color: #fafafa; }
-    .prose h2 { font-size: 1.5em; font-weight: bold; margin: 1em 0 0.5em; color: #fafafa; }
-    .prose h3 { font-size: 1.25em; font-weight: bold; margin: 1em 0 0.5em; color: #fafafa; }
-    .prose code { 
-      background: #18181b; 
-      padding: 2px 6px; 
-      border-radius: 4px; 
-      color: #fbbf24;
-      font-family: 'Courier New', monospace;
-    }
-    .prose pre { 
-      background: #18181b; 
-      padding: 1em; 
-      border-radius: 8px; 
-      overflow-x: auto;
-      margin: 1em 0;
-    }
-    .prose pre code { 
-      background: transparent; 
-      padding: 0;
-      color: #86efac;
-    }
-    .prose blockquote { 
-      border-left: 4px solid #52525b; 
-      padding-left: 1em; 
-      color: #a1a1aa;
-      margin: 1em 0;
-    }
-    .prose ul { 
-      list-style-type: disc; 
-      padding-left: 2em;
-      margin: 1em 0;
-    }
-    .prose ol { 
-      list-style-type: decimal; 
-      padding-left: 2em;
-      margin: 1em 0;
-    }
-    .prose li { margin: 0.5em 0; }
-    .prose a { color: #60a5fa; text-decoration: underline; }
-    .prose strong { font-weight: bold; color: #fafafa; }
-    .prose em { font-style: italic; color: #e4e4e7; }
-    
-    .md-line {
-      min-height: 1.5em;
-      line-height: 1.5em;
-      transition: background-color 0.15s ease;
-    }
-    
-    .md-line:hover {
-      background-color: rgba(255, 255, 255, 0.03);
-      cursor: pointer;
-    }
-    
-    .md-line.active {
-      background-color: rgba(59, 130, 246, 0.1);
-      border-left: 3px solid #3b82f6;
-      padding-left: 5px;
-      margin-left: -5px;
-    }
-  </style>
+        .prose table { width: 100%; border-collapse: collapse; margin: 1.5rem 0; font-size: 0.875rem; }
+        .prose th, .prose td { border: 1px solid #e2e8f0; padding: 12px; text-align: left; }
+        .prose th { background: #f8fafc; font-weight: 700; color: #1e293b; }
+        
+        @media print {
+            .no-print { display: none !important; }
+            .preview-page { box-shadow: none; border: none; padding: 0; margin: 0; width: 100%; }
+        }
+    </style>
 </head>
-<body>
-  <div class="container" id="container">
-    <div class="preview-panel" id="previewPanel">
-      <div class="preview-content prose" id="previewContent"></div>
-    </div>
+<body class="bg-[#f1f5f9]">
+    <div id="root"></div>
 
-    <div class="divider" id="divider"></div>
+    <script type="text/babel">
+        const { useState, useCallback, useRef, useEffect } = React;
 
-    <div class="editor-panel" id="editorPanel">
-      <div class="editor-wrapper">
-        <div class="editor-highlight" id="editorHighlight"></div>
-        <textarea 
-          class="editor" 
-          id="editor" 
-          placeholder="Type your markdown here..."
-          spellcheck="false"
-        ></textarea>
-      </div>
-      <div class="drag-overlay" id="dragOverlay">
-        <i data-lucide="file-text" class="drag-overlay-icon" style="width: 48px; height: 48px;"></i>
-        <p class="drag-overlay-text">Drop .md file here</p>
-      </div>
-    </div>
-  </div>
-
-  <div class="toolbar">
-    <button class="toolbar-btn" id="uploadBtn" title="Upload .md file">
-      <i data-lucide="upload" style="width: 20px; height: 20px;"></i>
-    </button>
-    <button class="toolbar-btn" id="pasteBtn" title="Paste from clipboard">
-      <i data-lucide="clipboard" style="width: 20px; height: 20px;"></i>
-    </button>
-    <button class="toolbar-btn" id="copyBtn" title="Copy to clipboard">
-      <i data-lucide="copy" style="width: 20px; height: 20px;"></i>
-    </button>
-    <button class="toolbar-btn" id="clearBtn" title="Clear editor">
-      <i data-lucide="trash-2" style="width: 20px; height: 20px;"></i>
-    </button>
-    <button class="toolbar-btn" id="resetBtn" title="Load default content">
-      <i data-lucide="refresh-cw" style="width: 20px; height: 20px;"></i>
-    </button>
-    <button class="toolbar-btn" id="downloadBtn" title="Download as .md">
-      <i data-lucide="download" style="width: 20px; height: 20px;"></i>
-    </button>
-  </div>
-
-  <input type="file" id="fileInput" accept=".md" class="hidden">
-
-  <script>
-    // Initialize Lucide icons
-    lucide.createIcons();
-
-    // State
-    let leftWidth = 50;
-    let isDragging = false;
-    let currentLine = 0;
-    const defaultMarkdown = `# Welcome to Markdown Renderer
-
-Start typing or upload a \`.md\` file...
-
-## Features
-- Live preview
-- Syntax highlighting
-- Drag & drop support
-- Resizable panels
-- **Synchronized scrolling**
-- **Click to locate line**
-
-\`\`\`javascript
-const hello = "world";
-console.log(hello);
-\`\`\`
-
-> This is a blockquote
-
-**Bold text** and *italic text*
-
-- List item 1
-- List item 2
-- List item 3
-
-## Learning Markdown
-
-Try these syntax examples:
-
-### Text Formatting
-*Italic* with single asterisks
-**Bold** with double asterisks
-***Bold and Italic*** with triple asterisks
-
-### Links and Images
-[Link text](https://example.com)
-
-### Code
-Inline \`code\` with backticks
-
-\`\`\`python
-# Code block with language
-def hello():
-    print("Hello, World!")
-\`\`\`
-
-### Lists
-1. Numbered item
-2. Another item
-
-- Bullet point
-- Another bullet
-
-### Blockquotes
-> Quote something important
-> Continue the quote`;
-
-    let markdown = defaultMarkdown;
-
-    // Elements
-    const container = document.getElementById('container');
-    const previewPanel = document.getElementById('previewPanel');
-    const editorPanel = document.getElementById('editorPanel');
-    const divider = document.getElementById('divider');
-    const editor = document.getElementById('editor');
-    const editorHighlight = document.getElementById('editorHighlight');
-    const previewContent = document.getElementById('previewContent');
-    const dragOverlay = document.getElementById('dragOverlay');
-    const fileInput = document.getElementById('fileInput');
-    const uploadBtn = document.getElementById('uploadBtn');
-    const pasteBtn = document.getElementById('pasteBtn');
-    const copyBtn = document.getElementById('copyBtn');
-    const clearBtn = document.getElementById('clearBtn');
-    const resetBtn = document.getElementById('resetBtn');
-    const downloadBtn = document.getElementById('downloadBtn');
-
-    // Utility functions
-    function escapeHtml(text) {
-      const map = {
-        '&': '&amp;',
-        '<': '&lt;',
-        '>': '&gt;',
-        '"': '&quot;',
-        "'": '&#039;'
-      };
-      return text.replace(/[&<>"']/g, m => map[m]);
-    }
-
-    function parseMarkdown(md) {
-      let html = md;
-
-      // Code blocks with syntax highlighting
-      html = html.replace(/```(\w+)?\n([\s\S]*?)```/g, (match, lang, code) => {
-        return `<pre><code class="language-${lang || 'plaintext'}">${escapeHtml(code.trim())}</code></pre>`;
-      });
-
-      // Split by lines and wrap each with line number
-      const processedLines = html.split('\n').map((line, index) => {
-        let processedLine = line;
-        
-        // Inline code
-        processedLine = processedLine.replace(/`([^`]+)`/g, '<code>$1</code>');
-
-        // Headers
-        processedLine = processedLine.replace(/^### (.*$)/gim, '<h3>$1</h3>');
-        processedLine = processedLine.replace(/^## (.*$)/gim, '<h2>$1</h2>');
-        processedLine = processedLine.replace(/^# (.*$)/gim, '<h1>$1</h1>');
-
-        // Bold and Italic
-        processedLine = processedLine.replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>');
-        processedLine = processedLine.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-        processedLine = processedLine.replace(/\*(.+?)\*/g, '<em>$1</em>');
-
-        // Blockquotes
-        processedLine = processedLine.replace(/^\> (.*$)/gim, '<blockquote>$1</blockquote>');
-
-        // Links
-        processedLine = processedLine.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>');
-
-        // Lists
-        processedLine = processedLine.replace(/^\d+\.\s+(.*$)/gim, '<li class="numbered">$1</li>');
-        processedLine = processedLine.replace(/^\-\s+(.*$)/gim, '<li>$1</li>');
-
-        return `<div class="md-line" data-line="${index}">${processedLine || '<br>'}</div>`;
-      });
-
-      html = processedLines.join('');
-
-      // Wrap consecutive list items
-      html = html.replace(/(<li class="numbered">.*<\/li>\s*)+/gs, '<ol>$&</ol>');
-      html = html.replace(/(<li>.*<\/li>\s*)+/gs, '<ul>$&</ul>');
-
-      return html;
-    }
-
-    function highlightMarkdown(text) {
-      let highlighted = escapeHtml(text);
-
-      // Code blocks (must be first to avoid conflicts)
-      highlighted = highlighted.replace(/```[\s\S]*?```/g, (match) => {
-        return `<span class="hl-code-block">${match}</span>`;
-      });
-
-      // Inline code (after code blocks)
-      highlighted = highlighted.replace(/`([^`]+)`/g, (match, code) => {
-        return `<span class="hl-code">\`${code}\`</span>`;
-      });
-
-      // Headers
-      highlighted = highlighted.replace(/^(#{1,6})\s+(.*)$/gm, (match, hashes, content) => {
-        return `<span class="hl-header">${hashes} ${content}</span>`;
-      });
-
-      // Bold and Italic
-      highlighted = highlighted.replace(/\*\*\*(.+?)\*\*\*/g, '<span class="hl-bold hl-italic">***$1***</span>');
-      highlighted = highlighted.replace(/\*\*(.+?)\*\*/g, '<span class="hl-bold">**$1**</span>');
-      highlighted = highlighted.replace(/\*(.+?)\*/g, '<span class="hl-italic">*$1*</span>');
-
-      // Links
-      highlighted = highlighted.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<span class="hl-link">[$1]($2)</span>');
-
-      // Blockquotes
-      highlighted = highlighted.replace(/^&gt;\s+(.*)$/gm, '<span class="hl-quote">&gt; $1</span>');
-
-      // Lists
-      highlighted = highlighted.replace(/^(\s*)([-*+]|\d+\.)\s+/gm, '$1<span class="hl-list">$2</span> ');
-
-      return highlighted;
-    }
-
-    function updatePreview() {
-      previewContent.innerHTML = parseMarkdown(markdown);
-      updateActiveLine();
-    }
-
-    function updateEditorHighlight() {
-      editorHighlight.innerHTML = highlightMarkdown(markdown);
-      syncScroll();
-    }
-
-    function syncScroll() {
-      editorHighlight.scrollTop = editor.scrollTop;
-      editorHighlight.scrollLeft = editor.scrollLeft;
-    }
-
-    function updateActiveLine() {
-      document.querySelectorAll('.md-line').forEach(el => el.classList.remove('active'));
-      const activeLine = document.querySelector(`.md-line[data-line="${currentLine}"]`);
-      if (activeLine) {
-        activeLine.classList.add('active');
-      }
-    }
-
-    // Resizable panels
-    divider.addEventListener('mousedown', (e) => {
-      isDragging = true;
-      e.preventDefault();
-    });
-
-    document.addEventListener('mousemove', (e) => {
-      if (!isDragging) return;
-      
-      const containerRect = container.getBoundingClientRect();
-      const newWidth = ((e.clientX - containerRect.left) / containerRect.width) * 100;
-      
-      if (newWidth > 20 && newWidth < 80) {
-        leftWidth = newWidth;
-        previewPanel.style.width = `${leftWidth}%`;
-        editorPanel.style.width = `${100 - leftWidth}%`;
-      }
-    });
-
-    document.addEventListener('mouseup', () => {
-      isDragging = false;
-    });
-
-    // Editor events
-    editor.addEventListener('input', (e) => {
-      markdown = e.target.value;
-      updatePreview();
-      updateEditorHighlight();
-    });
-
-    editor.addEventListener('scroll', () => {
-      syncScroll();
-    });
-
-    editor.addEventListener('click', handleEditorClick);
-    editor.addEventListener('keyup', handleEditorClick);
-
-    function handleEditorClick() {
-      const cursorPosition = editor.selectionStart;
-      const textBeforeCursor = markdown.substring(0, cursorPosition);
-      const lineNumber = textBeforeCursor.split('\n').length - 1;
-      
-      currentLine = lineNumber;
-      updateActiveLine();
-      
-      const lineElements = previewPanel.querySelectorAll('.md-line');
-      if (lineElements[lineNumber]) {
-        lineElements[lineNumber].scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }
-    }
-
-    // Preview click
-    previewContent.addEventListener('click', (e) => {
-      const target = e.target.closest('.md-line');
-      if (!target) return;
-      
-      const lineNumber = parseInt(target.getAttribute('data-line'));
-      if (isNaN(lineNumber)) return;
-      
-      currentLine = lineNumber;
-      updateActiveLine();
-      
-      const lines = markdown.split('\n');
-      let cursorPosition = 0;
-      for (let i = 0; i < lineNumber; i++) {
-        cursorPosition += lines[i].length + 1;
-      }
-      
-      editor.focus();
-      editor.setSelectionRange(cursorPosition, cursorPosition);
-      
-      const lineHeight = 24;
-      editor.scrollTop = lineNumber * lineHeight - (editor.clientHeight / 2);
-    });
-
-    // Synchronized scrolling
-    let isPreviewScrolling = false;
-    let isEditorScrolling = false;
-
-    editor.addEventListener('scroll', () => {
-      syncScroll();
-      
-      if (isPreviewScrolling) return;
-      isEditorScrolling = true;
-      
-      const scrollPercentage = editor.scrollTop / (editor.scrollHeight - editor.clientHeight);
-      previewPanel.scrollTop = scrollPercentage * (previewPanel.scrollHeight - previewPanel.clientHeight);
-      
-      setTimeout(() => { isEditorScrolling = false; }, 100);
-    });
-
-    previewPanel.addEventListener('scroll', () => {
-      if (isEditorScrolling) return;
-      isPreviewScrolling = true;
-      
-      const scrollPercentage = previewPanel.scrollTop / (previewPanel.scrollHeight - previewPanel.clientHeight);
-      editor.scrollTop = scrollPercentage * (editor.scrollHeight - editor.clientHeight);
-      
-      setTimeout(() => { isPreviewScrolling = false; }, 100);
-    });
-
-    // File upload
-    function handleFileUpload(file) {
-      if (file && file.name.endsWith('.md')) {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          markdown = e.target.result;
-          editor.value = markdown;
-          updatePreview();
+        const Icon = ({ name, size = 16, className = "" }) => {
+            const iconRef = useRef(null);
+            useEffect(() => {
+                if (window.lucide && iconRef.current) {
+                    window.lucide.createIcons({
+                        icons: { [name]: window.lucide.icons[name] },
+                        attrs: { width: size, height: size, class: className },
+                        nameAttr: 'data-lucide'
+                    });
+                }
+            }, [name, size, className]);
+            return <i ref={iconRef} data-lucide={name} className={className} style={{ width: size, height: size, display: 'inline-flex' }}></i>;
         };
-        reader.readAsText(file);
-      }
-    }
 
-    uploadBtn.addEventListener('click', () => fileInput.click());
-    fileInput.addEventListener('change', (e) => handleFileUpload(e.target.files[0]));
+        const App = () => {
+            const [markdown, setMarkdown] = useState(`### 1. Concept: Modern Najdi Architecture\nThis design integrates **sustainable local stone** with *passive cooling* features suitable for the Riyadh climate.\n\n#### Proposed Material Palette:\n| Material | Source | Quality | Thermal Value | Compliance |\n| :--- | :--- | :--- | :--- | :--- |\n| Riyadh Stone | Local | Grade A | 0.31 | ✅ |\n| Double Glazing | Dammam | Std | 1.85 | ✅ |`);
+            
+            const [projectTitle, setProjectTitle] = useState("Riyadh Villa Expansion");
+            const [projectDate, setProjectDate] = useState("12 Feb 2026");
+            const [projectLocation, setProjectLocation] = useState("An Narjis, Riyadh");
+            const [studioName, setStudioName] = useState("Muhamad Studio");
+            const [studioTagline, setStudioTagline] = useState("Interior & Architectural Design Lab");
+            const [projectRef, setProjectRef] = useState(`REF: #${Math.floor(Date.now()/1000000)}`);
 
-    // Drag and drop
-    editorPanel.addEventListener('drop', (e) => {
-      e.preventDefault();
-      dragOverlay.classList.remove('active');
-      handleFileUpload(e.dataTransfer.files[0]);
-    });
+            const [orientation, setOrientation] = useState('horizontal');
+            const [splitOffset, setSplitOffset] = useState(45);
+            const [rightPanelOpen, setRightPanelOpen] = useState(true);
+            const [rightPanelWidth, setRightPanelWidth] = useState(380);
+            const [activeTab, setActiveTab] = useState('templates');
 
-    editorPanel.addEventListener('dragover', (e) => {
-      e.preventDefault();
-      dragOverlay.classList.add('active');
-    });
+            const containerRef = useRef(null);
+            const mainAreaRef = useRef(null);
+            const previewContentRef = useRef(null);
+            const isResizingMain = useRef(false);
+            const isResizingSide = useRef(false);
+            
+            // To prevent feedback loops and focus loss
+            const isSyncing = useRef(false);
 
-    editorPanel.addEventListener('dragleave', () => {
-      dragOverlay.classList.remove('active');
-    });
+            // Convert current HTML state back to Markdown string
+            const syncHtmlToMarkdown = () => {
+                if (!previewContentRef.current) return;
+                isSyncing.current = true;
+                
+                const root = previewContentRef.current;
+                let md = "";
 
-    // Paste from clipboard
-    pasteBtn.addEventListener('click', async () => {
-      try {
-        const text = await navigator.clipboard.readText();
-        markdown = text;
-        editor.value = markdown;
-        updatePreview();
-        updateEditorHighlight();
-        
-        const originalIcon = pasteBtn.innerHTML;
-        pasteBtn.innerHTML = '<i data-lucide="check" style="width: 20px; height: 20px;"></i>';
-        lucide.createIcons();
-        setTimeout(() => {
-          pasteBtn.innerHTML = originalIcon;
-          lucide.createIcons();
-        }, 1000);
-      } catch (err) {
-        console.error('Failed to read clipboard:', err);
-      }
-    });
+                Array.from(root.children).forEach(el => {
+                    const tag = el.tagName;
+                    const text = el.innerText.trim();
 
-    // Copy to clipboard
-    copyBtn.addEventListener('click', () => {
-      navigator.clipboard.writeText(markdown).then(() => {
-        const originalIcon = copyBtn.innerHTML;
-        copyBtn.innerHTML = '<i data-lucide="check" style="width: 20px; height: 20px;"></i>';
-        lucide.createIcons();
-        setTimeout(() => {
-          copyBtn.innerHTML = originalIcon;
-          lucide.createIcons();
-        }, 1000);
-      });
-    });
+                    if (tag === 'H1') md += `# ${text}\n\n`;
+                    else if (tag === 'H2') md += `## ${text}\n\n`;
+                    else if (tag === 'H3') md += `### ${text}\n\n`;
+                    else if (tag === 'H4') md += `#### ${text}\n\n`;
+                    else if (tag === 'BLOCKQUOTE') md += `> ${text}\n\n`;
+                    else if (el.classList.contains('table-container')) {
+                        const table = el.querySelector('table');
+                        if (table) {
+                            const rows = Array.from(table.querySelectorAll('tr'));
+                            rows.forEach((row, i) => {
+                                const cells = Array.from(row.querySelectorAll('th, td')).map(c => c.innerText.trim());
+                                md += `| ${cells.join(' | ')} |\n`;
+                                if (i === 0) md += `| ${cells.map(() => ':---').join(' | ')} |\n`;
+                            });
+                            md += '\n';
+                        }
+                    } else if (text) {
+                        md += `${text}\n\n`;
+                    }
+                });
 
-    // Clear editor
-    clearBtn.addEventListener('click', () => {
-      if (confirm('Are you sure you want to clear all content?')) {
-        markdown = '';
-        editor.value = markdown;
-        updatePreview();
-        updateEditorHighlight();
-      }
-    });
+                setMarkdown(md.trim());
+                setTimeout(() => { isSyncing.current = false; }, 50);
+            };
 
-    // Reset to default
-    resetBtn.addEventListener('click', () => {
-      if (confirm('Load default content? Current content will be lost.')) {
-        markdown = defaultMarkdown;
-        editor.value = markdown;
-        updatePreview();
-        updateEditorHighlight();
-      }
-    });
+            // Only update the HTML when the Markdown changes EXTERNALLY (from editor or templates)
+            // If the change came from the Preview itself, we don't overwrite the HTML to keep focus
+            useEffect(() => {
+                if (!isSyncing.current && previewContentRef.current) {
+                    previewContentRef.current.innerHTML = renderMarkdown(markdown);
+                }
+            }, [markdown]);
 
-    // Download
-    downloadBtn.addEventListener('click', () => {
-      const blob = new Blob([markdown], { type: 'text/markdown' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'document.md';
-      a.click();
-      URL.revokeObjectURL(url);
-    });
+            const templates = [
+                {
+                    id: 'sbc-spec',
+                    name: "SBC Technical Spec",
+                    icon: "ShieldCheck",
+                    content: `### 1. Thermal Envelope Requirements\n| Element | Required U-Value | Proposed | Status |\n| :--- | :--- | :--- | :--- |\n| Ext. Wall | 0.34 | 0.31 | ✅ Compliant |\n| Glazing | 1.90 | 1.85 | ✅ Compliant |`
+                },
+                {
+                    id: 'boq-generator',
+                    name: "Auto-BOQ Sheet",
+                    icon: "Calculator",
+                    content: `### Division 04: Masonry\n| Item | Material | Unit | Qty | Rate | Total |\n| :--- | :--- | :--- | :--- | :--- | :--- |\n| 4.1 | Riyadh Stone (50mm) | m2 | 450 | 180 | 81,000 |`
+                }
+            ];
 
-    // Initialize
-    editor.value = markdown;
-    previewPanel.style.width = `${leftWidth}%`;
-    editorPanel.style.width = `${100 - leftWidth}%`;
-    updatePreview();
-    updateEditorHighlight();
-  </script>
+            const materialLibrary = [
+                { name: "Riyadh Stone", cat: "Facade", source: "Local", quality: "Grade A", thermal: "0.31", compliant: "✅" },
+                { name: "Double Glazing", cat: "Openings", source: "Dammam", quality: "Std", thermal: "1.85", compliant: "✅" }
+            ];
+
+            const applyTemplate = (content) => {
+                setMarkdown(prev => prev + "\n\n" + content);
+            };
+
+            const insertMaterial = (mat) => {
+                const tableHeader = "| Material | Source | Quality | Thermal Value | Compliance |";
+                const newRow = `| ${mat.name} | ${mat.source} | ${mat.quality} | ${mat.thermal} | ${mat.compliant} |`;
+                setMarkdown(prev => prev.includes(tableHeader) ? prev + `\n${newRow}` : prev + `\n\n#### Proposed Material Palette:\n${tableHeader}\n| :--- | :--- | :--- | :--- | :--- |\n${newRow}`);
+            };
+
+            const renderMarkdown = (text) => {
+                if (!text) return '';
+                let html = text
+                    .replace(/^# (.*$)/gim, '<h1 contenteditable="true" class="text-4xl font-black mb-8 text-slate-900 border-l-8 border-blue-600 pl-6 tracking-tight">$1</h1>')
+                    .replace(/^## (.*$)/gim, '<h2 contenteditable="true" class="text-2xl font-bold mb-4 text-slate-800 border-b pb-2 tracking-tight">$1</h2>')
+                    .replace(/^### (.*$)/gim, '<h3 contenteditable="true" class="text-xl font-semibold mb-3 text-blue-600">$1</h3>')
+                    .replace(/^#### (.*$)/gim, '<h4 contenteditable="true" class="text-xs font-black uppercase tracking-widest mb-4 text-slate-400">$1</h4>')
+                    .replace(/^\> (.*$)/gim, '<blockquote contenteditable="true" class="border-l-4 border-amber-500 pl-6 py-4 italic my-6 text-slate-600 bg-amber-50/30 rounded-r-lg">$1</blockquote>')
+                    .replace(/\*\*(.*)\*\*/gim, '<strong>$1</strong>')
+                    .replace(/\*(.*)\*/gim, '<em>$1</em>');
+
+                const lines = html.split('\n');
+                let inTable = false;
+                const finalLines = lines.map(line => {
+                    if (line.trim().startsWith('|')) {
+                        const cells = line.split('|').filter((c, i, arr) => i !== 0 && i !== arr.length - 1);
+                        if (line.includes(':---')) return "";
+                        const cellTag = !inTable ? 'th' : 'td';
+                        const row = `<tr>${cells.map(c => `<${cellTag} contenteditable="true" class="border border-slate-200 p-3">${c.trim()}</${cellTag}>`).join('')}</tr>`;
+                        if (!inTable) { 
+                            inTable = true; 
+                            return `<div class="table-container overflow-hidden rounded-xl border border-slate-200 my-8 shadow-sm"><table class="w-full text-sm"><thead>${row}</thead><tbody>`; 
+                        }
+                        return row;
+                    } else if (inTable) { 
+                        inTable = false; 
+                        return `</tbody></table></div><p contenteditable="true" class="mb-4">${line}</p>`; 
+                    }
+                    if (line.trim() === "") return "";
+                    if (line.startsWith('<h') || line.startsWith('<blockquote')) return line;
+                    return `<p contenteditable="true" class="mb-4">${line}</p>`;
+                });
+                return finalLines.join('');
+            };
+
+            const handleMouseMove = useCallback((e) => {
+                if (isResizingMain.current) {
+                    const rect = mainAreaRef.current.getBoundingClientRect();
+                    const offset = orientation === 'horizontal' ? ((e.clientX - rect.left) / rect.width) * 100 : ((e.clientY - rect.top) / rect.height) * 100;
+                    if (offset > 15 && offset < 85) setSplitOffset(offset);
+                }
+                if (isResizingSide.current) {
+                    const rect = containerRef.current.getBoundingClientRect();
+                    const width = rect.right - e.clientX;
+                    if (width > 260 && width < 600) setRightPanelWidth(width);
+                }
+            }, [orientation]);
+
+            const stopResizing = () => {
+                isResizingMain.current = false;
+                isResizingSide.current = false;
+                document.removeEventListener('mousemove', handleMouseMove);
+            };
+
+            return (
+                <div className="flex flex-col h-screen w-full bg-slate-50 overflow-hidden" ref={containerRef}>
+                    <header className="h-16 border-b bg-white flex items-center justify-between px-6 z-50 no-print">
+                        <div className="flex items-center gap-4">
+                            <div className="bg-blue-600 text-white p-2 rounded-xl shadow-lg shadow-blue-100 flex items-center"><Icon name="FileCheck" size={20}/></div>
+                            <div>
+                                <h1 className="font-extrabold text-xl tracking-tighter italic uppercase leading-none">DocMark <span className="text-blue-600 font-light italic">Studio</span></h1>
+                                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Muhamad Studio AI Lab</p>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-4 no-print">
+                            <button onClick={() => window.print()} className="bg-slate-900 text-white px-6 py-2.5 rounded-xl text-xs font-bold uppercase tracking-widest flex items-center gap-2 hover:bg-black hover:shadow-xl transition-all">
+                                <Icon name="Printer" size={16}/> Print Proposal
+                            </button>
+                        </div>
+                    </header>
+
+                    <main className="flex flex-1 overflow-hidden relative">
+                        <div ref={mainAreaRef} className={`flex flex-1 overflow-hidden ${orientation === 'vertical' ? 'flex-col' : 'flex-row'}`}>
+                            <section className="flex flex-col bg-white overflow-hidden relative no-print" style={orientation === 'horizontal' ? { width: `${splitOffset}%` } : { height: `${splitOffset}%` }}>
+                                <div className="px-5 py-3 bg-slate-50 border-b flex justify-between items-center text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                    <span className="flex items-center gap-2 italic"><Icon name="FileText" size={12}/> Markdown Editor (Auto-Sync)</span>
+                                    <div className="flex gap-3">
+                                        <button onClick={() => setOrientation('horizontal')} className={`hover:text-blue-600 transition-colors ${orientation === 'horizontal' ? 'text-blue-600' : ''}`}><Icon name="Columns" size={14}/></button>
+                                        <button onClick={() => setOrientation('vertical')} className={`hover:text-blue-600 transition-colors ${orientation === 'vertical' ? 'text-blue-600' : ''}`}><Icon name="Rows" size={14}/></button>
+                                    </div>
+                                </div>
+                                <textarea 
+                                    className="flex-1 p-10 outline-none font-mono text-sm leading-relaxed text-slate-700 bg-[#fafafa]/50 resize-none selection:bg-blue-100"
+                                    placeholder="Enter body content here..."
+                                    value={markdown}
+                                    onChange={(e) => setMarkdown(e.target.value)}
+                                />
+                            </section>
+
+                            <div onMouseDown={() => { isResizingMain.current = true; document.addEventListener('mousemove', handleMouseMove); document.addEventListener('mouseup', stopResizing); }} className={`${orientation === 'horizontal' ? 'w-1 cursor-col-resize' : 'h-1 cursor-row-resize'} bg-slate-200 hover:bg-blue-400 transition-colors z-40 no-print`}/>
+
+                            <section className="flex-1 flex flex-col bg-slate-200/40 overflow-hidden relative">
+                                <div className="px-5 py-3 bg-white border-b text-[10px] font-black text-slate-400 uppercase tracking-widest no-print flex justify-between items-center">
+                                    <span className="italic">Visual Workspace • Type Directly to Edit</span>
+                                    <span className="text-[8px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded">Fixed Focus Sync</span>
+                                </div>
+                                <div className="flex-1 overflow-auto p-8 sm:p-12">
+                                    <div className="preview-page max-w-[850px] mx-auto bg-white p-16 sm:p-24 min-h-[1100px] border border-slate-300">
+                                        
+                                        <div className="flex justify-between items-start mb-10 border-b-2 border-slate-900 pb-10">
+                                            <div>
+                                                <div contentEditable suppressContentEditableWarning onBlur={(e) => setStudioName(e.target.innerText)} className="text-xl font-black uppercase italic tracking-tighter leading-none text-slate-900 px-1">{studioName}</div>
+                                                <div contentEditable suppressContentEditableWarning onBlur={(e) => setStudioTagline(e.target.innerText)} className="text-[10px] font-bold text-blue-600 uppercase tracking-[0.2em] mt-1 px-1">{studioTagline}</div>
+                                            </div>
+                                            <div className="text-right text-[10px] font-bold uppercase text-slate-400 flex flex-col items-end gap-1">
+                                                <span className="text-slate-900">Riyadh, Saudi Arabia</span>
+                                                <div contentEditable suppressContentEditableWarning onBlur={(e) => setProjectRef(e.target.innerText)} className="px-1">{projectRef}</div>
+                                                <span>{new Date().toLocaleDateString('en-GB')}</span>
+                                            </div>
+                                        </div>
+
+                                        <div className="mb-12">
+                                            <div contentEditable suppressContentEditableWarning onBlur={(e) => setProjectTitle(e.target.innerText)} className="text-4xl font-black mb-2 text-slate-900 tracking-tight px-1">{projectTitle}</div>
+                                            <div className="flex gap-4 text-[11px] font-bold uppercase tracking-widest text-slate-500 italic">
+                                                <div contentEditable suppressContentEditableWarning onBlur={(e) => setProjectDate(e.target.innerText)} className="px-1">{projectDate}</div>
+                                                <span>|</span>
+                                                <div contentEditable suppressContentEditableWarning onBlur={(e) => setProjectLocation(e.target.innerText)} className="px-1">{projectLocation}</div>
+                                            </div>
+                                        </div>
+
+                                        <div 
+                                            ref={previewContentRef}
+                                            className="prose prose-slate max-w-none focus:outline-none" 
+                                            onInput={syncHtmlToMarkdown}
+                                        />
+                                    </div>
+                                </div>
+                            </section>
+                        </div>
+
+                        <button onClick={() => setRightPanelOpen(!rightPanelOpen)} className="absolute right-0 top-24 transform translate-x-1/2 bg-white border shadow-lg rounded-full w-10 h-10 z-50 text-slate-400 hover:text-blue-600 transition-all hover:scale-110 flex items-center justify-center no-print">
+                            <Icon name={rightPanelOpen ? "ChevronRight" : "ChevronLeft"} size={20}/>
+                        </button>
+
+                        {rightPanelOpen && (
+                            <div onMouseDown={() => { isResizingSide.current = true; document.addEventListener('mousemove', handleMouseMove); document.addEventListener('mouseup', stopResizing); }} className="w-1.5 hover:bg-blue-400 bg-slate-200 cursor-col-resize shrink-0 z-40 no-print transition-colors"/>
+                        )}
+
+                        <aside className={`bg-white flex flex-col shrink-0 border-l relative no-print transition-all duration-300 ease-in-out ${!rightPanelOpen ? 'w-0 border-none' : ''}`} style={{ width: rightPanelOpen ? `${rightPanelWidth}px` : '0px' }}>
+                            {rightPanelOpen && (
+                                <>
+                                    <div className="flex border-b">
+                                        <button onClick={() => setActiveTab('templates')} className={`flex-1 py-4 text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'templates' ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50/30' : 'text-slate-400'}`}>SBC Library</button>
+                                        <button onClick={() => setActiveTab('assets')} className={`flex-1 py-4 text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'assets' ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50/30' : 'text-slate-400'}`}>Assets</button>
+                                    </div>
+
+                                    <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                                        {activeTab === 'templates' ? (
+                                            <div className="space-y-4">
+                                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-b pb-2">Framework Blocks</p>
+                                                {templates.map(t => (
+                                                    <div key={t.id} onClick={() => applyTemplate(t.content)} className="p-4 border border-slate-100 rounded-xl hover:bg-blue-50 hover:border-blue-200 cursor-pointer group transition-all">
+                                                        <div className="flex items-center gap-4">
+                                                            <div className="p-3 bg-slate-50 rounded-lg group-hover:bg-white shadow-sm transition-all flex items-center"><Icon name={t.icon} className="text-slate-600 group-hover:text-blue-600" size={20}/></div>
+                                                            <div>
+                                                                <span className="text-sm font-bold text-slate-900 block">{t.name}</span>
+                                                                <span className="text-[9px] text-slate-400 uppercase font-bold tracking-tighter">Click to Append</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <div className="space-y-4">
+                                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-b pb-2">Technical Assets</p>
+                                                {materialLibrary.map((m, i) => (
+                                                    <div key={i} className="p-4 border border-slate-100 rounded-xl flex justify-between items-center group hover:shadow-md transition-all">
+                                                        <div>
+                                                            <p className="text-sm font-bold text-slate-900 leading-none">{m.name}</p>
+                                                            <p className="text-[9px] text-slate-400 uppercase font-black mt-1">{m.cat} • {m.source}</p>
+                                                        </div>
+                                                        <button onClick={() => insertMaterial(m)} className="p-2.5 bg-slate-50 text-slate-400 rounded-lg group-hover:bg-blue-600 group-hover:text-white transition-all shadow-sm flex items-center">
+                                                            <Icon name="Plus" size={16}/>
+                                                        </button>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div className="p-6 border-t bg-slate-50/50">
+                                        <div className="flex items-center gap-2 text-blue-600 mb-2 font-black text-[10px] uppercase tracking-widest">
+                                            <Icon name="RefreshCw" size={12}/> Focus Lock Engaged
+                                        </div>
+                                        <p className="text-[10px] text-slate-500 leading-relaxed italic">"Muhamad, you can now type continuously in the preview without losing your cursor."</p>
+                                    </div>
+                                </>
+                            )}
+                        </aside>
+                    </main>
+
+                    <footer className="h-10 border-t bg-white flex items-center px-6 justify-between text-[9px] font-bold text-slate-400 uppercase tracking-widest no-print">
+                        <div className="flex gap-6 italic">
+                            <span>V6.0 Focus-Stable Lab</span>
+                            <span className="text-blue-600 underline">muhamad.studio</span>
+                        </div>
+                        <div className="flex gap-4 items-center">
+                            <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span> SBC COMPLIANT</span>
+                            <span>RIYADH, KSA</span>
+                        </div>
+                    </footer>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
 </body>
 </html>

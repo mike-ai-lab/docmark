@@ -1,4 +1,4 @@
-09:16:01.099 /**
+/**
  * Validation + Beautification Test Script
  * 
  * This script demonstrates the full power of DocMark:
@@ -269,16 +269,3 @@ ${finalCounts.total === 0 ? '✨ Nothing! The document is perfect.' : ''}
         report
     };
 })();
-
-09:16:01.102 VM3860:14 🚀 Starting Validation + Beautification Test...
-
-09:16:01.103 VM3860:104 📝 STEP 1: Setting messy markdown input...
-
-09:16:01.197 Promise {<rejected>: TypeError: editor.getModel is not a function
-    at ValidationBeautifyTest (<anonymous>:105:26)
-   …}
-09:16:01.104 VM3860:105 Uncaught (in promise) TypeError: editor.getModel is not a function
-    at ValidationBeautifyTest (<anonymous>:105:26)
-    at <anonymous>:271:3
-ValidationBeautifyTest @ VM3860:105
-(anonymous) @ VM3860:271

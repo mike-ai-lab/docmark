@@ -12,10 +12,11 @@ const init = () => {
     // Global drag state - only one resizer can be active at a time
     let activeResizer = null;
     
-    // Manual undo history stack (10 steps)
+    // Manual undo history stack (50 steps for better undo/redo)
     let undoHistory = [];
     let undoHistoryIndex = -1;
-    const MAX_UNDO_STEPS = 10;
+    const MAX_UNDO_STEPS = 50;
+    let isPerformingUndoRedo = false; // Flag to prevent saving during undo/redo
 
     const localStorageNamespace = 'com.markdownlivepreview';
     const localStorageKey = 'last_state';
@@ -28,6 +29,7 @@ const init = () => {
     const localStoragePdfSettingsKey = 'pdf_font_settings';
     const localStorageHelperMessagesKey = 'helper_messages_settings';
     const localStorageTocKey = 'toc_settings';
+    const localStorageValidationKey = 'validation_settings';
     const confirmationMessage = 'Are you sure you want to reset? Your changes will be lost.';
     
     // Manual undo history management
@@ -50,6 +52,7 @@ const init = () => {
     
     const performUndo = () => {
         if (undoHistoryIndex > 0) {
+            isPerformingUndoRedo = true;
             undoHistoryIndex--;
             const previousContent = undoHistory[undoHistoryIndex];
             
@@ -61,6 +64,7 @@ const init = () => {
                 text: previousContent
             }]);
             
+            isPerformingUndoRedo = false;
             showMofuHelper(`Undo successful! (${undoHistoryIndex + 1}/${undoHistory.length} states)`);
             return true;
         } else {
@@ -71,6 +75,7 @@ const init = () => {
     
     const performRedo = () => {
         if (undoHistoryIndex < undoHistory.length - 1) {
+            isPerformingUndoRedo = true;
             undoHistoryIndex++;
             const nextContent = undoHistory[undoHistoryIndex];
             
@@ -82,6 +87,7 @@ const init = () => {
                 text: nextContent
             }]);
             
+            isPerformingUndoRedo = false;
             showMofuHelper(`Redo successful! (${undoHistoryIndex + 1}/${undoHistory.length} states)`);
             return true;
         } else {
@@ -224,7 +230,7 @@ This web site is using ${"`"}markedjs/marked${"`"}.
                 useShadows: false
             },
             wordWrap: 'on',
-            hover: { enabled: false },
+            hover: { enabled: true }, // Enable hover for validation messages
             quickSuggestions: {
                 other: true,
                 comments: false,
@@ -312,6 +318,870 @@ This web site is using ${"`"}markedjs/marked${"`"}.
         });
 
         // Scroll sync is now handled in the consolidated section at the bottom
+
+        // Setup markdown validation
+        let validationEnabled = false;
+        const validateMarkdown = () => {
+            if (!validationEnabled) return;
+            
+            const model = editor.getModel();
+            const content = model.getValue();
+            const lines = content.split('\n');
+            const markers = [];
+            const processedLines = new Set(); // Track lines already flagged to avoid duplicates
+            
+            // Track code blocks
+            let inCodeBlock = false;
+            let codeBlockStarts = [];
+            
+            // Track list context
+            let lastListMarker = null;
+            let lastOrderedNumber = null;
+            
+            // Track table context
+            let inTable = false;
+            let tableHeaderCols = 0;
+            
+            lines.forEach((line, index) => {
+                const lineNumber = index + 1;
+                const trimmed = line.trim();
+                
+                // Track code blocks
+                if (trimmed.startsWith('```')) {
+                    if (!inCodeBlock) {
+                        codeBlockStarts.push(lineNumber);
+                        inCodeBlock = true;
+                    } else {
+                        inCodeBlock = false;
+                    }
+                }
+                
+                // Skip validation inside code blocks
+                if (inCodeBlock && !trimmed.startsWith('```')) return;
+                
+                // Detect horizontal rules (must be before emphasis checks)
+                const isHorizontalRule = /^(\*{3,}|-{3,}|_{3,})$/.test(trimmed);
+                
+                // Validate horizontal rule format (should be on its own line, properly formatted)
+                if (trimmed.match(/^[\*\-_]{3,}$/)) {
+                    const char = trimmed[0];
+                    const isValid = trimmed.split('').every(c => c === char || c === ' ');
+                    if (!isValid) {
+                        markers.push({
+                            severity: monaco.MarkerSeverity.Info,
+                            startLineNumber: lineNumber,
+                            startColumn: 1,
+                            endLineNumber: lineNumber,
+                            endColumn: line.length + 1,
+                            message: `Horizontal rule format: Use consistent characters (e.g., ---, ***, or ___)`,
+                            source: 'markdown-validator'
+                        });
+                    }
+                }
+                
+                // Check for missing blank line after heading
+                if (index > 0) {
+                    const prevLine = lines[index - 1].trim();
+                    const isHeading = /^#{1,6}\s/.test(prevLine);
+                    if (isHeading && trimmed && !trimmed.startsWith('#') && !isHorizontalRule) {
+                        markers.push({
+                            severity: monaco.MarkerSeverity.Info,
+                            startLineNumber: lineNumber,
+                            startColumn: 1,
+                            endLineNumber: lineNumber,
+                            endColumn: 1,
+                            message: 'Missing blank line after heading: Add blank line for better readability',
+                            source: 'markdown-validator'
+                        });
+                    }
+                }
+                
+                // Check for headers without space after #
+                const headerNoSpace = line.match(/^(#{1,6})([^\s#])/);
+                if (headerNoSpace) {
+                    markers.push({
+                        severity: monaco.MarkerSeverity.Warning,
+                        startLineNumber: lineNumber,
+                        startColumn: 1,
+                        endLineNumber: lineNumber,
+                        endColumn: headerNoSpace[1].length + 2,
+                        message: 'Header missing space: Add space after # (e.g., "# Heading")',
+                        source: 'markdown-validator'
+                    });
+                    processedLines.add(lineNumber);
+                }
+                
+                // Check for malformed headers (too many #)
+                if (line.match(/^#{7,}/)) {
+                    markers.push({
+                        severity: monaco.MarkerSeverity.Warning,
+                        startLineNumber: lineNumber,
+                        startColumn: 1,
+                        endLineNumber: lineNumber,
+                        endColumn: line.length + 1,
+                        message: 'Invalid header: Markdown only supports h1-h6 (use # to ######)',
+                        source: 'markdown-validator'
+                    });
+                    processedLines.add(lineNumber);
+                }
+                
+                // Check for image/link issues (consolidated to avoid duplicates)
+                const imagePattern = /!\[([^\]]*)\]\(([^)]*)\)/g;
+                const imageBrokenPattern = /!\[([^\]]*)\]\s*\(/;
+                
+                if (imageBrokenPattern.test(line) && !imagePattern.test(line)) {
+                    // Broken image syntax
+                    markers.push({
+                        severity: monaco.MarkerSeverity.Error,
+                        startLineNumber: lineNumber,
+                        startColumn: line.indexOf('![') + 1,
+                        endLineNumber: lineNumber,
+                        endColumn: line.length + 1,
+                        message: 'Broken image syntax: Missing closing parenthesis or URL',
+                        source: 'markdown-validator'
+                    });
+                    processedLines.add(lineNumber);
+                } else {
+                    // Check for empty image URL
+                    const emptyImgUrl = line.match(/!\[([^\]]*)\]\(\s*\)/);
+                    if (emptyImgUrl) {
+                        const startCol = line.indexOf(emptyImgUrl[0]) + 1;
+                        markers.push({
+                            severity: monaco.MarkerSeverity.Error,
+                            startLineNumber: lineNumber,
+                            startColumn: startCol,
+                            endLineNumber: lineNumber,
+                            endColumn: startCol + emptyImgUrl[0].length,
+                            message: 'Empty image URL: Add image source (e.g., ![Alt](image.png))',
+                            source: 'markdown-validator'
+                        });
+                        processedLines.add(lineNumber);
+                    }
+                    
+                    // Check for empty alt text
+                    const emptyAlt = line.match(/!\[\]\(([^)]+)\)/);
+                    if (emptyAlt && !processedLines.has(lineNumber)) {
+                        const startCol = line.indexOf(emptyAlt[0]) + 1;
+                        markers.push({
+                            severity: monaco.MarkerSeverity.Info,
+                            startLineNumber: lineNumber,
+                            startColumn: startCol,
+                            endLineNumber: lineNumber,
+                            endColumn: startCol + emptyAlt[0].length,
+                            message: 'Empty alt text: Add description for accessibility (e.g., ![Logo](url))',
+                            source: 'markdown-validator'
+                        });
+                    }
+                }
+                
+                // Check for link issues (consolidated)
+                const linkPattern = /\[([^\]]+)\]\(([^)]+)\)/g;
+                const linkBrokenPattern = /\[([^\]]+)\]\s*\(/;
+                
+                if (linkBrokenPattern.test(line) && !linkPattern.test(line) && !processedLines.has(lineNumber)) {
+                    markers.push({
+                        severity: monaco.MarkerSeverity.Error,
+                        startLineNumber: lineNumber,
+                        startColumn: line.indexOf('[') + 1,
+                        endLineNumber: lineNumber,
+                        endColumn: line.length + 1,
+                        message: 'Broken link syntax: Missing closing parenthesis or URL',
+                        source: 'markdown-validator'
+                    });
+                    processedLines.add(lineNumber);
+                }
+                
+                // Check for empty link
+                const emptyLink = line.match(/\[\]\(\s*\)/);
+                if (emptyLink && !processedLines.has(lineNumber)) {
+                    const startCol = line.indexOf(emptyLink[0]) + 1;
+                    markers.push({
+                        severity: monaco.MarkerSeverity.Error,
+                        startLineNumber: lineNumber,
+                        startColumn: startCol,
+                        endLineNumber: lineNumber,
+                        endColumn: startCol + emptyLink[0].length,
+                        message: 'Empty link: Add text and URL (e.g., [Click here](url))',
+                        source: 'markdown-validator'
+                    });
+                }
+                
+                // Check for unclosed bold (skip horizontal rules and list items)
+                if (!isHorizontalRule && !trimmed.match(/^[\*\-\+]\s/)) {
+                    const boldMatches = line.match(/\*\*/g);
+                    if (boldMatches && boldMatches.length % 2 !== 0) {
+                        const lastBoldPos = line.lastIndexOf('**');
+                        markers.push({
+                            severity: monaco.MarkerSeverity.Warning,
+                            startLineNumber: lineNumber,
+                            startColumn: lastBoldPos + 1,
+                            endLineNumber: lineNumber,
+                            endColumn: line.length + 1,
+                            message: 'Unclosed bold: Add closing ** (e.g., **bold text**)',
+                            source: 'markdown-validator'
+                        });
+                    }
+                }
+                
+                // Check for unclosed italic (skip horizontal rules and list items)
+                if (!isHorizontalRule && !trimmed.match(/^[\*\-\+]\s/)) {
+                    // Only check for emphasis if there's actual text content after the *
+                    const italicPattern = /\*([^\*\s][^\*]*)\*/g;
+                    const singleStars = line.match(/(?<!\*)\*(?!\*)/g);
+                    
+                    if (singleStars && singleStars.length % 2 !== 0) {
+                        // Check if this is actually emphasis and not a list or other markdown
+                        const starPos = line.indexOf('*');
+                        const beforeStar = line.substring(0, starPos).trim();
+                        const afterStar = line.substring(starPos + 1, starPos + 2);
+                        
+                        // Only flag if it looks like emphasis (has text before or after, not at line start)
+                        if (beforeStar.length > 0 && afterStar && afterStar !== ' ' && afterStar !== '*') {
+                            const lastItalicPos = line.lastIndexOf('*');
+                            if (line[lastItalicPos + 1] !== '*' && line[lastItalicPos - 1] !== '*') {
+                                markers.push({
+                                    severity: monaco.MarkerSeverity.Warning,
+                                    startLineNumber: lineNumber,
+                                    startColumn: lastItalicPos + 1,
+                                    endLineNumber: lineNumber,
+                                    endColumn: line.length + 1,
+                                    message: 'Unclosed italic: Add closing * (e.g., *italic text*)',
+                                    source: 'markdown-validator'
+                                });
+                            }
+                        }
+                    }
+                }
+                
+                // Check for unclosed inline code
+                const backtickMatches = line.match(/(?<!`)`(?!`)/g);
+                if (backtickMatches && backtickMatches.length % 2 !== 0) {
+                    const lastBacktickPos = line.lastIndexOf('`');
+                    if (line[lastBacktickPos + 1] !== '`' && line[lastBacktickPos - 1] !== '`') {
+                        markers.push({
+                            severity: monaco.MarkerSeverity.Warning,
+                            startLineNumber: lineNumber,
+                            startColumn: lastBacktickPos + 1,
+                            endLineNumber: lineNumber,
+                            endColumn: line.length + 1,
+                            message: 'Unclosed inline code: Add closing ` (e.g., `code`)',
+                            source: 'markdown-validator'
+                        });
+                    }
+                }
+                
+                // Check for blockquote without space
+                const quoteNoSpace = line.match(/^(>+)([^\s>])/);
+                if (quoteNoSpace) {
+                    markers.push({
+                        severity: monaco.MarkerSeverity.Info,
+                        startLineNumber: lineNumber,
+                        startColumn: 1,
+                        endLineNumber: lineNumber,
+                        endColumn: quoteNoSpace[1].length + 2,
+                        message: 'Blockquote missing space: Add space after > (e.g., "> Quote")',
+                        source: 'markdown-validator'
+                    });
+                }
+                
+                // Check for mixed list markers
+                const unorderedMatch = trimmed.match(/^([-+*])\s/);
+                if (unorderedMatch) {
+                    if (lastListMarker && lastListMarker !== unorderedMatch[1] && lastOrderedNumber === null) {
+                        markers.push({
+                            severity: monaco.MarkerSeverity.Info,
+                            startLineNumber: lineNumber,
+                            startColumn: 1,
+                            endLineNumber: lineNumber,
+                            endColumn: 3,
+                            message: `Mixed list markers: Use consistent marker (${lastListMarker} or ${unorderedMatch[1]})`,
+                            source: 'markdown-validator'
+                        });
+                    }
+                    lastListMarker = unorderedMatch[1];
+                    lastOrderedNumber = null;
+                } else if (trimmed.match(/^\d+\.\s/)) {
+                    // Check ordered list numbering
+                    const numMatch = trimmed.match(/^(\d+)\.\s/);
+                    if (numMatch) {
+                        const num = parseInt(numMatch[1]);
+                        if (lastOrderedNumber !== null && num !== lastOrderedNumber + 1 && num !== 1) {
+                            markers.push({
+                                severity: monaco.MarkerSeverity.Info,
+                                startLineNumber: lineNumber,
+                                startColumn: 1,
+                                endLineNumber: lineNumber,
+                                endColumn: numMatch[0].length,
+                                message: `List numbering skip: Expected ${lastOrderedNumber + 1}, got ${num}`,
+                                source: 'markdown-validator'
+                            });
+                        }
+                        lastOrderedNumber = num;
+                        lastListMarker = null;
+                    }
+                } else if (trimmed && !trimmed.startsWith('>') && !trimmed.startsWith('#')) {
+                    // Reset list tracking on non-list content
+                    lastListMarker = null;
+                    lastOrderedNumber = null;
+                }
+                
+                // Check for table structure
+                if (trimmed.includes('|')) {
+                    const cells = trimmed.split('|').filter(c => c.trim());
+                    const isSeparator = /^[\s:-]+$/.test(cells.join(''));
+                    
+                    if (isSeparator) {
+                        // This is a separator row - validate format
+                        const separatorPattern = /^\|?\s*:?-+:?\s*(\|\s*:?-+:?\s*)*\|?\s*$/;
+                        if (!separatorPattern.test(trimmed)) {
+                            markers.push({
+                                severity: monaco.MarkerSeverity.Warning,
+                                startLineNumber: lineNumber,
+                                startColumn: 1,
+                                endLineNumber: lineNumber,
+                                endColumn: line.length + 1,
+                                message: 'Malformed table separator: Use format | --- | --- | with spaces',
+                                source: 'markdown-validator'
+                            });
+                        }
+                        
+                        const prevLine = index > 0 ? lines[index - 1].trim() : '';
+                        if (!prevLine.includes('|')) {
+                            markers.push({
+                                severity: monaco.MarkerSeverity.Warning,
+                                startLineNumber: lineNumber,
+                                startColumn: 1,
+                                endLineNumber: lineNumber,
+                                endColumn: line.length + 1,
+                                message: 'Table separator without header: Add header row above',
+                                source: 'markdown-validator'
+                            });
+                        } else {
+                            tableHeaderCols = prevLine.split('|').filter(c => c.trim()).length;
+                            inTable = true;
+                        }
+                    } else if (inTable && tableHeaderCols > 0) {
+                        // Check column count consistency
+                        if (cells.length !== tableHeaderCols) {
+                            markers.push({
+                                severity: monaco.MarkerSeverity.Warning,
+                                startLineNumber: lineNumber,
+                                startColumn: 1,
+                                endLineNumber: lineNumber,
+                                endColumn: line.length + 1,
+                                message: `Table column mismatch: Expected ${tableHeaderCols} columns, got ${cells.length}`,
+                                source: 'markdown-validator'
+                            });
+                        }
+                    }
+                } else if (inTable && trimmed) {
+                    inTable = false;
+                    tableHeaderCols = 0;
+                }
+                
+                // Check for unclosed HTML tags
+                const htmlTags = line.match(/<(\w+)(?:\s[^>]*)?>(?!.*<\/\1>)/g);
+                if (htmlTags) {
+                    htmlTags.forEach(tag => {
+                        const tagName = tag.match(/<(\w+)/)[1];
+                        if (!['img', 'br', 'hr', 'input', 'meta', 'link'].includes(tagName.toLowerCase())) {
+                            const tagStart = line.indexOf(tag);
+                            markers.push({
+                                severity: monaco.MarkerSeverity.Warning,
+                                startLineNumber: lineNumber,
+                                startColumn: tagStart + 1,
+                                endLineNumber: lineNumber,
+                                endColumn: tagStart + tag.length + 1,
+                                message: `Unclosed HTML tag: <${tagName}> (add </${tagName}>)`,
+                                source: 'markdown-validator'
+                            });
+                        }
+                    });
+                }
+            });
+            
+            // Check for unclosed code blocks (global check)
+            if (codeBlockStarts.length % 2 !== 0) {
+                const lastBlockLine = codeBlockStarts[codeBlockStarts.length - 1];
+                markers.push({
+                    severity: monaco.MarkerSeverity.Error,
+                    startLineNumber: lastBlockLine,
+                    startColumn: 1,
+                    endLineNumber: lastBlockLine,
+                    endColumn: lines[lastBlockLine - 1].length + 1,
+                    message: 'Unclosed code block: Add closing ``` on a new line',
+                    source: 'markdown-validator'
+                });
+            }
+            
+            monaco.editor.setModelMarkers(model, 'markdown-validator', markers);
+        };
+        
+        // Run validation on content change (debounced)
+        let validationTimeout;
+        editor.onDidChangeModelContent(() => {
+            if (!validationEnabled) return;
+            clearTimeout(validationTimeout);
+            validationTimeout = setTimeout(validateMarkdown, 500);
+        });
+        
+        // Store validation functions for external access
+        editor._validateMarkdown = validateMarkdown;
+        editor._setValidationEnabled = (enabled) => {
+            validationEnabled = enabled;
+            if (enabled) {
+                validateMarkdown();
+            } else {
+                monaco.editor.setModelMarkers(editor.getModel(), 'markdown-validator', []);
+            }
+        };
+        
+        // Inline floating suggestion bar with color-coded states
+        let currentSuggestionBar = null;
+        let currentFixIndex = 0;
+        let validationIssues = [];
+        let lineDecorations = []; // Track line highlights
+        
+        const createInlineSuggestionBar = () => {
+            const bar = document.createElement('div');
+            bar.className = 'validation-inline-bar';
+            bar.innerHTML = `
+                <div class="validation-bar-content">
+                    <div class="validation-bar-header">
+                        <span class="validation-bar-counter"></span>
+                        <span class="validation-bar-status"></span>
+                    </div>
+                    <div class="validation-bar-message"></div>
+                    <div class="validation-bar-preview">
+                        <div class="validation-preview-label">Suggested fix:</div>
+                        <div class="validation-preview-code"></div>
+                    </div>
+                    <div class="validation-bar-actions">
+                        <button class="validation-btn validation-btn-apply" title="Apply this fix">
+                            <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                                <path d="M13 4L6 11L3 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            Apply
+                        </button>
+                        <button class="validation-btn validation-btn-skip" title="Skip this issue">
+                            Skip
+                        </button>
+                        <button class="validation-btn validation-btn-discard" title="Discard and close">
+                            Discard
+                        </button>
+                        <div class="validation-nav-buttons">
+                            <button class="validation-btn validation-btn-prev" title="Previous issue">
+                                <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                                    <path d="M10 12L6 8L10 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                            </button>
+                            <button class="validation-btn validation-btn-next" title="Next issue">
+                                <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                                    <path d="M6 4L10 8L6 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            return bar;
+        };
+        
+        const generateFix = (marker, line) => {
+            let suggestedFix = null;
+            let fixDescription = '';
+            
+            // Header missing space
+            if (marker.message.includes('Header missing space')) {
+                const match = line.match(/^(#{1,6})([^\s#].+)/);
+                if (match) {
+                    suggestedFix = match[1] + ' ' + match[2];
+                    fixDescription = 'Add space after #';
+                }
+            }
+            // Blockquote missing space
+            else if (marker.message.includes('Blockquote missing space')) {
+                const match = line.match(/^(>+)([^\s>].+)/);
+                if (match) {
+                    suggestedFix = match[1] + ' ' + match[2];
+                    fixDescription = 'Add space after >';
+                }
+            }
+            // Mixed list markers
+            else if (marker.message.includes('Mixed list markers')) {
+                const match = line.match(/^(\s*)([+*])(\s+.+)/);
+                if (match) {
+                    suggestedFix = match[1] + '-' + match[3];
+                    fixDescription = 'Change to - marker';
+                }
+            }
+            // List numbering skip
+            else if (marker.message.includes('List numbering skip')) {
+                const match = marker.message.match(/Expected (\d+)/);
+                if (match) {
+                    const correctNum = match[1];
+                    suggestedFix = line.replace(/^(\s*)\d+\./, `$1${correctNum}.`);
+                    fixDescription = `Change to ${correctNum}.`;
+                }
+            }
+            // Unclosed inline code
+            else if (marker.message.includes('Unclosed inline code')) {
+                suggestedFix = line + '`';
+                fixDescription = 'Add closing backtick';
+            }
+            // Unclosed bold
+            else if (marker.message.includes('Unclosed bold')) {
+                suggestedFix = line + '**';
+                fixDescription = 'Add closing **';
+            }
+            // Unclosed italic
+            else if (marker.message.includes('Unclosed italic')) {
+                suggestedFix = line + '*';
+                fixDescription = 'Add closing *';
+            }
+            // Missing blank line after heading
+            else if (marker.message.includes('Missing blank line after heading')) {
+                suggestedFix = '\n' + line;
+                fixDescription = 'Insert blank line above';
+            }
+            // Broken image syntax
+            else if (marker.message.includes('Broken image syntax')) {
+                const match = line.match(/!\[([^\]]*)\]\s*\(/);
+                if (match) {
+                    suggestedFix = line.replace(/!\[([^\]]*)\]\s*\(/, '![$1](image.png)');
+                    fixDescription = 'Add closing ) and placeholder URL';
+                }
+            }
+            // Broken link syntax
+            else if (marker.message.includes('Broken link syntax')) {
+                const match = line.match(/\[([^\]]+)\]\s*\(/);
+                if (match) {
+                    suggestedFix = line.replace(/\[([^\]]+)\]\s*\(/, '[$1](url)');
+                    fixDescription = 'Add closing ) and placeholder URL';
+                }
+            }
+            // Empty image URL
+            else if (marker.message.includes('Empty image URL')) {
+                suggestedFix = line.replace(/!\[([^\]]*)\]\(\s*\)/, '![$1](image.png)');
+                fixDescription = 'Add placeholder image URL';
+            }
+            // Empty link
+            else if (marker.message.includes('Empty link')) {
+                suggestedFix = line.replace(/\[\]\(\s*\)/, '[Link text](url)');
+                fixDescription = 'Add link text and URL';
+            }
+            
+            return { suggestedFix, fixDescription };
+        };
+        
+        const positionInlineBar = (lineNumber) => {
+            if (!currentSuggestionBar) return;
+            
+            // Get the line position in the editor
+            const lineTop = editor.getTopForLineNumber(lineNumber);
+            const lineHeight = editor.getOption(monaco.editor.EditorOption.lineHeight);
+            const scrollTop = editor.getScrollTop();
+            const editorDom = editor.getDomNode();
+            const editorRect = editorDom.getBoundingClientRect();
+            
+            // Position below the error line
+            const top = editorRect.top + (lineTop - scrollTop) + lineHeight + 5;
+            const left = editorRect.left + 60; // Indent from line numbers
+            
+            currentSuggestionBar.style.top = `${top}px`;
+            currentSuggestionBar.style.left = `${left}px`;
+        };
+        
+        const updateLineDecoration = (lineNumber, state) => {
+            // state: 'error' (red), 'fixed' (green), 'skipped' (blue)
+            const colorMap = {
+                'error': 'rgba(239, 68, 68, 0.2)',      // red
+                'fixed': 'rgba(34, 197, 94, 0.2)',      // green
+                'skipped': 'rgba(59, 130, 246, 0.2)'    // blue
+            };
+            
+            const decoration = {
+                range: new monaco.Range(lineNumber, 1, lineNumber, 1),
+                options: {
+                    isWholeLine: true,
+                    className: `validation-line-${state}`,
+                    glyphMarginClassName: `validation-glyph-${state}`,
+                    overviewRuler: {
+                        color: colorMap[state],
+                        position: monaco.editor.OverviewRulerLane.Left
+                    },
+                    minimap: {
+                        color: colorMap[state],
+                        position: monaco.editor.MinimapPosition.Inline
+                    }
+                }
+            };
+            
+            lineDecorations = editor.deltaDecorations(lineDecorations, [decoration]);
+        };
+        
+        const showSuggestionForIssue = (index) => {
+            if (index < 0 || index >= validationIssues.length) return;
+            
+            currentFixIndex = index;
+            const issue = validationIssues[index];
+            const model = editor.getModel();
+            const line = model.getLineContent(issue.marker.startLineNumber);
+            
+            // Navigate to issue
+            editor.revealLineInCenter(issue.marker.startLineNumber);
+            editor.setPosition({ 
+                lineNumber: issue.marker.startLineNumber, 
+                column: issue.marker.startColumn 
+            });
+            
+            // Update line decoration to error state
+            if (issue.state === 'pending') {
+                updateLineDecoration(issue.marker.startLineNumber, 'error');
+            }
+            
+            // Position the inline bar
+            setTimeout(() => positionInlineBar(issue.marker.startLineNumber), 50);
+            
+            // Update bar content
+            const counter = currentSuggestionBar.querySelector('.validation-bar-counter');
+            const status = currentSuggestionBar.querySelector('.validation-bar-status');
+            const message = currentSuggestionBar.querySelector('.validation-bar-message');
+            const preview = currentSuggestionBar.querySelector('.validation-preview-code');
+            const applyBtn = currentSuggestionBar.querySelector('.validation-btn-apply');
+            const prevBtn = currentSuggestionBar.querySelector('.validation-btn-prev');
+            const nextBtn = currentSuggestionBar.querySelector('.validation-btn-next');
+            
+            counter.textContent = `${index + 1}/${validationIssues.length}`;
+            message.textContent = issue.marker.message;
+            
+            // Update state indicator
+            if (issue.state === 'fixed') {
+                status.textContent = '✓ Fixed';
+                status.className = 'validation-bar-status status-fixed';
+                currentSuggestionBar.setAttribute('data-state', 'fixed');
+            } else if (issue.state === 'skipped') {
+                status.textContent = '⊘ Skipped';
+                status.className = 'validation-bar-status status-skipped';
+                currentSuggestionBar.setAttribute('data-state', 'skipped');
+            } else {
+                status.textContent = '⚠ Needs fix';
+                status.className = 'validation-bar-status status-error';
+                currentSuggestionBar.setAttribute('data-state', 'error');
+            }
+            
+            if (issue.suggestedFix && issue.state === 'pending') {
+                preview.textContent = issue.suggestedFix;
+                preview.parentElement.style.display = 'block';
+                applyBtn.disabled = false;
+            } else if (issue.state !== 'pending') {
+                preview.parentElement.style.display = 'none';
+                applyBtn.disabled = true;
+            } else {
+                preview.textContent = 'No automatic fix available';
+                preview.parentElement.style.display = 'block';
+                applyBtn.disabled = true;
+            }
+            
+            prevBtn.disabled = index === 0;
+            nextBtn.disabled = index === validationIssues.length - 1;
+        };
+        
+        const applyCurrentFix = () => {
+            const issue = validationIssues[currentFixIndex];
+            if (!issue || !issue.suggestedFix || issue.state !== 'pending') return;
+            
+            const model = editor.getModel();
+            const lineNumber = issue.marker.startLineNumber;
+            const line = model.getLineContent(lineNumber);
+            
+            const range = new monaco.Range(lineNumber, 1, lineNumber, line.length + 1);
+            editor.executeEdits('validation-fix', [{
+                range: range,
+                text: issue.suggestedFix
+            }]);
+            
+            // Mark as fixed
+            issue.state = 'fixed';
+            updateLineDecoration(lineNumber, 'fixed');
+            
+            // Move to next pending issue or stay
+            const nextPending = validationIssues.findIndex((iss, idx) => idx > currentFixIndex && iss.state === 'pending');
+            if (nextPending !== -1) {
+                showSuggestionForIssue(nextPending);
+            } else {
+                // No more pending, check if all done
+                const allDone = validationIssues.every(iss => iss.state !== 'pending');
+                if (allDone) {
+                    closeSuggestionBar();
+                    showMofuHelper('Excellent! All fixes applied ✔');
+                } else {
+                    showSuggestionForIssue(currentFixIndex);
+                }
+            }
+        };
+        
+        const skipCurrentIssue = () => {
+            const issue = validationIssues[currentFixIndex];
+            if (!issue || issue.state !== 'pending') return;
+            
+            // Mark as skipped
+            issue.state = 'skipped';
+            updateLineDecoration(issue.marker.startLineNumber, 'skipped');
+            
+            // Move to next pending issue
+            const nextPending = validationIssues.findIndex((iss, idx) => idx > currentFixIndex && iss.state === 'pending');
+            if (nextPending !== -1) {
+                showSuggestionForIssue(nextPending);
+            } else {
+                // No more pending
+                const allDone = validationIssues.every(iss => iss.state !== 'pending');
+                if (allDone) {
+                    closeSuggestionBar();
+                    showMofuHelper('Wizard complete! Review the highlighted changes.');
+                } else {
+                    showSuggestionForIssue(currentFixIndex);
+                }
+            }
+        };
+        
+        const closeSuggestionBar = () => {
+            if (currentSuggestionBar) {
+                currentSuggestionBar.classList.add('hiding');
+                setTimeout(() => {
+                    if (currentSuggestionBar) {
+                        currentSuggestionBar.remove();
+                        currentSuggestionBar = null;
+                    }
+                }, 200);
+            }
+            
+            // Clear decorations after a delay for review
+            setTimeout(() => {
+                lineDecorations = editor.deltaDecorations(lineDecorations, []);
+            }, 5000);
+            
+            validationIssues = [];
+            currentFixIndex = 0;
+        };
+        
+        editor._interactiveFixWizard = async () => {
+            const model = editor.getModel();
+            const markers = monaco.editor.getModelMarkers({ resource: model.uri });
+            const validationMarkers = markers.filter(m => m.source === 'markdown-validator');
+            
+            if (validationMarkers.length === 0) {
+                showMofuHelper('No validation issues found!');
+                return;
+            }
+            
+            // Close existing bar if any
+            closeSuggestionBar();
+            
+            // Prepare issues with fixes
+            validationIssues = validationMarkers.map(marker => {
+                const line = model.getLineContent(marker.startLineNumber);
+                const { suggestedFix, fixDescription } = generateFix(marker, line);
+                return { 
+                    marker, 
+                    suggestedFix, 
+                    fixDescription,
+                    state: 'pending' // pending, fixed, skipped
+                };
+            });
+            
+            // Create and show inline bar
+            currentSuggestionBar = createInlineSuggestionBar();
+            document.body.appendChild(currentSuggestionBar);
+            
+            // Setup event listeners
+            currentSuggestionBar.querySelector('.validation-btn-apply').addEventListener('click', applyCurrentFix);
+            currentSuggestionBar.querySelector('.validation-btn-skip').addEventListener('click', skipCurrentIssue);
+            currentSuggestionBar.querySelector('.validation-btn-discard').addEventListener('click', closeSuggestionBar);
+            currentSuggestionBar.querySelector('.validation-btn-prev').addEventListener('click', () => {
+                if (currentFixIndex > 0) {
+                    showSuggestionForIssue(currentFixIndex - 1);
+                }
+            });
+            currentSuggestionBar.querySelector('.validation-btn-next').addEventListener('click', () => {
+                if (currentFixIndex < validationIssues.length - 1) {
+                    showSuggestionForIssue(currentFixIndex + 1);
+                }
+            });
+            
+            // Reposition on scroll
+            editor.onDidScrollChange(() => {
+                if (currentSuggestionBar && validationIssues[currentFixIndex]) {
+                    positionInlineBar(validationIssues[currentFixIndex].marker.startLineNumber);
+                }
+            });
+            
+            // Show first issue
+            showSuggestionForIssue(0);
+        };
+        
+        // Export validation errors to clipboard
+        editor._exportValidationErrors = () => {
+            const model = editor.getModel();
+            const markers = monaco.editor.getModelMarkers({ resource: model.uri });
+            const validationMarkers = markers.filter(m => m.source === 'markdown-validator');
+            
+            if (validationMarkers.length === 0) {
+                return 'No validation errors found.';
+            }
+            
+            let report = `# Markdown Validation Report\n\n`;
+            report += `Total Issues: ${validationMarkers.length}\n\n`;
+            
+            // Group by severity
+            const errors = validationMarkers.filter(m => m.severity === monaco.MarkerSeverity.Error);
+            const warnings = validationMarkers.filter(m => m.severity === monaco.MarkerSeverity.Warning);
+            const info = validationMarkers.filter(m => m.severity === monaco.MarkerSeverity.Info);
+            
+            if (errors.length > 0) {
+                report += `## Errors (${errors.length})\n\n`;
+                errors.forEach((marker, idx) => {
+                    const lineContent = model.getLineContent(marker.startLineNumber);
+                    report += `${idx + 1}. **Line ${marker.startLineNumber}**: ${marker.message}\n`;
+                    report += `   \`\`\`\n   ${lineContent}\n   \`\`\`\n\n`;
+                });
+            }
+            
+            if (warnings.length > 0) {
+                report += `## Warnings (${warnings.length})\n\n`;
+                warnings.forEach((marker, idx) => {
+                    const lineContent = model.getLineContent(marker.startLineNumber);
+                    report += `${idx + 1}. **Line ${marker.startLineNumber}**: ${marker.message}\n`;
+                    report += `   \`\`\`\n   ${lineContent}\n   \`\`\`\n\n`;
+                });
+            }
+            
+            if (info.length > 0) {
+                report += `## Info (${info.length})\n\n`;
+                info.forEach((marker, idx) => {
+                    const lineContent = model.getLineContent(marker.startLineNumber);
+                    report += `${idx + 1}. **Line ${marker.startLineNumber}**: ${marker.message}\n`;
+                    report += `   \`\`\`\n   ${lineContent}\n   \`\`\`\n\n`;
+                });
+            }
+            
+            return report;
+        };
+        
+        // Add keyboard shortcut: Ctrl+Shift+V to export validation errors
+        editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.KeyV, () => {
+            if (!validationEnabled) {
+                console.log('Validation not enabled');
+                return;
+            }
+            
+            const report = editor._exportValidationErrors();
+            navigator.clipboard.writeText(report).then(() => {
+                console.log('Validation report copied to clipboard');
+            }).catch(err => {
+                console.error('Failed to copy validation report:', err);
+            });
+        });
 
         return editor;
     };
@@ -546,8 +1416,8 @@ This web site is using ${"`"}markedjs/marked${"`"}.
                     year: 'numeric' 
                 });
                 
-                const footerHtml = `<hr style="margin-top: 40px;">
-<div style="display: flex; justify-content: space-between; margin-top: 20px;">
+                const footerHtml = `<hr class="metadata-footer-separator" style="margin-top: 40px;">
+<div class="metadata-footer" style="display: flex; justify-content: space-between; margin-top: 20px;">
   <div>
     <strong>${footerLeft}</strong><br>
     <span style="color: #666;">${metadata.title || 'Document'}</span>
@@ -885,8 +1755,6 @@ This web site is using ${"`"}markedjs/marked${"`"}.
         // Apply decorations
         tempEditor.deltaDecorations([], decorations);
         
-        console.log('Applied', decorations.length, 'diff decorations');
-        
         // Copy button handler - copy the diff text with +/- prefixes
         document.getElementById('diff-copy-btn').addEventListener('click', async () => {
             try {
@@ -1197,6 +2065,33 @@ let performBeautify = (content) => {
             saveHelperMessagesSetting(checked);
         });
     };
+    
+    // ----- style tooltips toggle -----
+    let initStyleTooltipsToggle = () => {
+        let checkbox = document.querySelector('#style-tooltips-checkbox');
+        if (!checkbox) return;
+        
+        const disabled = localStorage.getItem('com.markdownlivepreview.style_tooltips_disabled') === 'true';
+        checkbox.checked = !disabled;
+        
+        checkbox.addEventListener('change', (event) => {
+            if (event.target.checked) {
+                localStorage.removeItem('com.markdownlivepreview.style_tooltips_disabled');
+                // Show tooltip immediately for current style
+                const selector = document.querySelector('#style-selector');
+                if (selector) {
+                    const currentStyle = selector.value;
+                    // Trigger a fake change event to show tooltip
+                    setTimeout(() => {
+                        const changeEvent = new Event('change');
+                        selector.dispatchEvent(changeEvent);
+                    }, 100);
+                }
+            } else {
+                localStorage.setItem('com.markdownlivepreview.style_tooltips_disabled', 'true');
+            }
+        });
+    };
 
     // ----- preview CSS loader (switch github-markdown css) -----
     const PREVIEW_CSS_LIGHT = 'css/github-markdown-light.css?v=1.12.0';
@@ -1281,15 +2176,193 @@ let performBeautify = (content) => {
         currentStyle = settings || 'github';
         selector.value = currentStyle;
         
+        // Style information for tooltips
+        const styleInfo = {
+            github: {
+                name: 'GitHub Style',
+                description: 'Traditional, balanced, professional',
+                fonts: 'Helvetica (Sans-serif)',
+                textSize: '11pt body, 20pt H1',
+                features: 'Full table borders, gray header backgrounds',
+                bestFor: 'Documentation, README files, general content'
+            },
+            gitbook: {
+                name: 'GitBook Style',
+                description: 'Modern, clean, book-like',
+                fonts: 'Helvetica (Sans-serif)',
+                textSize: '10pt body, 18pt H1',
+                features: 'Horizontal table borders, minimal styling',
+                bestFor: 'Books, guides, long-form documentation'
+            },
+            vscode: {
+                name: 'VS Code Style',
+                description: 'Compact, technical, code-focused',
+                fonts: 'Courier (Monospace)',
+                textSize: '8pt body, 12pt H1',
+                features: 'Minimal borders, tight spacing',
+                bestFor: 'Technical docs, code-heavy content'
+            }
+        };
+        
+        // Check if user specifically disabled style tooltips (separate from helper messages)
+        const styleTooltipsDisabled = localStorage.getItem('com.markdownlivepreview.style_tooltips_disabled') === 'true';
+        
+        // Show style info tooltip
+        const showStyleTooltip = (style) => {
+            // Check localStorage directly each time (not cached)
+            const isDisabled = localStorage.getItem('com.markdownlivepreview.style_tooltips_disabled') === 'true';
+            
+            if (isDisabled) {
+                return;
+            }
+            
+            const info = styleInfo[style];
+            if (!info) {
+                return;
+            }
+            
+            // Remove existing tooltip
+            const existing = document.querySelector('.style-info-tooltip');
+            if (existing) {
+                existing.remove();
+            }
+            
+            // Create tooltip
+            const tooltip = document.createElement('div');
+            tooltip.className = 'style-info-tooltip';
+            
+            // Get current theme colors
+            const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+            const bgColor = isDark ? '#1e1e1e' : '#ffffff';
+            const textColor = isDark ? '#e0e0e0' : '#333333';
+            const borderColor = isDark ? '#404040' : '#ddd';
+            const mutedColor = isDark ? '#a0a0a0' : '#666666';
+            
+            tooltip.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 8px;">
+                    <strong style="font-size: 14px; color: ${textColor};">${info.name}</strong>
+                    <button id="close-style-tooltip" style="background: none; border: none; font-size: 18px; cursor: pointer; padding: 0; margin-left: 10px; color: ${textColor};">×</button>
+                </div>
+                <p style="margin: 4px 0; font-size: 12px; color: ${mutedColor};">${info.description}</p>
+                <div style="margin-top: 8px; font-size: 11px; line-height: 1.6; color: ${textColor};">
+                    <div><strong>Fonts:</strong> ${info.fonts}</div>
+                    <div><strong>Text Size:</strong> ${info.textSize}</div>
+                    <div><strong>Features:</strong> ${info.features}</div>
+                    <div style="margin-top: 4px; color: ${mutedColor};"><em>Best for: ${info.bestFor}</em></div>
+                </div>
+                <div style="margin-top: 10px; padding-top: 8px; border-top: 1px solid ${borderColor};">
+                    <label style="font-size: 11px; cursor: pointer; display: flex; align-items: center; color: ${textColor};">
+                        <input type="checkbox" id="never-show-style-tooltips" style="margin-right: 6px; cursor: pointer;">
+                        Don't show again
+                    </label>
+                </div>
+            `;
+            
+            tooltip.style.cssText = `
+                position: fixed;
+                top: 60px;
+                left: 20px;
+                background: ${bgColor};
+                border: 1px solid ${borderColor};
+                border-radius: 8px;
+                padding: 12px 16px;
+                box-shadow: 0 4px 12px rgba(0,0,0,${isDark ? '0.5' : '0.15'});
+                z-index: 10000;
+                max-width: 320px;
+                animation: slideIn 0.3s ease-out;
+            `;
+            
+            document.body.appendChild(tooltip);
+            
+            let isPaused = false;
+            let autoDismissTimer = null;
+            
+            // Auto-dismiss after 2 seconds (unless hovered or paused)
+            const startAutoDismiss = () => {
+                autoDismissTimer = setTimeout(() => {
+                    if (!isPaused) {
+                        tooltip.style.animation = 'slideOut 0.3s ease-out';
+                        setTimeout(() => tooltip.remove(), 300);
+                    }
+                }, 2000);
+            };
+            
+            const cancelAutoDismiss = () => {
+                if (autoDismissTimer) {
+                    clearTimeout(autoDismissTimer);
+                    autoDismissTimer = null;
+                }
+            };
+            
+            startAutoDismiss();
+            
+            // Pause on hover - tooltip stays visible while mouse is over it
+            tooltip.addEventListener('mouseenter', () => {
+                cancelAutoDismiss();
+            });
+            
+            // Resume when mouse leaves
+            tooltip.addEventListener('mouseleave', () => {
+                if (!isPaused) {
+                    startAutoDismiss();
+                }
+            });
+            
+            // Pause auto-dismiss on mousedown (for text selection)
+            tooltip.addEventListener('mousedown', () => {
+                isPaused = true;
+                cancelAutoDismiss();
+            });
+            
+            // Resume auto-dismiss on mouseup
+            tooltip.addEventListener('mouseup', () => {
+                isPaused = false;
+                // Don't auto-start timer here, let mouseleave handle it
+            });
+            
+            // Close button
+            document.getElementById('close-style-tooltip').addEventListener('click', (e) => {
+                e.stopPropagation();
+                cancelAutoDismiss();
+                tooltip.style.animation = 'slideOut 0.3s ease-out';
+                setTimeout(() => tooltip.remove(), 300);
+            });
+            
+            // Don't show again checkbox
+            document.getElementById('never-show-style-tooltips').addEventListener('change', (e) => {
+                if (e.target.checked) {
+                    localStorage.setItem('com.markdownlivepreview.style_tooltips_disabled', 'true');
+                    
+                    // Update the settings menu checkbox
+                    const settingsCheckbox = document.querySelector('#style-tooltips-checkbox');
+                    if (settingsCheckbox) {
+                        settingsCheckbox.checked = false;
+                    }
+                    
+                    cancelAutoDismiss();
+                    tooltip.style.animation = 'slideOut 0.3s ease-out';
+                    setTimeout(() => tooltip.remove(), 300);
+                }
+            });
+        };
+        
         // Apply initial style
         const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
         setPreviewCss(isDark, currentStyle);
+        
+        // Show tooltip on initial load (delayed to avoid overwhelming user)
+        setTimeout(() => {
+            showStyleTooltip(currentStyle);
+        }, 500);
 
         selector.addEventListener('change', (event) => {
             currentStyle = event.target.value;
             saveStyleSettings(currentStyle);
             const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
             setPreviewCss(isDark, currentStyle);
+            
+            // Show tooltip when style changes
+            showStyleTooltip(currentStyle);
         });
     };
 
@@ -1500,7 +2573,6 @@ let performBeautify = (content) => {
     let exportPreviewToHtml = async () => {
         const outputElement = document.querySelector('#output');
         if (!outputElement) {
-            console.log('No output element found');
             return;
         }
 
@@ -1653,14 +2725,11 @@ let performBeautify = (content) => {
     let exportPreviewToPdf = async () => {
         const outputElement = document.querySelector('#output');
         if (!outputElement) {
-            console.log('No output element found');
             return;
         }
 
         // Wait for jsPDF to load if not available yet
         if (typeof window.jspdf === 'undefined') {
-            console.log('Waiting for jsPDF to load...');
-            
             // Wait up to 5 seconds for jsPDF to load
             let attempts = 0;
             while (typeof window.jspdf === 'undefined' && attempts < 50) {
@@ -1968,7 +3037,7 @@ let performBeautify = (content) => {
             };
 
             // Parse HTML and extract text content
-            const parseElement = (element) => {
+            const parseElement = async (element) => {
                 // Skip elements marked to skip (like date divs already processed)
                 if (element._skipInPdf) return;
                 
@@ -2034,29 +3103,125 @@ let performBeautify = (content) => {
                             const img = element.children[0];
                             const alt = img.getAttribute('alt') || 'Image';
                             const src = img.getAttribute('src') || '';
-                            const title = img.getAttribute('title') || '';
                             
-                            // Add image placeholder with info
-                            doc.setFont('helvetica', 'italic');
-                            doc.setFontSize(10);
-                            doc.setTextColor(100, 100, 100);
+                            console.log('[PDF] Processing image:', { alt, src });
                             
-                            let imageText = `[Image: ${sanitizeForPdf(alt)}]`;
-                            if (title) imageText += ` - ${sanitizeForPdf(title)}`;
-                            if (src) imageText += `\n${sanitizeForPdf(src)}`;
-                            
-                            const lines = doc.splitTextToSize(imageText, maxWidth);
-                            lines.forEach(line => {
-                                if (yPosition + 5 > pageHeight - margin) {
-                                    doc.addPage();
-                                    yPosition = margin;
+                            // Try to embed the actual image
+                            if (src) {
+                                try {
+                                    console.log('[PDF] Attempting to load image from:', src);
+                                    
+                                    // Load image with CORS proxy fallback
+                                    const imageData = await new Promise((resolve, reject) => {
+                                        const image = new Image();
+                                        image.crossOrigin = 'Anonymous';
+                                        
+                                        image.onload = () => {
+                                            console.log('[PDF] Image loaded successfully');
+                                            const canvas = document.createElement('canvas');
+                                            canvas.width = image.width;
+                                            canvas.height = image.height;
+                                            const ctx = canvas.getContext('2d');
+                                            
+                                            try {
+                                                ctx.drawImage(image, 0, 0);
+                                                const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+                                                console.log('[PDF] Canvas conversion successful');
+                                                resolve({
+                                                    dataUrl,
+                                                    width: image.width,
+                                                    height: image.height
+                                                });
+                                            } catch (e) {
+                                                console.error('[PDF] Canvas tainted (CORS issue):', e.message);
+                                                reject(new Error('CORS: ' + e.message));
+                                            }
+                                        };
+                                        
+                                        image.onerror = (e) => {
+                                            console.error('[PDF] Image load failed:', e);
+                                            reject(new Error('Image load failed'));
+                                        };
+                                        
+                                        setTimeout(() => {
+                                            console.error('[PDF] Image load timeout');
+                                            reject(new Error('Timeout'));
+                                        }, 5000);
+                                        
+                                        // Try direct load first
+                                        image.src = src;
+                                    });
+                                    
+                                    // Calculate dimensions
+                                    const maxImgWidth = maxWidth * 0.7;
+                                    const aspectRatio = imageData.height / imageData.width;
+                                    let imgWidth = Math.min(maxImgWidth, imageData.width / 3.78);
+                                    let imgHeight = imgWidth * aspectRatio;
+                                    
+                                    const maxImgHeight = 100;
+                                    if (imgHeight > maxImgHeight) {
+                                        imgHeight = maxImgHeight;
+                                        imgWidth = imgHeight / aspectRatio;
+                                    }
+                                    
+                                    if (yPosition + imgHeight > pageHeight - margin) {
+                                        doc.addPage();
+                                        yPosition = margin;
+                                    }
+                                    
+                                    const imgX = margin + (maxWidth - imgWidth) / 2;
+                                    doc.addImage(imageData.dataUrl, 'JPEG', imgX, yPosition, imgWidth, imgHeight);
+                                    console.log('[PDF] Image embedded successfully!', { imgWidth, imgHeight });
+                                    yPosition += imgHeight;
+                                    addSpacing(2);
+                                    
+                                } catch (error) {
+                                    console.error('[PDF] Failed to embed image:', error.message);
+                                    
+                                    // Show helpful error message based on error type
+                                    if (error.message.includes('CORS')) {
+                                        console.log('[PDF] CORS blocked - using placeholder with link');
+                                        console.log('[PDF] TIP: Use data URLs or same-origin images for embedding');
+                                    }
+                                    
+                                    // Fallback to placeholder with clickable link
+                                    doc.setFont('helvetica', 'italic');
+                                    doc.setFontSize(10);
+                                    doc.setTextColor(100, 100, 100);
+                                    
+                                    const imageText = `[Image: ${sanitizeForPdf(alt)}]`;
+                                    doc.text(imageText, margin, yPosition);
+                                    yPosition += 5;
+                                    
+                                    // Add URL as clickable link
+                                    doc.setFont('helvetica', 'normal');
+                                    doc.setFontSize(9);
+                                    doc.setTextColor(0, 102, 204);
+                                    const urlText = sanitizeForPdf(src);
+                                    const urlLines = doc.splitTextToSize(urlText, maxWidth);
+                                    urlLines.forEach(line => {
+                                        if (yPosition + 5 > pageHeight - margin) {
+                                            doc.addPage();
+                                            yPosition = margin;
+                                        }
+                                        doc.textWithLink(line, margin, yPosition, { url: src });
+                                        yPosition += 5;
+                                    });
+                                    
+                                    doc.setTextColor(0, 0, 0);
+                                    addSpacing(2);
                                 }
-                                doc.text(line, margin, yPosition);
+                            } else {
+                                console.log('[PDF] No image src provided');
+                                // No src, use placeholder
+                                doc.setFont('helvetica', 'italic');
+                                doc.setFontSize(10);
+                                doc.setTextColor(100, 100, 100);
+                                doc.text(`[Image: ${sanitizeForPdf(alt)}]`, margin, yPosition);
                                 yPosition += 5;
-                            });
-                            
-                            doc.setTextColor(0, 0, 0);
-                            addSpacing(2);
+                                doc.setTextColor(0, 0, 0);
+                                addSpacing(2);
+                            }
                         } else {
                             // Handle inline formatting (bold, italic, links, inline code)
                             const formatted = getFormattedText(element);
@@ -2488,8 +3653,45 @@ let performBeautify = (content) => {
                         addSpacing(3);
                         break;
                     default:
+                        // Check if it's a page break div
+                        if (tagName === 'div' && element.style.pageBreakAfter === 'always') {
+                            // Add a new page
+                            doc.addPage();
+                            yPosition = margin;
+                            return;
+                        }
+                        
+                        // Check if it's a page break before div
+                        if (tagName === 'div' && element.style.pageBreakBefore === 'always') {
+                            // Add a new page
+                            doc.addPage();
+                            yPosition = margin;
+                            return;
+                        }
+                        
+                        // Check if it's a fixed position footer div
+                        if (tagName === 'div' && element.style.position === 'fixed' && element.style.bottom === '0') {
+                            // Force footer to bottom of page - calculate actual bottom position
+                            const footerContentHeight = 30; // Approximate height needed for footer content
+                            yPosition = pageHeight - margin - footerContentHeight;
+                            
+                            // Process footer content
+                            Array.from(element.children).forEach(child => parseElement(child));
+                            return;
+                        }
+                        
                         // Check if it's a flexbox footer div
                         if (tagName === 'div' && element.style.display === 'flex' && element.style.justifyContent === 'space-between') {
+                            // Check if this is inside a fixed footer wrapper
+                            const isInFixedFooter = element.parentElement && 
+                                                   element.parentElement.style.position === 'fixed' && 
+                                                   element.parentElement.style.bottom === '0';
+                            
+                            if (isInFixedFooter) {
+                                // Force to bottom of page
+                                yPosition = pageHeight - margin - 30;
+                            }
+                            
                             // This is a flexbox footer - render side by side
                             const leftDiv = element.children[0];
                             const rightDiv = element.children[1];
@@ -2615,10 +3817,36 @@ let performBeautify = (content) => {
                 yPosition = margin;
             }
 
-            // Process all children of the output element
-            Array.from(outputElement.children).forEach(child => {
-                parseElement(child);
-            });
+            // Process all children of the output element, but skip footer
+            let footerElement = null;
+            for (const child of outputElement.children) {
+                // Check if this is the PDF footer
+                if (child.getAttribute('data-pdf-footer') === 'true') {
+                    footerElement = child;
+                    continue; // Skip processing it now
+                }
+                await parseElement(child);
+            }
+
+            // Render footer at the bottom of the last page if it exists
+            if (footerElement) {
+                const footerBottomMargin = 12.75; // Distance from page bottom (15% closer)
+                const footerHeight = 25; // Approximate height needed for footer
+                const footerY = pageHeight - footerBottomMargin - footerHeight;
+                
+                // If current content is too close to footer area, add new page
+                if (yPosition > footerY - 10) {
+                    doc.addPage();
+                }
+                
+                // Position at bottom of page
+                yPosition = footerY;
+                
+                // Process footer elements
+                for (const child of footerElement.children) {
+                    await parseElement(child);
+                }
+            }
 
             // Save the PDF with style and timestamp
             const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
@@ -2944,7 +4172,6 @@ let performBeautify = (content) => {
         if (exportMdButton) {
             exportMdButton.addEventListener('click', () => {
                 if (!editorInstance) {
-                    console.log('Editor not initialized');
                     return;
                 }
                 
@@ -3032,7 +4259,6 @@ let performBeautify = (content) => {
         if (pdfSettingsLink) {
             pdfSettingsLink.addEventListener('click', (event) => {
                 event.preventDefault();
-                console.log('PDF Settings clicked');
                 openPdfSettingsModal();
             });
         }
@@ -3046,10 +4272,21 @@ let performBeautify = (content) => {
         undoButton.addEventListener('click', (event) => {
             event.preventDefault();
             if (editor) {
-                // Try custom undo first, fallback to Monaco's undo
-                if (!performUndo()) {
-                    editor.trigger('keyboard', 'undo', null);
-                }
+                performUndo();
+                editor.focus();
+            }
+        });
+    };
+
+    // ----- Redo button -----
+    let setupRedoButton = () => {
+        const redoButton = document.querySelector('#redo-button');
+        if (!redoButton) return;
+        
+        redoButton.addEventListener('click', (event) => {
+            event.preventDefault();
+            if (editor) {
+                performRedo();
                 editor.focus();
             }
         });
@@ -3080,7 +4317,7 @@ let performBeautify = (content) => {
     let printPreviewToPdf = async () => {
         const outputElement = document.querySelector('#output');
         if (!outputElement) {
-            console.log('No output element found');
+
             return;
         }
 
@@ -3310,6 +4547,62 @@ let performBeautify = (content) => {
         });
     };
 
+    let setupInsertImageButton = () => {
+        const button = document.querySelector('#insert-image-button');
+        if (!button) return;
+        
+        button.addEventListener('click', (event) => {
+            event.preventDefault();
+            insertImageTemplate();
+        });
+    };
+
+    let insertImageTemplate = () => {
+        // Prompt for image dimensions
+        const width = prompt('Enter image width (in pixels, e.g., 300):', '300');
+        if (!width) return; // User cancelled
+        
+        const height = prompt('Enter image height (in pixels, leave empty for auto):', '');
+        
+        // Build the HTML img tag
+        const heightAttr = height ? ` height="${height}"` : '';
+        const template = `
+<img src="https://via.placeholder.com/${width}x${height || '200'}?text=Your+Image" width="${width}"${heightAttr}>
+
+`;
+        
+        const model = editor.getModel();
+        const position = editor.getPosition();
+        
+        // Insert at current cursor position
+        editor.executeEdits('insert-image', [{
+            range: new monaco.Range(
+                position.lineNumber, 
+                position.column, 
+                position.lineNumber, 
+                position.column
+            ),
+            text: template
+        }]);
+        
+        // Select the URL for easy replacement
+        setTimeout(() => {
+            const newLine = position.lineNumber + 1;
+            const srcStart = template.indexOf('src="') + 5;
+            const srcEnd = template.indexOf('"', srcStart);
+            
+            editor.setSelection(new monaco.Selection(
+                newLine, srcStart,
+                newLine, srcEnd
+            ));
+            
+            editor.revealLineInCenter(newLine);
+            editor.focus();
+        }, 50);
+        
+        showMofuHelper(`I've added an <strong>image placeholder</strong> (${width}x${height || 'auto'})! Replace the URL with your image link.`);
+    };
+
     let insertHeaderTemplate = () => {
         const today = new Date().toLocaleDateString('en-GB', { 
             day: 'numeric', 
@@ -3325,11 +4618,27 @@ let performBeautify = (content) => {
 
 `;
         
-        const position = editor.getPosition();
-        const startLine = position.lineNumber;
+        const model = editor.getModel();
+        const content = model.getValue();
+        const lines = content.split('\n');
         
-        editor.executeEdits('', [{
-            range: new monaco.Range(position.lineNumber, position.column, position.lineNumber, position.column),
+        // Check if document starts with YAML front matter
+        let insertLine = 1;
+        let insertColumn = 1;
+        
+        if (lines[0] && lines[0].trim() === '---') {
+            // Find end of YAML front matter
+            for (let i = 1; i < lines.length; i++) {
+                if (lines[i].trim() === '---') {
+                    insertLine = i + 2; // Insert after YAML front matter
+                    break;
+                }
+            }
+        }
+        
+        // Always insert at the determined top position
+        editor.executeEdits('insert-header', [{
+            range: new monaco.Range(insertLine, insertColumn, insertLine, insertColumn),
             text: template
         }]);
         
@@ -3339,8 +4648,8 @@ let performBeautify = (content) => {
             const titleEndCol = 3 + "Document Title".length;
             
             editor.setSelection(new monaco.Selection(
-                startLine, titleStartCol,
-                startLine, titleEndCol
+                insertLine, titleStartCol,
+                insertLine, titleEndCol
             ));
             
             editor.focus();
@@ -3355,6 +4664,9 @@ let performBeautify = (content) => {
         });
         
         const template = `
+
+<div data-pdf-footer="true">
+
 ---
 
 <div style="display: flex; justify-content: space-between; margin-top: 20px;">
@@ -3367,15 +4679,25 @@ let performBeautify = (content) => {
     <span style="color: #666;">${today}</span>
   </div>
 </div>
+
+</div>
 `;
         
-        const position = editor.getPosition();
-        const startLine = position.lineNumber + 5; // Line with "SIGNATURE"
+        const model = editor.getModel();
+        const lineCount = model.getLineCount();
+        const lastLineContent = model.getLineContent(lineCount);
         
-        editor.executeEdits('', [{
-            range: new monaco.Range(position.lineNumber, position.column, position.lineNumber, position.column),
+        // Always insert at the very end
+        const insertLine = lineCount;
+        const insertColumn = lastLineContent.length + 1;
+        
+        editor.executeEdits('insert-footer', [{
+            range: new monaco.Range(insertLine, insertColumn, insertLine, insertColumn),
             text: template
         }]);
+        
+        // Calculate where SIGNATURE will be (line 6 after insertion point)
+        const signatureLine = lineCount + 6;
         
         // Select "SIGNATURE" text for easy replacement
         setTimeout(() => {
@@ -3383,10 +4705,12 @@ let performBeautify = (content) => {
             const sigEndCol = 13 + "SIGNATURE".length;
             
             editor.setSelection(new monaco.Selection(
-                startLine, sigStartCol,
-                startLine, sigEndCol
+                signatureLine, sigStartCol,
+                signatureLine, sigEndCol
             ));
             
+            // Scroll to the footer
+            editor.revealLineInCenter(signatureLine);
             editor.focus();
         }, 50);
     };
@@ -3450,17 +4774,16 @@ let performBeautify = (content) => {
             
             // Toggle on click
             dropdown.addEventListener('click', (e) => {
-                // Don't toggle if clicking on a checkbox, select, or link
-                if (e.target.tagName === 'INPUT' || 
-                    e.target.tagName === 'SELECT' || 
-                    e.target.tagName === 'A' ||
-                    e.target.closest('a')) {
+                // Don't toggle if clicking inside dropdown-content (checkboxes, labels, etc.)
+                if (e.target.closest('.dropdown-content')) {
+
                     return;
                 }
                 
                 clearTimeout(closeTimeout);
                 isOpen = !isOpen;
                 dropdownContent.style.display = isOpen ? 'block' : 'none';
+
             });
         });
         
@@ -3534,70 +4857,70 @@ let performBeautify = (content) => {
             {
                 section: 'Headers',
                 items: [
-                    { title: 'H1 Header', code: '# Header 1' },
-                    { title: 'H2 Header', code: '## Header 2' },
-                    { title: 'H3 Header', code: '### Header 3' }
+                    { title: 'H1 Header', code: '# Header 1', type: 'header' },
+                    { title: 'H2 Header', code: '## Header 2', type: 'header' },
+                    { title: 'H3 Header', code: '### Header 3', type: 'header' }
                 ]
             },
             {
                 section: 'Text Formatting',
                 items: [
-                    { title: 'Bold', code: '**bold text**' },
-                    { title: 'Italic', code: '*italic text*' },
-                    { title: 'Bold + Italic', code: '***bold and italic***' },
-                    { title: 'Strikethrough', code: '~~strikethrough~~' },
-                    { title: 'Inline Code', code: '`code`' }
+                    { title: 'Bold', code: '**bold text**', type: 'inline' },
+                    { title: 'Italic', code: '*italic text*', type: 'inline' },
+                    { title: 'Bold + Italic', code: '***bold and italic***', type: 'inline' },
+                    { title: 'Strikethrough', code: '~~strikethrough~~', type: 'inline' },
+                    { title: 'Inline Code', code: '`code`', type: 'inline' }
                 ]
             },
             {
                 section: 'Lists',
                 items: [
-                    { title: 'Unordered List', code: '* Item 1\n* Item 2\n  * Nested item' },
-                    { title: 'Ordered List', code: '1. First item\n2. Second item\n3. Third item' },
-                    { title: 'Task List', code: '- [ ] Unchecked\n- [x] Checked' }
+                    { title: 'Unordered List', code: '* Item 1\n* Item 2\n  * Nested item', type: 'block' },
+                    { title: 'Ordered List', code: '1. First item\n2. Second item\n3. Third item', type: 'block' },
+                    { title: 'Task List', code: '- [ ] Unchecked\n- [x] Checked', type: 'block' }
                 ]
             },
             {
                 section: 'Links & Images',
                 items: [
-                    { title: 'Link', code: '[Link Text](https://example.com)' },
-                    { title: 'Image', code: '![Alt Text](image.jpg)' },
-                    { title: 'Link with Title', code: '[Link](https://example.com "Title")' }
+                    { title: 'Link', code: '[Link Text](https://example.com)', type: 'inline' },
+                    { title: 'Image', code: '![Alt Text](image.jpg)', type: 'inline' },
+                    { title: 'Link with Title', code: '[Link](https://example.com "Title")', type: 'inline' }
                 ]
             },
             {
                 section: 'Tables',
                 items: [
-                    { title: 'Basic Table', code: '| Header 1 | Header 2 |\n| --- | --- |\n| Cell 1 | Cell 2 |\n| Cell 3 | Cell 4 |' },
-                    { title: 'Aligned Table', code: '| Left | Center | Right |\n| :--- | :---: | ---: |\n| L | C | R |' }
+                    { title: 'Basic Table', code: '| Header 1 | Header 2 |\n| --- | --- |\n| Cell 1 | Cell 2 |\n| Cell 3 | Cell 4 |', type: 'block' },
+                    { title: 'Aligned Table', code: '| Left | Center | Right |\n| :--- | :---: | ---: |\n| L | C | R |', type: 'block' }
                 ]
             },
             {
                 section: 'Code Blocks',
                 items: [
-                    { title: 'Code Block', code: '```\ncode here\n```' },
-                    { title: 'Code with Language', code: '```javascript\nconst x = 10;\n```' }
+                    { title: 'Code Block', code: '```\ncode here\n```', type: 'block' },
+                    { title: 'Code with Language', code: '```javascript\nconst x = 10;\n```', type: 'block' }
                 ]
             },
             {
                 section: 'Quotes & Breaks',
                 items: [
-                    { title: 'Blockquote', code: '> This is a quote\n> Multiple lines' },
-                    { title: 'Horizontal Rule', code: '---' },
-                    { title: 'Line Break', code: 'Line 1  \nLine 2' }
+                    { title: 'Blockquote', code: '> This is a quote\n> Multiple lines', type: 'block' },
+                    { title: 'Horizontal Rule', code: '---', type: 'block' },
+                    { title: 'Line Break', code: 'Line 1  \nLine 2', type: 'inline' }
                 ]
             },
             {
                 section: 'Document Structure',
                 items: [
-                    { title: 'Header with Date', code: '# Document Title\n\n<div style="text-align: right; margin-top: -40px; margin-bottom: 20px; color: #666; font-size: 0.9em;">11 Feb 2026</div>\n\n---' },
-                    { title: 'Footer', code: '---\n\n<div style="display: flex; justify-content: space-between; margin-top: 20px;">\n  <div>\n    <strong>SIGNATURE</strong><br>\n    <span style="color: #666;">Document Name</span>\n  </div>\n  <div style="text-align: right;">\n    <strong>CLIENT</strong><br>\n    <span style="color: #666;">11 Feb 2026</span>\n  </div>\n</div>' }
+                    { title: 'Header with Date', code: '# Document Title\n\n<div style="text-align: right; margin-top: -40px; margin-bottom: 20px; color: #666; font-size: 0.9em;">11 Feb 2026</div>\n\n---', type: 'block' },
+                    { title: 'Footer', code: '---\n\n<div style="display: flex; justify-content: space-between; margin-top: 20px;">\n  <div>\n    <strong>SIGNATURE</strong><br>\n    <span style="color: #666;">Document Name</span>\n  </div>\n  <div style="text-align: right;">\n    <strong>CLIENT</strong><br>\n    <span style="color: #666;">11 Feb 2026</span>\n  </div>\n</div>', type: 'block' }
                 ]
             },
             {
                 section: 'YAML Metadata',
                 items: [
-                    { title: 'Document Metadata', code: '---\ntitle: Document Title\ndate: 11 Feb 2026\nfooter-left: SIGNATURE\nfooter-right: CLIENT\n---' }
+                    { title: 'Document Metadata', code: '---\ntitle: Document Title\ndate: 11 Feb 2026\nfooter-left: SIGNATURE\nfooter-right: CLIENT\n---', type: 'yaml' }
                 ]
             }
         ];
@@ -3613,7 +4936,10 @@ let performBeautify = (content) => {
                 <div class="cheatsheet-item">
                     <div class="cheatsheet-item-header">
                         <span class="cheatsheet-item-title">${item.title}</span>
-                        <button class="cheatsheet-copy-btn" data-code="${itemId}">Copy</button>
+                        <div class="cheatsheet-item-actions">
+                            <button class="cheatsheet-insert-btn" data-code="${itemId}" data-type="${item.type}">Insert</button>
+                            <button class="cheatsheet-copy-btn" data-code="${itemId}">Copy</button>
+                        </div>
                     </div>
                     <div class="cheatsheet-code" id="${itemId}">${item.code.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>
                 </div>`;
@@ -3623,6 +4949,25 @@ let performBeautify = (content) => {
         });
         
         contentContainer.innerHTML = contentHtml;
+        
+        // Add insert button handlers
+        contentContainer.querySelectorAll('.cheatsheet-insert-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const codeId = e.target.getAttribute('data-code');
+                const type = e.target.getAttribute('data-type');
+                const codeElement = document.getElementById(codeId);
+                const code = codeElement.textContent;
+                
+                insertSyntaxAtCursor(code, type);
+                
+                e.target.textContent = 'Inserted!';
+                e.target.classList.add('inserted');
+                setTimeout(() => {
+                    e.target.textContent = 'Insert';
+                    e.target.classList.remove('inserted');
+                }, 1500);
+            });
+        });
         
         // Add copy button handlers
         contentContainer.querySelectorAll('.cheatsheet-copy-btn').forEach(btn => {
@@ -3648,13 +4993,146 @@ let performBeautify = (content) => {
         });
     };
 
-    let insertLineBreak = () => {
+    // Intelligent syntax insertion at cursor
+    let insertSyntaxAtCursor = (code, type) => {
+        if (!editor) return;
+        
         const position = editor.getPosition();
-        editor.executeEdits('', [{
-            range: new monaco.Range(position.lineNumber, position.column, position.lineNumber, position.column),
-            text: '\n\n---\n\n'
+        const model = editor.getModel();
+        const lineContent = model.getLineContent(position.lineNumber);
+        const lineLength = lineContent.length;
+        const isLineEmpty = lineContent.trim() === '';
+        const isAtLineStart = position.column === 1;
+        const isAtLineEnd = position.column > lineLength;
+        
+        let insertText = code;
+        let insertPosition = position;
+        let needsNewlineBefore = false;
+        let needsNewlineAfter = false;
+        
+        // Determine insertion strategy based on type and context
+        if (type === 'yaml') {
+            // YAML front matter must be at document start
+            if (position.lineNumber !== 1 || !isAtLineStart) {
+                // Move to document start
+                insertPosition = new monaco.Position(1, 1);
+                // If document isn't empty, add newline after YAML
+                if (model.getLineCount() > 1 || !isLineEmpty) {
+                    insertText = code + '\n\n';
+                }
+            }
+        } else if (type === 'block') {
+            // Block elements need their own lines
+            if (!isLineEmpty) {
+                if (isAtLineEnd) {
+                    // At end of non-empty line - add newlines before and after
+                    insertText = '\n\n' + code + '\n\n';
+                } else if (isAtLineStart) {
+                    // At start of non-empty line - add newline after
+                    insertText = code + '\n\n';
+                } else {
+                    // Middle of line - go to end, then add newlines
+                    insertPosition = new monaco.Position(position.lineNumber, lineLength + 1);
+                    insertText = '\n\n' + code + '\n\n';
+                }
+            } else {
+                // Empty line - just insert with newline after
+                insertText = code + '\n\n';
+            }
+        } else if (type === 'header') {
+            // Headers need their own line
+            if (!isLineEmpty) {
+                if (isAtLineEnd) {
+                    // At end of line - add newlines
+                    insertText = '\n\n' + code + '\n\n';
+                } else if (isAtLineStart) {
+                    // At start - insert and add newline after
+                    insertText = code + '\n\n';
+                } else {
+                    // Middle - go to end first
+                    insertPosition = new monaco.Position(position.lineNumber, lineLength + 1);
+                    insertText = '\n\n' + code + '\n\n';
+                }
+            } else {
+                // Empty line - just insert with newline after
+                insertText = code + '\n\n';
+            }
+        } else if (type === 'inline') {
+            // Inline elements can be inserted anywhere
+            // Just insert at cursor position
+            insertText = code;
+        }
+        
+        // Perform the insertion
+        editor.executeEdits('insert-syntax', [{
+            range: new monaco.Range(
+                insertPosition.lineNumber,
+                insertPosition.column,
+                insertPosition.lineNumber,
+                insertPosition.column
+            ),
+            text: insertText
         }]);
+        
+        // Move cursor to a sensible position
+        if (type === 'inline') {
+            // For inline, select the placeholder text if any
+            if (code.includes('text') || code.includes('Link') || code.includes('Alt')) {
+                // Try to select the placeholder
+                const newPos = new monaco.Position(
+                    insertPosition.lineNumber,
+                    insertPosition.column + code.indexOf('text') > -1 ? code.indexOf('text') : 
+                    code.indexOf('Link') > -1 ? code.indexOf('Link') : 
+                    code.indexOf('Alt') > -1 ? code.indexOf('Alt') : 0
+                );
+                editor.setPosition(newPos);
+            } else {
+                // Just move cursor after insertion
+                editor.setPosition(new monaco.Position(
+                    insertPosition.lineNumber,
+                    insertPosition.column + code.length
+                ));
+            }
+        } else {
+            // For block elements, move to the content area
+            const lines = insertText.split('\n');
+            const targetLine = insertPosition.lineNumber + (insertText.startsWith('\n\n') ? 2 : 0);
+            editor.setPosition(new monaco.Position(targetLine, 1));
+        }
+        
         editor.focus();
+    };
+
+    let insertLineBreak = () => {
+        const model = editor.getModel();
+        const position = editor.getPosition();
+        const currentLine = model.getLineContent(position.lineNumber);
+        
+        // Page break should be inserted intelligently based on context
+        let insertLine = position.lineNumber;
+        let insertColumn = 1;
+        let insertText = '';
+        
+        // If we're in the middle of text, move to next line
+        if (currentLine.trim() !== '') {
+            insertLine = position.lineNumber + 1;
+            insertText = '\n<div style="page-break-after: always;"></div>\n\n';
+        } else {
+            // We're on an empty line
+            insertText = '<div style="page-break-after: always;"></div>\n\n';
+        }
+        
+        editor.executeEdits('insert-break', [{
+            range: new monaco.Range(insertLine, insertColumn, insertLine, insertColumn),
+            text: insertText
+        }]);
+        
+        // Move cursor to after the page break
+        const newCursorLine = insertLine + (currentLine.trim() !== '' ? 3 : 2);
+        setTimeout(() => {
+            editor.setPosition({ lineNumber: newCursorLine, column: 1 });
+            editor.focus();
+        }, 50);
     };
 
     // ----- TOC (Table of Contents) -----
@@ -3699,16 +5177,21 @@ let performBeautify = (content) => {
     };
     
     let toggleToc = () => {
+
         tocVisible = tocEnabled;
         
         const panel = document.querySelector('#toc-panel');
         const container = document.querySelector('#container');
         
+
+        
         if (tocVisible) {
+
             panel.classList.remove('hidden');
             container.classList.add('toc-visible');
             updateToc();
         } else {
+
             panel.classList.add('hidden');
             container.classList.remove('toc-visible');
         }
@@ -3721,9 +5204,91 @@ let performBeautify = (content) => {
         }
     };
     
+    // ----- Markdown Validation -----
+    
+    let setupValidationCheckbox = () => {
+        const checkbox = document.querySelector('#validation-checkbox');
+        const exportLink = document.querySelector('#export-validation-link');
+        const autofixLink = document.querySelector('#autofix-validation-link');
+        if (!checkbox) return;
+        
+        // Load saved setting
+        const savedSetting = loadValidationSettings();
+        
+        if (savedSetting !== null && savedSetting !== undefined) {
+            checkbox.checked = savedSetting;
+            if (editor && editor._setValidationEnabled) {
+                editor._setValidationEnabled(savedSetting);
+            }
+            // Show/hide links based on validation state
+            if (exportLink) {
+                exportLink.style.display = savedSetting ? 'block' : 'none';
+            }
+            if (autofixLink) {
+                autofixLink.style.display = savedSetting ? 'block' : 'none';
+            }
+        }
+        
+        checkbox.addEventListener('change', (event) => {
+            const enabled = event.currentTarget.checked;
+            saveValidationSettings(enabled);
+            if (editor && editor._setValidationEnabled) {
+                editor._setValidationEnabled(enabled);
+            }
+            // Show/hide links
+            if (exportLink) {
+                exportLink.style.display = enabled ? 'block' : 'none';
+            }
+            if (autofixLink) {
+                autofixLink.style.display = enabled ? 'block' : 'none';
+            }
+        });
+        
+        // Setup export validation report button
+        if (exportLink) {
+            exportLink.addEventListener('click', (e) => {
+                e.preventDefault();
+                if (!editor || !editor._exportValidationErrors) return;
+                
+                const report = editor._exportValidationErrors();
+                navigator.clipboard.writeText(report).then(() => {
+                    console.log('Validation report copied to clipboard');
+                }).catch(err => {
+                    console.error('Failed to copy validation report:', err);
+                });
+            });
+        }
+        
+        // Setup auto-fix button (now interactive wizard)
+        if (autofixLink) {
+            autofixLink.textContent = 'Fix Issues (Interactive)';
+            autofixLink.addEventListener('click', async (e) => {
+                e.preventDefault();
+                if (!editor || !editor._interactiveFixWizard) return;
+                
+                await editor._interactiveFixWizard();
+            });
+        }
+    };
+    
+    let loadValidationSettings = () => {
+        let last = Storehouse.getItem(localStorageNamespace, localStorageValidationKey);
+        return last || false;
+    };
+    
+    let saveValidationSettings = (enabled) => {
+        let expiredAt = new Date(2099, 1, 1);
+        Storehouse.setItem(localStorageNamespace, localStorageValidationKey, enabled, expiredAt);
+    };
+    
     let generateTocData = () => {
+
         const content = editor ? editor.getValue() : '';
+
+        
         const lines = content.split('\n');
+
+        
         const tocItems = [];
         let inCodeBlock = false;
         let inYamlFrontMatter = false;
@@ -3732,10 +5297,12 @@ let performBeautify = (content) => {
             // Track YAML front matter
             if (index === 0 && line.trim() === '---') {
                 inYamlFrontMatter = true;
+
                 return;
             }
             if (inYamlFrontMatter && line.trim() === '---') {
                 inYamlFrontMatter = false;
+
                 return;
             }
             if (inYamlFrontMatter) return;
@@ -3743,20 +5310,27 @@ let performBeautify = (content) => {
             // Track code blocks
             if (line.trim().startsWith('```')) {
                 inCodeBlock = !inCodeBlock;
+
                 return;
             }
             
             // Skip if in code block
             if (inCodeBlock) return;
             
-            // Match headers (# to ######) - allow optional space
-            const headerMatch = line.match(/^(#{1,6})\s*(.+)$/);
+            // Match headers (# to ######) - allow optional space and handle \r\n line endings
+            const trimmedLine = line.replace(/\r$/, ''); // Remove trailing \r
+            const headerMatch = trimmedLine.match(/^(#{1,6})\s*(.+)$/);
             if (headerMatch) {
                 const level = headerMatch[1].length;
                 const text = headerMatch[2].trim();
                 
+
+                
                 // Skip empty headings
-                if (!text) return;
+                if (!text) {
+
+                    return;
+                }
                 
                 const id = text.toLowerCase()
                     .replace(/[^\w\s-]/g, '')
@@ -3773,35 +5347,103 @@ let performBeautify = (content) => {
             }
         });
         
+
         return tocItems;
     };
     
     let updateToc = () => {
-        if (!tocVisible) return;
+
+        
+        if (!tocVisible) {
+
+            return;
+        }
         
         const tocContent = document.querySelector('#toc-content');
-        if (!tocContent) return;
+        if (!tocContent) {
+
+            return;
+        }
         
+
         currentTocData = generateTocData();
         
         if (currentTocData.length === 0) {
+
             tocContent.innerHTML = '<div class="toc-empty">No headings found in document</div>';
             return;
         }
         
-        let html = '<ul class="toc-list">';
-        currentTocData.forEach(item => {
-            html += `<li class="toc-item toc-h${item.level}">
-                <a href="#" class="toc-link" data-line="${item.line}" data-id="${item.id}">
-                    ${item.text}
-                </a>
-            </li>`;
-        });
-        html += '</ul>';
+
         
-        tocContent.innerHTML = html;
+        // Build hierarchical tree structure
+        const buildTree = (items) => {
+            const root = { children: [], level: 0 };
+            const stack = [root];
+            
+            items.forEach(item => {
+                const node = { ...item, children: [] };
+                
+                // Find parent - pop stack until we find a level less than current
+                while (stack.length > 1 && stack[stack.length - 1].level >= item.level) {
+                    stack.pop();
+                }
+                
+                // Add to parent's children
+                stack[stack.length - 1].children.push(node);
+                
+                // Push current node to stack
+                stack.push(node);
+            });
+            
+            return root.children;
+        };
         
-        // Add click handlers
+        // Render tree recursively
+        const renderTree = (nodes, parentLevel = 0) => {
+            if (!nodes || nodes.length === 0) return '';
+            
+            let html = '<ul class="toc-tree-list">';
+            
+            nodes.forEach(node => {
+                const hasChildren = node.children && node.children.length > 0;
+                const collapseIcon = hasChildren 
+                    ? `<button class="toc-collapse-btn" data-collapsed="false" aria-label="Collapse">
+                         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="toc-icon toc-icon-minus">
+                           <circle cx="12" cy="12" r="10"></circle>
+                           <line x1="8" y1="12" x2="16" y2="12"></line>
+                         </svg>
+                         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="toc-icon toc-icon-plus" style="display: none;">
+                           <circle cx="12" cy="12" r="10"></circle>
+                           <line x1="12" y1="8" x2="12" y2="16"></line>
+                           <line x1="8" y1="12" x2="16" y2="12"></line>
+                         </svg>
+                       </button>`
+                    : '<span class="toc-spacer"></span>';
+                
+                html += `<li class="toc-tree-item toc-h${node.level}" data-level="${node.level}">
+                    <div class="toc-item-row">
+                        ${collapseIcon}
+                        <a href="#" class="toc-link" data-line="${node.line}" data-id="${node.id}">
+                            ${node.text}
+                        </a>
+                    </div>`;
+                
+                if (hasChildren) {
+                    html += `<div class="toc-children">${renderTree(node.children, node.level)}</div>`;
+                }
+                
+                html += '</li>';
+            });
+            
+            html += '</ul>';
+            return html;
+        };
+        
+        const tree = buildTree(currentTocData);
+        tocContent.innerHTML = renderTree(tree);
+        
+        // Add click handlers for links
         tocContent.querySelectorAll('.toc-link').forEach(link => {
             link.addEventListener('click', (e) => {
                 e.preventDefault();
@@ -3814,6 +5456,46 @@ let performBeautify = (content) => {
                     // Update active state
                     tocContent.querySelectorAll('.toc-link').forEach(l => l.classList.remove('active'));
                     e.target.classList.add('active');
+                }
+            });
+        });
+        
+        // Add click handlers for collapse/expand buttons
+        tocContent.querySelectorAll('.toc-collapse-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                const isCollapsed = btn.getAttribute('data-collapsed') === 'true';
+                const treeItem = btn.closest('.toc-tree-item');
+                const childrenContainer = treeItem.querySelector(':scope > .toc-children');
+                const minusIcon = btn.querySelector('.toc-icon-minus');
+                const plusIcon = btn.querySelector('.toc-icon-plus');
+                
+                if (isCollapsed) {
+                    // Expand
+                    btn.setAttribute('data-collapsed', 'false');
+                    childrenContainer.style.maxHeight = childrenContainer.scrollHeight + 'px';
+                    minusIcon.style.display = 'block';
+                    plusIcon.style.display = 'none';
+                    
+                    // After animation, set to auto for dynamic content
+                    setTimeout(() => {
+                        if (btn.getAttribute('data-collapsed') === 'false') {
+                            childrenContainer.style.maxHeight = 'none';
+                        }
+                    }, 300);
+                } else {
+                    // Collapse
+                    // Set explicit height first for animation
+                    childrenContainer.style.maxHeight = childrenContainer.scrollHeight + 'px';
+                    // Force reflow
+                    childrenContainer.offsetHeight;
+                    // Then collapse
+                    childrenContainer.style.maxHeight = '0';
+                    btn.setAttribute('data-collapsed', 'true');
+                    minusIcon.style.display = 'none';
+                    plusIcon.style.display = 'block';
                 }
             });
         });
@@ -3993,21 +5675,6 @@ let performBeautify = (content) => {
                 initialDividerPos = dividerRect.left - containerRect.left;
             }
             
-            console.log('MAIN DIVIDER MOUSEDOWN:', {
-                dividerId: divider.id,
-                isVertical: isVertical,
-                dividerRect: { left: dividerRect.left, top: dividerRect.top, width: dividerRect.width, height: dividerRect.height },
-                containerRect: { left: containerRect.left, top: containerRect.top, width: containerRect.width, height: containerRect.height },
-                initialDividerPos: initialDividerPos,
-                initialLeftWidth: initialLeftWidth,
-                initialTopHeight: initialTopHeight,
-                isFlipped: isFlipped(),
-                editorWidth: editorPane.offsetWidth,
-                editorHeight: editorPane.offsetHeight,
-                previewWidth: previewPane.offsetWidth,
-                previewHeight: previewPane.offsetHeight
-            });
-            
             // Set up the active resizer with all needed references
             activeResizer = {
                 divider: divider,
@@ -4062,7 +5729,7 @@ let performBeautify = (content) => {
     };
 
     let setupCheatsheetDivider = () => {
-        let lastCheatsheetWidth = 320;
+        let lastCheatsheetWidth = 300;
         const divider = document.getElementById('cheatsheet-divider');
         const cheatsheetPane = document.querySelector('.cheatsheet-pane');
         const container = document.getElementById('container');
@@ -4115,6 +5782,10 @@ let performBeautify = (content) => {
     // ----- entry point -----
     let lastContent = loadLastContent();
     let editor = setupEditor();
+    
+    // Expose editor globally for testing
+    window.editor = editor;
+    
     if (lastContent) {
         presetValue(lastContent);
     } else {
@@ -4138,9 +5809,12 @@ let performBeautify = (content) => {
         performRedo();
     });
     
-    // Save to history periodically (every 5 seconds of typing)
+    // Save to history on typing pause (300ms debounce for responsive undo/redo)
     let typingTimer;
     editor.onDidChangeModelContent(() => {
+        // Don't save to history if we're performing undo/redo
+        if (isPerformingUndoRedo) return;
+        
         clearTimeout(typingTimer);
         typingTimer = setTimeout(() => {
             const currentContent = editor.getValue();
@@ -4148,13 +5822,14 @@ let performBeautify = (content) => {
             if (undoHistory.length === 0 || undoHistory[undoHistoryIndex] !== currentContent) {
                 saveToUndoHistory(currentContent);
             }
-        }, 5000);
+        }, 300); // 300ms debounce - saves quickly after user stops typing
     });
     
     setupClearButton();
     setupPasteButton();
     setupCopyButton(editor);
     setupUndoButton();
+    setupRedoButton();
     setupBeautifyButton();
     setupExportButton();
     setupPrintPdfButton();
@@ -4164,10 +5839,12 @@ let performBeautify = (content) => {
     setupPdfSettingsButton();
     setupInsertHeaderButton();
     setupInsertFooterButton();
+    setupInsertImageButton();
     setupInsertBreakButton();
     setupDropdowns();
     setupCheatSheetButton();
     setupTocCheckbox();
+    setupValidationCheckbox();
     
     // Load PDF settings
     loadPdfSettings();
@@ -4185,6 +5862,9 @@ let performBeautify = (content) => {
     // initialize helper messages
     let helperMessagesSettings = loadHelperMessagesSetting();
     initHelperMessagesToggle(helperMessagesSettings);
+    
+    // initialize style tooltips toggle
+    initStyleTooltipsToggle();
 
     // initialize theme (dark/light)
     let themeSettings = loadThemeSettings();

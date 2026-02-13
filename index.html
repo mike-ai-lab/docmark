@@ -89,16 +89,64 @@
         
         <div class="header-center">
             <div class="button-group">
-                <div class="btn-item" id="paste-button"><a href="#">Paste</a></div>
-                <div class="btn-item" id="copy-button"><a href="#">Copy</a></div>
-                <div class="btn-item" id="undo-button"><a href="#">Undo</a></div>
-                <div class="btn-item" id="beautify-button"><a href="#">Beautify</a></div>
-                <div class="btn-item" id="clear-button"><a href="#">Clear</a></div>
+                <div class="btn-item icon-btn" id="paste-button" title="Paste">
+                    <a href="#">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect width="8" height="4" x="8" y="2" rx="1" ry="1"/>
+                            <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>
+                        </svg>
+                    </a>
+                </div>
+                <div class="btn-item icon-btn" id="copy-button" title="Copy">
+                    <a href="#">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect width="14" height="14" x="8" y="8" rx="2" ry="2"/>
+                            <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>
+                        </svg>
+                    </a>
+                </div>
+                <div class="btn-item icon-btn" id="undo-button" title="Undo">
+                    <a href="#">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M3 7v6h6"/>
+                            <path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/>
+                        </svg>
+                    </a>
+                </div>
+                <div class="btn-item icon-btn" id="redo-button" title="Redo">
+                    <a href="#">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 7v6h-6"/>
+                            <path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6 2.3l3 2.7"/>
+                        </svg>
+                    </a>
+                </div>
+                <div class="btn-item icon-btn" id="beautify-button" title="Beautify">
+                    <a href="#">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/>
+                            <path d="M5 3v4"/>
+                            <path d="M19 17v4"/>
+                            <path d="M3 5h4"/>
+                            <path d="M17 19h4"/>
+                        </svg>
+                    </a>
+                </div>
+                <div class="btn-item icon-btn" id="clear-button" title="Clear">
+                    <a href="#">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M3 6h18"/>
+                            <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/>
+                            <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
+                        </svg>
+                    </a>
+                </div>
             </div>
             
             <div class="button-group">
                 <div class="btn-item" id="insert-header-button"><a href="#">+ Header</a></div>
                 <div class="btn-item" id="insert-footer-button"><a href="#">+ Footer</a></div>
+                <div class="btn-item" id="insert-image-button"><a href="#">+ Image</a></div>
                 <div class="btn-item" id="insert-break-button"><a href="#">+ Break</a></div>
             </div>
             
@@ -127,6 +175,10 @@
                             <span>Helper Messages</span>
                         </label>
                         <label class="dropdown-item">
+                            <input type="checkbox" id="style-tooltips-checkbox">
+                            <span>Style Info Tooltips</span>
+                        </label>
+                        <label class="dropdown-item">
                             <input type="checkbox" id="theme-checkbox">
                             <span>Dark Mode</span>
                         </label>
@@ -142,6 +194,12 @@
                             <input type="checkbox" id="toc-checkbox">
                             <span>Table of Contents</span>
                         </label>
+                        <label class="dropdown-item">
+                            <input type="checkbox" id="validation-checkbox">
+                            <span>Markdown Validation</span>
+                        </label>
+                        <a href="#" id="export-validation-link" style="display: none;">Export Validation Report</a>
+                        <a href="#" id="autofix-validation-link" style="display: none;">Auto-Fix Issues</a>
                         <div class="dropdown-item">
                             <label>
                                 <span>Style:</span>
