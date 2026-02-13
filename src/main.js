@@ -584,21 +584,25 @@ This web site is using ${"`"}markedjs/marked${"`"}.
                     });
                 }
                 
-                // Check for mixed list markers
+                // Check for mixed list markers - FLAG NON-DASH MARKERS
                 const unorderedMatch = trimmed.match(/^([-+*])\s/);
                 if (unorderedMatch) {
-                    if (lastListMarker && lastListMarker !== unorderedMatch[1] && lastOrderedNumber === null) {
+                    const currentMarker = unorderedMatch[1];
+                    
+                    // If this is not a dash and we're in a list, flag it
+                    if (currentMarker !== '-' && (lastListMarker || lastListMarker === null)) {
                         markers.push({
                             severity: monaco.MarkerSeverity.Info,
                             startLineNumber: lineNumber,
                             startColumn: 1,
                             endLineNumber: lineNumber,
                             endColumn: 3,
-                            message: `Mixed list markers: Use consistent marker (${lastListMarker} or ${unorderedMatch[1]})`,
+                            message: `Mixed list markers: Use consistent marker (-)`,
                             source: 'markdown-validator'
                         });
                     }
-                    lastListMarker = unorderedMatch[1];
+                    
+                    lastListMarker = currentMarker;
                     lastOrderedNumber = null;
                 } else if (trimmed.match(/^\d+\.\s/)) {
                     // Check ordered list numbering
@@ -736,7 +740,7 @@ This web site is using ${"`"}markedjs/marked${"`"}.
             }
         };
         
-        // Inline floating suggestion bar with color-coded states
+        // Inline rectangular validation bar (VSCode style)
         let currentSuggestionBar = null;
         let currentFixIndex = 0;
         let validationIssues = [];
@@ -747,37 +751,42 @@ This web site is using ${"`"}markedjs/marked${"`"}.
             bar.className = 'validation-inline-bar';
             bar.innerHTML = `
                 <div class="validation-bar-content">
-                    <div class="validation-bar-header">
-                        <span class="validation-bar-counter"></span>
-                        <span class="validation-bar-status"></span>
-                    </div>
-                    <div class="validation-bar-message"></div>
-                    <div class="validation-bar-preview">
-                        <div class="validation-preview-label">Suggested fix:</div>
-                        <div class="validation-preview-code"></div>
-                    </div>
+                    <div class="validation-bar-icon"></div>
+                    <span class="validation-bar-file">markdown</span>
+                    <span class="validation-bar-counter"></span>
+                    <span class="validation-bar-message"></span>
+                    <div class="validation-bar-preview"></div>
                     <div class="validation-bar-actions">
                         <button class="validation-btn validation-btn-apply" title="Apply this fix">
-                            <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-                                <path d="M13 4L6 11L3 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
+                                <path d="M13 4L6 11L3 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                             </svg>
                             Apply
+                        </button>
+                        <button class="validation-btn validation-btn-apply-all" title="Apply all pending fixes">
+                            <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
+                                <path d="M13 3L6 10L3 7M13 7L6 14L3 11" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            Apply All
                         </button>
                         <button class="validation-btn validation-btn-skip" title="Skip this issue">
                             Skip
                         </button>
-                        <button class="validation-btn validation-btn-discard" title="Discard and close">
-                            Discard
+                        <button class="validation-btn validation-btn-discard-all" title="Discard all and close">
+                            <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
+                                <path d="M12 4L4 12M4 4L12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                            </svg>
+                            Discard All
                         </button>
                         <div class="validation-nav-buttons">
                             <button class="validation-btn validation-btn-prev" title="Previous issue">
-                                <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-                                    <path d="M10 12L6 8L10 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                                <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
+                                    <path d="M10 12L6 8L10 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                                 </svg>
                             </button>
                             <button class="validation-btn validation-btn-next" title="Next issue">
-                                <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-                                    <path d="M6 4L10 8L6 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                                <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
+                                    <path d="M6 4L10 8L6 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                                 </svg>
                             </button>
                         </div>
@@ -807,12 +816,64 @@ This web site is using ${"`"}markedjs/marked${"`"}.
                     fixDescription = 'Add space after >';
                 }
             }
-            // Mixed list markers
+            // Mixed list markers - IMPROVED: Always use dash
             else if (marker.message.includes('Mixed list markers')) {
-                const match = line.match(/^(\s*)([+*])(\s+.+)/);
+                // Match: optional indent, marker (+*-), optional space, rest of line
+                const match = line.match(/^(\s*)([+*-])(\s*.+)/);
                 if (match) {
-                    suggestedFix = match[1] + '-' + match[3];
-                    fixDescription = 'Change to - marker';
+                    // Ensure there's a space after the dash
+                    const indent = match[1];
+                    const content = match[3].trimStart(); // Remove leading spaces
+                    suggestedFix = indent + '- ' + content;
+                    fixDescription = 'Standardize to - marker';
+                }
+            }
+            // Table column mismatch - IMPROVED: Add red placeholders
+            else if (marker.message.includes('Table column mismatch')) {
+                const expectedMatch = marker.message.match(/Expected (\d+) columns, got (\d+)/);
+                if (expectedMatch) {
+                    const expected = parseInt(expectedMatch[1]);
+                    const got = parseInt(expectedMatch[2]);
+                    
+                    if (got < expected) {
+                        // Add missing columns with red placeholder HTML
+                        const missingCount = expected - got;
+                        // Remove trailing pipe if exists
+                        const cleanLine = line.trimEnd().replace(/\|$/, '').trimEnd();
+                        // Add missing columns with red HTML spans
+                        const placeholders = ' | ' + Array(missingCount).fill('<span style="color:red">COL_FIX!</span>').join(' | ');
+                        suggestedFix = cleanLine + placeholders + ' |';
+                        fixDescription = `Add ${missingCount} missing column(s)`;
+                    } else {
+                        // Too many columns - remove extras
+                        const parts = line.split('|');
+                        // Keep leading/trailing empty strings from split
+                        const hasLeadingPipe = line.trimStart().startsWith('|');
+                        const hasTrailingPipe = line.trimEnd().endsWith('|');
+                        
+                        let cells = parts.map(c => c.trim()).filter(c => c !== '');
+                        cells = cells.slice(0, expected);
+                        
+                        if (hasLeadingPipe && hasTrailingPipe) {
+                            suggestedFix = '| ' + cells.join(' | ') + ' |';
+                        } else if (hasLeadingPipe) {
+                            suggestedFix = '| ' + cells.join(' | ');
+                        } else if (hasTrailingPipe) {
+                            suggestedFix = cells.join(' | ') + ' |';
+                        } else {
+                            suggestedFix = cells.join(' | ');
+                        }
+                        fixDescription = `Remove ${got - expected} extra column(s)`;
+                    }
+                }
+            }
+            // Unclosed HTML tags - NEW
+            else if (marker.message.includes('Unclosed HTML tag')) {
+                const tagMatch = marker.message.match(/Unclosed HTML tag: <(\w+)>/);
+                if (tagMatch) {
+                    const tag = tagMatch[1];
+                    suggestedFix = line + `</${tag}>`;
+                    fixDescription = `Add closing </${tag}>`;
                 }
             }
             // List numbering skip
@@ -884,12 +945,14 @@ This web site is using ${"`"}markedjs/marked${"`"}.
             const editorDom = editor.getDomNode();
             const editorRect = editorDom.getBoundingClientRect();
             
-            // Position below the error line
-            const top = editorRect.top + (lineTop - scrollTop) + lineHeight + 5;
-            const left = editorRect.left + 60; // Indent from line numbers
+            // Position directly below the error line, spanning full editor width
+            const top = editorRect.top + (lineTop - scrollTop) + lineHeight;
+            const left = editorRect.left;
+            const width = editorRect.width;
             
             currentSuggestionBar.style.top = `${top}px`;
             currentSuggestionBar.style.left = `${left}px`;
+            currentSuggestionBar.style.width = `${width}px`;
         };
         
         const updateLineDecoration = (lineNumber, state) => {
@@ -945,42 +1008,33 @@ This web site is using ${"`"}markedjs/marked${"`"}.
             
             // Update bar content
             const counter = currentSuggestionBar.querySelector('.validation-bar-counter');
-            const status = currentSuggestionBar.querySelector('.validation-bar-status');
             const message = currentSuggestionBar.querySelector('.validation-bar-message');
-            const preview = currentSuggestionBar.querySelector('.validation-preview-code');
+            const preview = currentSuggestionBar.querySelector('.validation-bar-preview');
             const applyBtn = currentSuggestionBar.querySelector('.validation-btn-apply');
             const prevBtn = currentSuggestionBar.querySelector('.validation-btn-prev');
             const nextBtn = currentSuggestionBar.querySelector('.validation-btn-next');
             
-            counter.textContent = `${index + 1}/${validationIssues.length}`;
+            counter.textContent = `${index + 1} of ${validationIssues.length} problems`;
             message.textContent = issue.marker.message;
             
-            // Update state indicator
+            // Update state and preview
             if (issue.state === 'fixed') {
-                status.textContent = '✓ Fixed';
-                status.className = 'validation-bar-status status-fixed';
                 currentSuggestionBar.setAttribute('data-state', 'fixed');
+                preview.textContent = '✓ Fixed';
+                applyBtn.disabled = true;
             } else if (issue.state === 'skipped') {
-                status.textContent = '⊘ Skipped';
-                status.className = 'validation-bar-status status-skipped';
                 currentSuggestionBar.setAttribute('data-state', 'skipped');
+                preview.textContent = '⊘ Skipped';
+                applyBtn.disabled = true;
             } else {
-                status.textContent = '⚠ Needs fix';
-                status.className = 'validation-bar-status status-error';
                 currentSuggestionBar.setAttribute('data-state', 'error');
-            }
-            
-            if (issue.suggestedFix && issue.state === 'pending') {
-                preview.textContent = issue.suggestedFix;
-                preview.parentElement.style.display = 'block';
-                applyBtn.disabled = false;
-            } else if (issue.state !== 'pending') {
-                preview.parentElement.style.display = 'none';
-                applyBtn.disabled = true;
-            } else {
-                preview.textContent = 'No automatic fix available';
-                preview.parentElement.style.display = 'block';
-                applyBtn.disabled = true;
+                if (issue.suggestedFix) {
+                    preview.textContent = issue.suggestedFix;
+                    applyBtn.disabled = false;
+                } else {
+                    preview.textContent = 'No automatic fix available';
+                    applyBtn.disabled = true;
+                }
             }
             
             prevBtn.disabled = index === 0;
@@ -1017,6 +1071,50 @@ This web site is using ${"`"}markedjs/marked${"`"}.
                     showMofuHelper('Excellent! All fixes applied ✔');
                 } else {
                     showSuggestionForIssue(currentFixIndex);
+                }
+            }
+        };
+        
+        const applyAllFixes = () => {
+            const model = editor.getModel();
+            let fixedCount = 0;
+            
+            // Sort issues by line number in DESCENDING order (bottom to top)
+            // This prevents line number shifts from affecting subsequent fixes
+            const pendingIssues = validationIssues
+                .map((issue, index) => ({ issue, index }))
+                .filter(item => item.issue.state === 'pending' && item.issue.suggestedFix)
+                .sort((a, b) => b.issue.marker.startLineNumber - a.issue.marker.startLineNumber);
+            
+            // Apply all fixes from bottom to top
+            pendingIssues.forEach(({ issue, index }) => {
+                const lineNumber = issue.marker.startLineNumber;
+                const line = model.getLineContent(lineNumber);
+                
+                const range = new monaco.Range(lineNumber, 1, lineNumber, line.length + 1);
+                editor.executeEdits('validation-fix-all', [{
+                    range: range,
+                    text: issue.suggestedFix
+                }]);
+                
+                issue.state = 'fixed';
+                updateLineDecoration(lineNumber, 'fixed');
+                fixedCount++;
+            });
+            
+            // Check if all done
+            const allDone = validationIssues.every(iss => iss.state !== 'pending');
+            if (allDone) {
+                closeSuggestionBar();
+                showMofuHelper(`Excellent! All ${fixedCount} fixes applied ✔`);
+            } else {
+                // Show first remaining pending issue
+                const nextPending = validationIssues.findIndex(iss => iss.state === 'pending');
+                if (nextPending !== -1) {
+                    showSuggestionForIssue(nextPending);
+                } else {
+                    closeSuggestionBar();
+                    showMofuHelper(`Applied ${fixedCount} fixes! Review the highlighted changes.`);
                 }
             }
         };
@@ -1096,8 +1194,9 @@ This web site is using ${"`"}markedjs/marked${"`"}.
             
             // Setup event listeners
             currentSuggestionBar.querySelector('.validation-btn-apply').addEventListener('click', applyCurrentFix);
+            currentSuggestionBar.querySelector('.validation-btn-apply-all').addEventListener('click', applyAllFixes);
             currentSuggestionBar.querySelector('.validation-btn-skip').addEventListener('click', skipCurrentIssue);
-            currentSuggestionBar.querySelector('.validation-btn-discard').addEventListener('click', closeSuggestionBar);
+            currentSuggestionBar.querySelector('.validation-btn-discard-all').addEventListener('click', closeSuggestionBar);
             currentSuggestionBar.querySelector('.validation-btn-prev').addEventListener('click', () => {
                 if (currentFixIndex > 0) {
                     showSuggestionForIssue(currentFixIndex - 1);
@@ -5845,6 +5944,17 @@ let performBeautify = (content) => {
     setupCheatSheetButton();
     setupTocCheckbox();
     setupValidationCheckbox();
+    
+    // Force update validation link visibility after editor is ready
+    setTimeout(() => {
+        const checkbox = document.querySelector('#validation-checkbox');
+        const autofixLink = document.querySelector('#autofix-validation-link');
+        const exportLink = document.querySelector('#export-validation-link');
+        if (checkbox && checkbox.checked) {
+            if (autofixLink) autofixLink.style.display = 'block';
+            if (exportLink) exportLink.style.display = 'block';
+        }
+    }, 100);
     
     // Load PDF settings
     loadPdfSettings();
