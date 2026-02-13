@@ -605,6 +605,47 @@ footer {
   border-bottom: none !important;
 }
 
+/* Validation placeholder styling - highlight fix placeholders in red */
+/* Style placeholder text in table cells */
+#preview-wrapper .markdown-body table td:has-text("COL_FIX!"),
+#preview-wrapper .markdown-body table td {
+  /* Check if cell contains COL_FIX! */
+}
+
+/* Style broken image/link placeholders */
+#preview-wrapper .markdown-body a[href="URL_FIX!"],
+#preview-wrapper .markdown-body a[href="IMAGE_URL_FIX!"] {
+  color: #dc2626 !important;
+  font-weight: 600;
+  text-decoration: none;
+  border: 1px solid #dc2626;
+  padding: 2px 6px;
+  border-radius: 3px;
+  background-color: rgba(220, 38, 38, 0.1);
+}
+
+#preview-wrapper .markdown-body img[src="IMAGE_URL_FIX!"] {
+  border: 2px dashed #dc2626 !important;
+  padding: 8px;
+  background-color: rgba(220, 38, 38, 0.1);
+  display: inline-block;
+  min-width: 100px;
+  min-height: 50px;
+}
+
+/* Dark mode placeholder styles */
+[data-theme="dark"] #preview-wrapper .markdown-body a[href="URL_FIX!"],
+[data-theme="dark"] #preview-wrapper .markdown-body a[href="IMAGE_URL_FIX!"] {
+  color: #f87171 !important;
+  border-color: #f87171;
+  background-color: rgba(248, 113, 113, 0.15);
+}
+
+[data-theme="dark"] #preview-wrapper .markdown-body img[src="IMAGE_URL_FIX!"] {
+  border-color: #f87171 !important;
+  background-color: rgba(248, 113, 113, 0.15);
+}
+
 .column {
   width: 50%;
   padding: 0;
