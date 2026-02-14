@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Markdown Live Preview - Muhamad</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Fira+Code&display=swap');
+
+        :root {
+            --bg-main: #f8fafc;
+            --border-color: #e2e8f0;
+            --accent-blue: #3b82f6;
+        }
+
+        body {
+            background-color: var(--bg-main);
+            color: #1e293b;
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* --- Header & Toolbar --- */
+        .app-header {
+            height: 56px;
+            background: white;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            padding: 0 16px;
+            justify-content: space-between;
+            z-index: 100;
+        }
+
+        .toolbar-btn {
+            padding: 6px 12px;
+            font-size: 12px;
+            font-weight: 500;
+            color: #64748b;
+            border-radius: 6px;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .toolbar-btn:hover { background: #f1f5f9; color: #0f172a; }
+        .toolbar-btn.active { background: #eff6ff; color: var(--accent-blue); }
+
+        /* --- Main Layout --- */
+        .main-content {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .editor-container {
+            width: 50%;
+            background: white;
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .line-numbers {
+            width: 40px;
+            background: #fdfdfd;
+            border-right: 1px solid #f1f5f9;
+            color: #cbd5e1;
+            font-family: 'Fira Code', monospace;
+            font-size: 12px;
+            padding-top: 20px;
+            text-align: center;
+            user-select: none;
+        }
+
+        .editor-area {
+            flex: 1;
+            padding: 20px;
+            font-family: 'Fira Code', monospace;
+            font-size: 14px;
+            line-height: 1.6;
+            color: #334155;
+            outline: none;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+
+        /* --- Preview Panel --- */
+        .preview-container {
+            flex: 1;
+            background: #f1f5f9;
+            position: relative;
+            overflow: auto;
+            display: flex;
+            justify-content: center;
+            scrollbar-width: thin;
+        }
+
+        /* WEB LAYOUT MODE */
+        .preview-web {
+            width: 100%;
+            min-height: 100%;
+            background: white;
+            padding: 60px;
+            box-shadow: none;
+        }
+
+        /* PAPER LAYOUT MODE */
+        .preview-paper {
+            margin: 40px auto;
+            width: 210mm; /* A4 Width */
+            background: transparent;
+            transform-origin: top center;
+            transition: transform 0.1s ease-out;
+        }
+
+        .paper-page {
+            width: 210mm;
+            height: 297mm;
+            background: white;
+            padding: 25.4mm;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 40px;
+            box-sizing: border-box;
+            overflow: hidden;
+            page-break-after: always;
+        }
+
+        .paper-page:last-child {
+            margin-bottom: 40px;
+        }
+
+        /* Content Styling */
+        .prose h1 { font-size: 2.25rem; font-weight: 700; margin-bottom: 1.5rem; color: #0f172a; }
+        .prose p { margin-bottom: 1.25rem; line-height: 1.75; color: #334155; }
+        .prose ul { list-style-type: disc; margin-left: 1.5rem; margin-bottom: 1.25rem; }
+
+        /* Zoom Controls Overlay */
+        .zoom-controls {
+            position: absolute;
+            bottom: 24px;
+            right: 24px;
+            background: white;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            padding: 4px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            z-index: 200;
+        }
+
+        .zoom-btn {
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 4px;
+            color: #64748b;
+            cursor: pointer;
+        }
+
+        .zoom-btn:hover { background: #f8fafc; color: var(--accent-blue); }
+        .zoom-level {
+            font-size: 11px;
+            font-weight: 600;
+            padding: 0 12px;
+            color: #475569;
+            min-width: 50px;
+            text-align: center;
+        }
+
+        .footer-bar {
+            height: 48px;
+            background: white;
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            padding: 0 16px;
+            font-size: 11px;
+            color: #94a3b8;
+            gap: 20px;
+            justify-content: space-between;
+        }
+
+        .activity-bar {
+            display: flex;
+            gap: 4px;
+            background: #f1f5f9;
+            padding: 4px;
+            border-radius: 8px;
+        }
+
+        .activity-btn {
+            padding: 8px 16px;
+            font-size: 12px;
+            font-weight: 500;
+            color: #64748b;
+            border-radius: 6px;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            border: none;
+            background: transparent;
+        }
+
+        .activity-btn:hover { background: #e2e8f0; color: #0f172a; }
+        .activity-btn.active { background: white; color: var(--accent-blue); box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+
+        .resizer {
+            width: 4px;
+            cursor: col-resize;
+            background: transparent;
+            transition: background 0.2s;
+        }
+        .resizer:hover { background: var(--accent-blue); }
+
+    </style>
+</head>
+<body>
+
+    <header class="app-header">
+        <div class="flex items-center gap-4">
+            <div class="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center text-white">
+                <i class="fa-solid fa-file-lines text-sm"></i>
+            </div>
+            <h1 class="text-sm font-semibold tracking-tight">MARKDOWN LIVE PREVIEW</h1>
+        </div>
+
+        <div class="flex items-center gap-3">
+            <button class="toolbar-btn"><i class="fa-solid fa-download"></i> Export</button>
+            <div class="w-8 h-8 rounded-full bg-slate-200 border border-white shadow-sm overflow-hidden">
+                <img src="https://ui-avatars.com/api/?name=Muhamad&background=3b82f6&color=fff" alt="Profile">
+            </div>
+        </div>
+    </header>
+
+    <div class="main-content">
+        <!-- Editor -->
+        <div class="editor-container" id="editor-side">
+            <div class="flex flex-1 overflow-hidden">
+                <div class="line-numbers">1<br>2<br>3<br>4<br>5<br>6</div>
+                <div class="editor-area" contenteditable="true" spellcheck="false" id="markdown-input"># Hello Muhamad
+
+This is a professional Markdown editor focused on layout precision. 
+
+- Support for **Web Layout** (fluid)
+- Support for **Paper Layout** (A4 fixed)
+- Mouse wheel zooming in paper mode
+
+Try scrolling with Ctrl held down over the preview!</div>
+            </div>
+        </div>
+
+        <div class="resizer" id="drag-handle"></div>
+
+        <!-- Preview -->
+        <div class="preview-container" id="preview-viewport">
+            <div id="preview-render" class="preview-web prose">
+                <!-- Content injected here -->
+            </div>
+
+            <!-- Zoom UI (Hidden in Web mode) -->
+            <div id="zoom-overlay" class="zoom-controls hidden">
+                <button class="zoom-btn" onclick="adjustZoom(-0.1)"><i class="fa-solid fa-minus"></i></button>
+                <span class="zoom-level" id="zoom-val">100%</span>
+                <button class="zoom-btn" onclick="adjustZoom(0.1)"><i class="fa-solid fa-plus"></i></button>
+                <div class="w-[1px] h-4 bg-slate-200 mx-1"></div>
+                <button class="zoom-btn" onclick="resetZoom()"><i class="fa-solid fa-rotate-left"></i></button>
+            </div>
+        </div>
+    </div>
+
+    <footer class="footer-bar">
+        <div class="flex items-center gap-4">
+            <span><i class="fa-solid fa-font mr-1"></i> <span id="word-count">124</span> words</span>
+            <span><i class="fa-solid fa-paragraph mr-1"></i> <span id="line-count">6</span> lines</span>
+            <span id="page-count" style="display:none;"><i class="fa-solid fa-file mr-1"></i> <span id="page-num">1</span> pages</span>
+        </div>
+        
+        <div class="activity-bar">
+            <button onclick="setLayout('web')" id="btn-web" class="activity-btn active">
+                <i class="fa-solid fa-globe"></i> Web Layout
+            </button>
+            <button onclick="setLayout('paper')" id="btn-paper" class="activity-btn">
+                <i class="fa-solid fa-note-sticky"></i> Paper Layout
+            </button>
+        </div>
+    </footer>
+
+    <script>
+        let currentLayout = 'web';
+        let zoomScale = 1.0;
+        const editor = document.getElementById('markdown-input');
+        const preview = document.getElementById('preview-render');
+        const viewport = document.getElementById('preview-viewport');
+        const zoomVal = document.getElementById('zoom-val');
+        const zoomOverlay = document.getElementById('zoom-overlay');
+
+        // Sync Editor to Preview
+        function syncContent() {
+            // Simple MD to HTML conversion logic
+            let html = editor.innerText
+                .replace(/^# (.*$)/gim, '<h1>$1</h1>')
+                .replace(/^\- (.*$)/gim, '<li>$1</li>')
+                .replace(/\*\*(.*)\*\*/gim, '<strong>$1</strong>')
+                .replace(/\n\n/g, '</p><p>');
+            
+            if (currentLayout === 'paper') {
+                paginateContent(`<p>${html}</p>`);
+            } else {
+                preview.innerHTML = `<p>${html}</p>`;
+            }
+            
+            updateStats();
+        }
+
+        // Paginate content into multiple A4 pages
+        function paginateContent(html) {
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = html;
+            tempDiv.style.visibility = 'hidden';
+            tempDiv.style.position = 'absolute';
+            tempDiv.style.width = '159.2mm'; // 210mm - 2*25.4mm padding
+            document.body.appendChild(tempDiv);
+
+            const pageHeight = 246.2; // 297mm - 2*25.4mm padding in mm, ~930px
+            const pages = [];
+            let currentPage = document.createElement('div');
+            currentPage.className = 'paper-page-content';
+            
+            Array.from(tempDiv.childNodes).forEach(node => {
+                const clone = node.cloneNode(true);
+                currentPage.appendChild(clone);
+                
+                if (currentPage.offsetHeight > 930) { // ~246mm
+                    currentPage.removeChild(clone);
+                    pages.push(currentPage.innerHTML);
+                    currentPage = document.createElement('div');
+                    currentPage.className = 'paper-page-content';
+                    currentPage.appendChild(clone);
+                }
+            });
+            
+            if (currentPage.childNodes.length > 0) {
+                pages.push(currentPage.innerHTML);
+            }
+            
+            document.body.removeChild(tempDiv);
+            
+            // Render pages
+            preview.innerHTML = pages.map(content => 
+                `<div class="paper-page prose">${content}</div>`
+            ).join('');
+            
+            document.getElementById('page-num').textContent = pages.length;
+        }
+
+        // Update stats
+        function updateStats() {
+            const text = editor.innerText;
+            const words = text.trim().split(/\s+/).filter(w => w.length > 0).length;
+            const lines = text.split('\n').length;
+            document.getElementById('word-count').textContent = words;
+            document.getElementById('line-count').textContent = lines;
+        }
+
+        editor.addEventListener('input', syncContent);
+        syncContent();
+
+        // Switch Layouts
+        function setLayout(mode) {
+            currentLayout = mode;
+            
+            // UI Button states
+            document.getElementById('btn-web').classList.toggle('active', mode === 'web');
+            document.getElementById('btn-paper').classList.toggle('active', mode === 'paper');
+
+            if (mode === 'paper') {
+                preview.className = 'preview-paper';
+                zoomOverlay.classList.remove('hidden');
+                document.getElementById('page-count').style.display = 'block';
+                resetZoom();
+                syncContent(); // Re-paginate
+            } else {
+                preview.className = 'preview-web prose';
+                preview.style.transform = 'none';
+                zoomOverlay.classList.add('hidden');
+                document.getElementById('page-count').style.display = 'none';
+                syncContent(); // Re-render without pagination
+            }
+        }
+
+        // Zoom Logic
+        function adjustZoom(delta) {
+            if (currentLayout !== 'paper') return;
+            zoomScale = Math.min(Math.max(0.2, zoomScale + delta), 3);
+            applyZoom();
+        }
+
+        function resetZoom() {
+            zoomScale = 0.85; // Default fit for A4
+            applyZoom();
+        }
+
+        function applyZoom() {
+            preview.style.transform = `scale(${zoomScale})`;
+            zoomVal.innerText = `${Math.round(zoomScale * 100)}%`;
+        }
+
+        // Scroll to Zoom (Ctrl + Wheel)
+        viewport.addEventListener('wheel', (e) => {
+            if (currentLayout === 'paper' && e.ctrlKey) {
+                e.preventDefault();
+                const delta = e.deltaY > 0 ? -0.05 : 0.05;
+                adjustZoom(delta);
+            }
+        }, { passive: false });
+
+        // Simple Split Pane Logic
+        const resizer = document.getElementById('drag-handle');
+        const editorSide = document.getElementById('editor-side');
+        let isResizing = false;
+
+        resizer.addEventListener('mousedown', () => isResizing = true);
+        document.addEventListener('mousemove', (e) => {
+            if (!isResizing) return;
+            const percentage = (e.clientX / window.innerWidth) * 100;
+            if (percentage > 20 && percentage < 80) {
+                editorSide.style.width = percentage + '%';
+            }
+        });
+        document.addEventListener('mouseup', () => isResizing = false);
+
+    </script>
+</body>
+</html>

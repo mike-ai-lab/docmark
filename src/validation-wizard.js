@@ -1,4 +1,14 @@
-﻿        const validateMarkdown = () => {
+﻿/**
+ * Validation Wizard Module
+ * Provides markdown validation and auto-fix functionality
+ */
+
+export function setupValidationWizard(editor, monaco, showMofuHelper) {
+    // Setup markdown validation
+    let validationEnabled = false;
+    let wizardMode = 'docked'; // 'docked' or 'inline'
+    
+const validateMarkdown = () => {
             if (!validationEnabled) return;
             
             const model = editor.getModel();
@@ -515,51 +525,55 @@
         
         const createInlineSuggestionBar = () => {
             const bar = document.createElement('div');
-            bar.className = 'validation-inline-bar';
+            bar.className = 'vw-wizard-container wizard-docked';
             bar.innerHTML = `
-                <div class="validation-bar-content">
-                    <div class="validation-bar-icon"></div>
-                    <span class="validation-bar-file">markdown</span>
-                    <span class="validation-bar-counter"></span>
-                    <span class="validation-bar-message"></span>
-                    <div class="validation-bar-preview"></div>
-                    <div class="validation-bar-actions">
-                        <button class="validation-btn validation-btn-apply" title="Apply this fix">
-                            <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
-                                <path d="M13 4L6 11L3 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                            </svg>
-                            Apply
-                        </button>
-                        <button class="validation-btn validation-btn-apply-all" title="Apply all pending fixes">
-                            <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
-                                <path d="M13 3L6 10L3 7M13 7L6 14L3 11" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                            </svg>
-                            Apply All
-                        </button>
-                        <button class="validation-btn validation-btn-skip" title="Skip this issue">
-                            Skip
-                        </button>
-                        <button class="validation-btn validation-btn-discard-all" title="Discard all and close">
-                            <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
-                                <path d="M12 4L4 12M4 4L12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-                            </svg>
-                            Discard All
-                        </button>
-                        <div class="validation-nav-buttons">
-                            <button class="validation-btn validation-btn-prev" title="Previous issue">
-                                <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
-                                    <path d="M10 12L6 8L10 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                                </svg>
-                            </button>
-                            <button class="validation-btn validation-btn-next" title="Next issue">
-                                <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
-                                    <path d="M6 4L10 8L6 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                                </svg>
-                            </button>
-                        </div>
-                    </div>
-                </div>
+                <div class="vw-state-indicator vw-state-error"></div>
+                <span class="vw-counter-badge"></span>
+                <div class="vw-divider"></div>
+                <button class="vw-btn-icon vw-btn-mode" title="Toggle Docked/Inline Mode">
+                    <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                        <path d="M2 8h12M8 2v12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                    </svg>
+                </button>
+                <div class="vw-divider"></div>
+                <div class="vw-issue-content"></div>
+                <div class="vw-divider"></div>
+                <button class="vw-btn-icon vw-btn-apply" title="Apply Fix">
+                    <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                        <path d="M13 4L6 11L3 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </button>
+                <button class="vw-btn-icon vw-btn-apply-all" title="Apply All">
+                    <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                        <path d="M13 3L6 10L3 7M13 7L6 14L3 11" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </button>
+                <button class="vw-btn-icon vw-btn-skip" title="Skip">
+                    <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                        <path d="M6 4L10 8L6 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </button>
+                <button class="vw-btn-icon vw-btn-close" title="Close">
+                    <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                        <path d="M12 4L4 12M4 4L12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                    </svg>
+                </button>
+                <div class="vw-divider"></div>
+                <button class="vw-nav-btn vw-btn-prev" title="Previous">
+                    <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
+                        <path d="M10 12L6 8L10 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </button>
+                <button class="vw-nav-btn vw-btn-next" title="Next">
+                    <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
+                        <path d="M6 4L10 8L6 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </button>
             `;
+            
+            // Append to body (docked mode)
+            document.body.appendChild(bar);
+            
             return bar;
         };
         
@@ -1000,7 +1014,7 @@
         };
         
         const positionInlineBar = (lineNumber) => {
-            if (!currentSuggestionBar) return;
+            if (!currentSuggestionBar || wizardMode !== 'inline') return;
             
             // Get the line position in the editor
             const lineTop = editor.getTopForLineNumber(lineNumber);
@@ -1009,14 +1023,41 @@
             const editorDom = editor.getDomNode();
             const editorRect = editorDom.getBoundingClientRect();
             
-            // Position directly below the error line, spanning full editor width
+            // Position directly below the error line
             const top = editorRect.top + (lineTop - scrollTop) + lineHeight;
-            const left = editorRect.left;
-            const width = editorRect.width;
+            const left = editorRect.left + 10; // 10px padding from left
+            const maxWidth = editorRect.width - 20; // 10px padding on each side
             
             currentSuggestionBar.style.top = `${top}px`;
             currentSuggestionBar.style.left = `${left}px`;
-            currentSuggestionBar.style.width = `${width}px`;
+            currentSuggestionBar.style.maxWidth = `${maxWidth}px`;
+        };
+        
+        const toggleWizardMode = () => {
+            wizardMode = wizardMode === 'docked' ? 'inline' : 'docked';
+            updateWizardPosition();
+        };
+        
+        const updateWizardPosition = () => {
+            if (!currentSuggestionBar) return;
+            
+            if (wizardMode === 'docked') {
+                currentSuggestionBar.className = 'vw-wizard-container wizard-docked';
+                // Clear inline styles
+                currentSuggestionBar.style.top = '';
+                currentSuggestionBar.style.left = '';
+                currentSuggestionBar.style.maxWidth = '';
+                // Ensure it's in body
+                if (currentSuggestionBar.parentElement !== document.body) {
+                    document.body.appendChild(currentSuggestionBar);
+                }
+            } else {
+                currentSuggestionBar.className = 'vw-wizard-container wizard-inline';
+                // Position below current issue line
+                if (validationIssues[currentFixIndex]) {
+                    positionInlineBar(validationIssues[currentFixIndex].marker.startLineNumber);
+                }
+            }
         };
         
         const updateLineDecoration = (lineNumber, state) => {
@@ -1053,7 +1094,6 @@
             currentFixIndex = index;
             const issue = validationIssues[index];
             const model = editor.getModel();
-            const line = model.getLineContent(issue.marker.startLineNumber);
             
             // Navigate to issue
             editor.revealLineInCenter(issue.marker.startLineNumber);
@@ -1067,42 +1107,70 @@
                 updateLineDecoration(issue.marker.startLineNumber, 'error');
             }
             
-            // Position the inline bar
-            setTimeout(() => positionInlineBar(issue.marker.startLineNumber), 50);
+            // Update bar content with new structure
+            const stateIndicator = currentSuggestionBar.querySelector('.vw-state-indicator');
+            const counter = currentSuggestionBar.querySelector('.vw-counter-badge');
+            const issueContent = currentSuggestionBar.querySelector('.vw-issue-content');
+            const applyBtn = currentSuggestionBar.querySelector('.vw-btn-apply');
+            const applyAllBtn = currentSuggestionBar.querySelector('.vw-btn-apply-all');
+            const prevBtn = currentSuggestionBar.querySelector('.vw-btn-prev');
+            const nextBtn = currentSuggestionBar.querySelector('.vw-btn-next');
             
-            // Update bar content
-            const counter = currentSuggestionBar.querySelector('.validation-bar-counter');
-            const message = currentSuggestionBar.querySelector('.validation-bar-message');
-            const preview = currentSuggestionBar.querySelector('.validation-bar-preview');
-            const applyBtn = currentSuggestionBar.querySelector('.validation-btn-apply');
-            const prevBtn = currentSuggestionBar.querySelector('.validation-btn-prev');
-            const nextBtn = currentSuggestionBar.querySelector('.validation-btn-next');
+            counter.textContent = `${index + 1}/${validationIssues.length}`;
             
-            counter.textContent = `${index + 1} of ${validationIssues.length} problems`;
-            message.textContent = issue.marker.message;
-            
-            // Update state and preview
+            // Update state indicator and content based on issue state
             if (issue.state === 'fixed') {
-                currentSuggestionBar.setAttribute('data-state', 'fixed');
-                preview.textContent = 'âœ“ Fixed';
+                stateIndicator.className = 'vw-state-indicator vw-state-fixed';
+                issueContent.innerHTML = `<strong>Fixed:</strong> ${issue.marker.message}`;
                 applyBtn.disabled = true;
+                applyBtn.style.opacity = '0.3';
             } else if (issue.state === 'skipped') {
-                currentSuggestionBar.setAttribute('data-state', 'skipped');
-                preview.textContent = 'âŠ˜ Skipped';
+                stateIndicator.className = 'vw-state-indicator vw-state-error';
+                issueContent.innerHTML = `<strong>Skipped:</strong> ${issue.marker.message}`;
                 applyBtn.disabled = true;
+                applyBtn.style.opacity = '0.3';
             } else {
-                currentSuggestionBar.setAttribute('data-state', 'error');
+                stateIndicator.className = 'vw-state-indicator vw-state-error';
                 if (issue.suggestedFix) {
-                    preview.textContent = issue.suggestedFix;
+                    const preview = issue.suggestedFix.length > 50 
+                        ? issue.suggestedFix.substring(0, 50) + '...' 
+                        : issue.suggestedFix;
+                    issueContent.innerHTML = `${issue.marker.message} → <code>${preview}</code>`;
                     applyBtn.disabled = false;
+                    applyBtn.style.opacity = '1';
                 } else {
-                    preview.textContent = 'No automatic fix available';
+                    issueContent.innerHTML = `${issue.marker.message} <em>(no auto-fix)</em>`;
                     applyBtn.disabled = true;
+                    applyBtn.style.opacity = '0.3';
                 }
             }
             
-            prevBtn.disabled = index === 0;
-            nextBtn.disabled = index === validationIssues.length - 1;
+            // Update navigation buttons
+            if (index === 0) {
+                prevBtn.classList.add('disabled');
+                prevBtn.disabled = true;
+            } else {
+                prevBtn.classList.remove('disabled');
+                prevBtn.disabled = false;
+            }
+            
+            if (index === validationIssues.length - 1) {
+                nextBtn.classList.add('disabled');
+                nextBtn.disabled = true;
+            } else {
+                nextBtn.classList.remove('disabled');
+                nextBtn.disabled = false;
+            }
+            
+            // Check if there are any pending fixes for Apply All button
+            const hasPendingFixes = validationIssues.some(i => i.state === 'pending' && i.suggestedFix);
+            applyAllBtn.disabled = !hasPendingFixes;
+            applyAllBtn.style.opacity = hasPendingFixes ? '1' : '0.3';
+            
+            // Update position if in inline mode
+            if (wizardMode === 'inline') {
+                positionInlineBar(issue.marker.startLineNumber);
+            }
         };
         
         const applyCurrentFix = () => {
@@ -1152,7 +1220,7 @@
                     if (skippedCount > 0) {
                         summaryMessage += `, skipped ${skippedCount}`;
                     }
-                    summaryMessage += ' âœ”';
+                    summaryMessage += ' Ô£ö';
                     
                     showMofuHelper(summaryMessage);
                 } else {
@@ -1190,8 +1258,8 @@
                 if (issuesByLine.size === 0) {
                     closeSuggestionBar();
                     if (totalFixedCount > 0) {
-                        console.log('[applyAll] âœ“ COMPLETE - Fixed', totalFixedCount, 'issues');
-                        showMofuHelper(`Excellent! All ${totalFixedCount} fixes applied âœ”`);
+                        console.log('[applyAll] Ô£ô COMPLETE - Fixed', totalFixedCount, 'issues');
+                        showMofuHelper(`Excellent! All ${totalFixedCount} fixes applied Ô£ö`);
                     } else {
                         showMofuHelper('No issues found to fix!');
                     }
@@ -1219,9 +1287,9 @@
                         });
                         updateLineDecoration(lineNumber, 'fixed');
                         totalFixedCount += lineIssues.length;
-                        console.log('[applyAll] âœ“ Fixed line', lineNumber, '-', lineIssues.length, 'issues');
+                        console.log('[applyAll] Ô£ô Fixed line', lineNumber, '-', lineIssues.length, 'issues');
                     } else {
-                        console.log('[applyAll] âœ— Failed to fix line', lineNumber);
+                        console.log('[applyAll] Ô£ù Failed to fix line', lineNumber);
                     }
                 });
                 
@@ -1242,13 +1310,13 @@
                             applyFixesIteration();
                         } else {
                             closeSuggestionBar();
-                            console.log('[applyAll] âœ“ ALL DONE - Fixed', totalFixedCount, 'issues total');
-                            showMofuHelper(`Excellent! All ${totalFixedCount} fixes applied âœ”`);
+                            console.log('[applyAll] Ô£ô ALL DONE - Fixed', totalFixedCount, 'issues total');
+                            showMofuHelper(`Excellent! All ${totalFixedCount} fixes applied Ô£ö`);
                         }
                     }, 150);
                 } else {
                     closeSuggestionBar();
-                    console.log('[applyAll] âš  Max iterations reached');
+                    console.log('[applyAll] ÔÜá Max iterations reached');
                     showMofuHelper(`Applied ${totalFixedCount} fixes! Some issues may remain.`);
                 }
             };
@@ -1291,6 +1359,9 @@
                 }, 200);
             }
             
+            // Reset wizard mode to docked for next time
+            wizardMode = 'docked';
+            
             // Clear decorations after a delay for review
             setTimeout(() => {
                 lineDecorations = editor.deltaDecorations(lineDecorations, []);
@@ -1325,29 +1396,34 @@
                 };
             });
             
-            // Create and show inline bar
+            // Create and show inline bar (already appended to body in function)
+            // Always start in docked mode
+            wizardMode = 'docked';
             currentSuggestionBar = createInlineSuggestionBar();
-            document.body.appendChild(currentSuggestionBar);
             
             // Setup event listeners
-            currentSuggestionBar.querySelector('.validation-btn-apply').addEventListener('click', applyCurrentFix);
-            currentSuggestionBar.querySelector('.validation-btn-apply-all').addEventListener('click', applyAllFixes);
-            currentSuggestionBar.querySelector('.validation-btn-skip').addEventListener('click', skipCurrentIssue);
-            currentSuggestionBar.querySelector('.validation-btn-discard-all').addEventListener('click', closeSuggestionBar);
-            currentSuggestionBar.querySelector('.validation-btn-prev').addEventListener('click', () => {
+            currentSuggestionBar.querySelector('.vw-btn-mode').addEventListener('click', toggleWizardMode);
+            currentSuggestionBar.querySelector('.vw-btn-apply').addEventListener('click', applyCurrentFix);
+            currentSuggestionBar.querySelector('.vw-btn-apply-all').addEventListener('click', applyAllFixes);
+            currentSuggestionBar.querySelector('.vw-btn-skip').addEventListener('click', skipCurrentIssue);
+            currentSuggestionBar.querySelector('.vw-btn-close').addEventListener('click', closeSuggestionBar);
+            currentSuggestionBar.querySelector('.vw-btn-prev').addEventListener('click', () => {
                 if (currentFixIndex > 0) {
                     showSuggestionForIssue(currentFixIndex - 1);
                 }
             });
-            currentSuggestionBar.querySelector('.validation-btn-next').addEventListener('click', () => {
+            currentSuggestionBar.querySelector('.vw-btn-next').addEventListener('click', () => {
                 if (currentFixIndex < validationIssues.length - 1) {
                     showSuggestionForIssue(currentFixIndex + 1);
                 }
             });
             
             // Reposition on scroll
+            // Docked mode - no scroll repositioning needed
+            // The wizard stays fixed at bottom center
+            // But in inline mode, reposition on scroll
             editor.onDidScrollChange(() => {
-                if (currentSuggestionBar && validationIssues[currentFixIndex]) {
+                if (currentSuggestionBar && validationIssues[currentFixIndex] && wizardMode === 'inline') {
                     positionInlineBar(validationIssues[currentFixIndex].marker.startLineNumber);
                 }
             });
@@ -1418,3 +1494,5 @@
                 console.error('Failed to copy validation report:', err);
             });
         });
+
+}

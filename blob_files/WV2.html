@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Split View Fixer Wizard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Fira+Code&family=Inter:wght@400;500;600;700&display=swap');
+
+        body {
+            background-color: #09090b;
+            color: #e4e4e7;
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            margin: 0;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        .app-header {
+            height: 56px;
+            background: #18181b;
+            border-bottom: 1px solid #27272a;
+            display: flex;
+            align-items: center;
+            padding: 0 24px;
+            justify-content: space-between;
+            z-index: 50;
+        }
+
+        .main-container {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .resizer {
+            width: 4px;
+            cursor: col-resize;
+            background: #27272a;
+            transition: background 0.2s;
+            z-index: 40;
+        }
+        .resizer:hover, .resizer.dragging { background: #3b82f6; }
+
+        .panel {
+            overflow-y: auto;
+            position: relative;
+            padding: 40px;
+            scrollbar-width: thin;
+            scrollbar-color: #27272a transparent;
+        }
+
+        .editor-panel {
+            background: #121214;
+            font-family: 'Fira Code', monospace;
+            font-size: 13.5px;
+            line-height: 2.4;
+            color: #a1a1aa;
+            width: 50%;
+        }
+
+        .renderer-panel { background: #09090b; flex: 1; }
+
+        /* Simplified Minimal Highlights */
+        .highlight-err { color: #f87171; font-weight: 500; }
+        .highlight-fixed { color: #34d399; font-weight: 500; }
+        .highlight-review { color: #60a5fa; font-weight: 500; }
+
+        /* Wizard - Docked Style */
+        .wizard-docked {
+            position: fixed;
+            bottom: 32px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 700px;
+            min-height: 45px;
+            background: #18181b;
+            border: 1px solid #3f3f46;
+            border-radius: 12px;
+            padding: 8px 16px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+            display: flex;
+            align-items: center;
+            z-index: 2000;
+        }
+
+        /* Wizard - Floating Inline Style */
+        .wizard-inline {
+            position: absolute;
+            width: calc(100% - 20px);
+            max-width: 680px;
+            min-height: 45px;
+            background: #1c1c21;
+            border: 1px solid #27272a;
+            border-radius: 10px;
+            padding: 8px 12px;
+            margin: 12px 0;
+            display: flex;
+            align-items: center;
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.6);
+            z-index: 100;
+            left: 10px;
+            /* Floating effect */
+            animation: float 0.3s ease-out;
+        }
+
+        @keyframes float {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .issue-content {
+            flex: 1;
+            padding: 0 16px;
+            font-size: 12px;
+            line-height: 1.4;
+            max-height: 60px;
+            overflow-y: auto;
+            color: #d1d1d6;
+        }
+
+        .nav-btn {
+            padding: 4px 8px;
+            font-size: 14px;
+            color: #71717a;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: 0.2s;
+        }
+        .nav-btn:hover { color: #fff; background: #27272a; }
+        .nav-btn.disabled { opacity: 0.2; cursor: not-allowed; }
+
+        .btn-icon {
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 6px;
+            cursor: pointer;
+            color: #a1a1aa;
+            transition: 0.2s;
+        }
+        .btn-icon:hover { background: #27272a; color: #fff; }
+        .btn-icon.active-fix { color: #3b82f6; background: rgba(59, 130, 246, 0.1); }
+
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+
+    <header class="app-header">
+        <div class="flex items-center gap-6">
+            <span class="text-white font-semibold text-sm">Muhamad's Advanced Fixer</span>
+            <div class="flex bg-zinc-800 p-1 rounded-md gap-1">
+                <button onclick="setMode('docked')" id="btn-docked" class="px-3 py-1 text-[10px] font-bold rounded bg-zinc-700 text-white">DOCKED</button>
+                <button onclick="setMode('inline')" id="btn-inline" class="px-3 py-1 text-[10px] font-bold rounded text-zinc-400">INLINE</button>
+            </div>
+        </div>
+        <button onclick="resetDemo()" class="text-[10px] text-zinc-500 hover:text-white uppercase font-bold">Reset Demo</button>
+    </header>
+
+    <div class="main-container" id="main-split">
+        <div class="panel editor-panel" id="editor-panel">
+            <div id="content-area">
+                <p># Advanced Markdown Issues</p>
+                
+                <div id="line-1-wrapper" class="relative">
+                    <p id="line-1" class="highlight-err">* Item with asterisk marker</p>
+                    <div id="inline-target-1"></div>
+                </div>
+                
+                <div id="line-2-wrapper" class="relative">
+                    <p id="line-2" class="highlight-err">+ Item with plus marker</p>
+                    <div id="inline-target-2"></div>
+                </div>
+
+                <div id="line-3-wrapper" class="relative">
+                    <p id="line-3" class="highlight-err">1. List directly touching table below</p>
+                    <div id="inline-target-3"></div>
+                </div>
+                <p>| Col 1 | Col 2 |</p>
+                <p>|-------|-------|</p>
+
+                <div id="line-4-wrapper" class="relative">
+                    <p id="line-4" class="highlight-err">![Missing alt text]()</p>
+                    <div id="inline-target-4"></div>
+                </div>
+
+                <div id="line-5-wrapper" class="relative">
+                    <p id="line-5" class="highlight-err">###Heading with no space</p>
+                    <div id="inline-target-5"></div>
+                </div>
+
+                <div id="line-6-wrapper" class="relative">
+                    <p id="line-6" class="highlight-err">This is a very long line of text that probably should be broken up or checked for consistent punctuation</p>
+                    <div id="inline-target-6"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="resizer" id="drag-handle"></div>
+
+        <div class="panel renderer-panel">
+            <div class="max-w-xl text-sm leading-relaxed text-zinc-400">
+                <h1 class="text-2xl font-bold text-white mb-4">Preview Panel</h1>
+                <ul class="list-disc ml-5 mb-4">
+                    <li id="render-1" class="text-red-400/60">Item with asterisk marker</li>
+                    <li id="render-2" class="text-red-400/60">Item with plus marker</li>
+                </ul>
+                <p id="render-3" class="text-red-400/60">1. List touching table</p>
+                <div class="border border-red-900/30 p-2 bg-red-950/10 rounded mb-4 text-[10px]">Table Parsing Error</div>
+                <div id="render-4" class="w-20 h-20 bg-zinc-800 rounded flex items-center justify-center mb-4">Image</div>
+                <h3 id="render-5" class="text-red-400/60 font-bold">###Heading (Raw)</h3>
+                <p id="render-6" class="text-red-400/60">Long line content...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Wizard Component -->
+    <div id="wizard-ui" class="wizard-docked">
+        <div class="flex items-center gap-1 shrink-0">
+            <div id="prev-btn" class="nav-btn disabled" onclick="navigate(-1)" title="Previous Issue">↑</div>
+            <div id="next-btn" class="nav-btn" onclick="navigate(1)" title="Next Issue">↓</div>
+            <div class="nav-btn text-[12px] ml-1" onclick="undoCurrent()" title="Revert current fix">↶</div>
+        </div>
+
+        <div class="w-px h-5 bg-zinc-800 mx-3 shrink-0"></div>
+
+        <div class="flex flex-col shrink-0">
+            <span id="problem-count" class="text-[9px] font-black text-zinc-500 uppercase tracking-tighter">01 / 06</span>
+            <div class="state-indicator mt-1" id="state-dot"></div>
+        </div>
+
+        <div class="issue-content" id="issue-text">
+            Standardize list marker <code>*</code> to <code>-</code> for document consistency.
+        </div>
+
+        <div class="flex items-center gap-1 shrink-0 ml-auto">
+            <button id="fix-btn" class="btn-icon active-fix" onclick="applyFix()" title="Apply Fix">
+                <i class="fa-solid fa-check text-xs"></i>
+            </button>
+            <button class="btn-icon active-fix" onclick="applyAll()" title="Apply All">
+                <i class="fa-solid fa-wand-magic-sparkles text-xs"></i>
+            </button>
+            <div class="w-px h-5 bg-zinc-800 mx-2 shrink-0"></div>
+            <button class="btn-icon hover:!text-red-400" onclick="closeWizard()" title="Close">
+                <i class="fa-solid fa-xmark text-xs"></i>
+            </button>
+        </div>
+    </div>
+
+    <script>
+        const issues = [
+            { text: 'Standardize list marker <code>*</code> to <code>-</code>.', lineId: 'line-1', renderId: 'render-1', target: 'inline-target-1', fixed: false },
+            { text: 'Standardize list marker <code>+</code> to <code>-</code>.', lineId: 'line-2', renderId: 'render-2', target: 'inline-target-2', fixed: false },
+            { text: 'Critical: Insert a blank line before the table.', lineId: 'line-3', renderId: 'render-3', target: 'inline-target-3', fixed: false },
+            { text: 'Accessibility: Add <code>alt text</code> to the image.', lineId: 'line-4', renderId: 'render-4', target: 'inline-target-4', fixed: false },
+            { text: 'Syntax Error: Add a space after <code>###</code>.', lineId: 'line-5', renderId: 'render-5', target: 'inline-target-5', fixed: false },
+            { text: 'Style: Long sentence detected. Break into two sentences.', lineId: 'line-6', renderId: 'render-6', target: 'inline-target-6', fixed: false }
+        ];
+
+        let currentIndex = 0;
+        let viewMode = 'docked';
+
+        const resizer = document.getElementById('drag-handle');
+        const editor = document.getElementById('editor-panel');
+        let isResizing = false;
+
+        resizer.addEventListener('mousedown', () => isResizing = true);
+        document.addEventListener('mousemove', (e) => {
+            if (!isResizing) return;
+            const percent = (e.clientX / window.innerWidth) * 100;
+            if (percent > 20 && percent < 80) editor.style.width = `${percent}%`;
+        });
+        document.addEventListener('mouseup', () => isResizing = false);
+
+        function navigate(dir) {
+            const next = currentIndex + dir;
+            if (next >= 0 && next < issues.length) {
+                currentIndex = next;
+                updateUI();
+            }
+        }
+
+        function updateUI() {
+            const issue = issues[currentIndex];
+            const wiz = document.getElementById('wizard-ui');
+
+            document.getElementById('problem-count').innerText = `${String(currentIndex + 1).padStart(2, '0')} / ${String(issues.length).padStart(2, '0')}`;
+            document.getElementById('issue-text').innerHTML = issue.text;
+            
+            document.getElementById('prev-btn').classList.toggle('disabled', currentIndex === 0);
+            document.getElementById('next-btn').classList.toggle('disabled', currentIndex === issues.length - 1);
+
+            document.getElementById('state-dot').style.background = issue.fixed ? '#10b981' : '#f59e0b';
+            
+            document.getElementById('fix-btn').style.opacity = issue.fixed ? '0.3' : '1';
+            document.getElementById('fix-btn').style.pointerEvents = issue.fixed ? 'none' : 'auto';
+
+            // Minimalist Color Logic
+            issues.forEach((is, idx) => {
+                const el = document.getElementById(is.lineId);
+                el.classList.remove('highlight-err', 'highlight-fixed', 'highlight-review');
+                
+                if (idx === currentIndex) {
+                    // Current active line for review/skipping is blue
+                    el.classList.add('highlight-review');
+                } else if (is.fixed) {
+                    // Fixed is green
+                    el.classList.add('highlight-fixed');
+                } else {
+                    // Unfixed problems are red
+                    el.classList.add('highlight-err');
+                }
+            });
+
+            if (viewMode === 'inline') {
+                wiz.className = 'wizard-inline';
+                const target = document.getElementById(issue.target);
+                target.appendChild(wiz);
+            } else {
+                wiz.className = 'wizard-docked';
+                document.body.appendChild(wiz);
+            }
+        }
+
+        function applyFix() {
+            const issue = issues[currentIndex];
+            issue.fixed = true;
+            document.getElementById(issue.renderId).className = 'text-zinc-300 transition-colors duration-500';
+            
+            if (currentIndex < issues.length - 1) {
+                setTimeout(() => navigate(1), 300);
+            } else {
+                updateUI();
+            }
+        }
+
+        function undoCurrent() {
+            const issue = issues[currentIndex];
+            issue.fixed = false;
+            document.getElementById(issue.renderId).className = 'text-red-400/60';
+            updateUI();
+        }
+
+        function applyAll() {
+            issues.forEach(is => {
+                is.fixed = true;
+                document.getElementById(is.renderId).className = 'text-zinc-300';
+            });
+            updateUI();
+        }
+
+        function setMode(mode) {
+            viewMode = mode;
+            document.getElementById('btn-docked').className = mode === 'docked' ? 'px-3 py-1 text-[10px] font-bold rounded bg-zinc-700 text-white' : 'px-3 py-1 text-[10px] font-bold rounded text-zinc-400';
+            document.getElementById('btn-inline').className = mode === 'inline' ? 'px-3 py-1 text-[10px] font-bold rounded bg-zinc-700 text-white' : 'px-3 py-1 text-[10px] font-bold rounded text-zinc-400';
+            updateUI();
+        }
+
+        function resetDemo() {
+            issues.forEach(is => {
+                is.fixed = false;
+                document.getElementById(is.renderId).className = 'text-red-400/60';
+            });
+            currentIndex = 0;
+            document.getElementById('wizard-ui').classList.remove('hidden');
+            updateUI();
+        }
+
+        function closeWizard() {
+            document.getElementById('wizard-ui').classList.add('hidden');
+        }
+
+        updateUI();
+    </script>
+</body>
+</html>

@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Text Editor Live Preview</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            height: 100%;
+            width: 100%;
+        }
+
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: #f5f5f5;
+            overflow: hidden;
+        }
+
+        /* Header */
+        .header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 60px;
+            background: white;
+            border-bottom: 1px solid #e0e0e0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+            z-index: 100;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, #5B5BFF, #7B7BFF);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 18px;
+        }
+
+        .header-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #1a1a1a;
+            letter-spacing: 0.5px;
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .btn-export {
+            padding: 8px 16px;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            color: #666;
+            transition: all 0.2s;
+        }
+
+        .btn-export:hover {
+            background: #f9f9f9;
+            border-color: #bbb;
+        }
+
+        .user-avatar {
+            width: 36px;
+            height: 36px;
+            background: linear-gradient(135deg, #5B5BFF, #7B7BFF);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        /* Main Container */
+        .content {
+            display: flex;
+            margin-top: 60px;
+            height: calc(100vh - 60px);
+            gap: 0;
+        }
+
+        /* Editor Section */
+        .editor-section {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: white;
+            border-right: 1px solid #e0e0e0;
+        }
+
+        .editor-textarea {
+            flex: 1;
+            padding: 24px;
+            border: none;
+            outline: none;
+            font-family: 'Segoe UI', Arial, sans-serif;
+            font-size: 13px;
+            line-height: 1.6;
+            resize: none;
+            color: #1a1a1a;
+            background: white;
+            overflow-y: auto;
+        }
+
+        .editor-textarea::placeholder {
+            color: #999;
+        }
+
+        .editor-textarea::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .editor-textarea::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .editor-textarea::-webkit-scrollbar-thumb {
+            background: #ccc;
+            border-radius: 4px;
+        }
+
+        .editor-textarea::-webkit-scrollbar-thumb:hover {
+            background: #999;
+        }
+
+        /* Preview Section */
+        .preview-section {
+            flex: 1.2;
+            display: flex;
+            flex-direction: column;
+            background: #fafafa;
+        }
+
+        .preview-toolbar {
+            padding: 12px 20px;
+            background: white;
+            border-bottom: 1px solid #e0e0e0;
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            justify-content: flex-end;
+        }
+
+        .layout-btn {
+            padding: 8px 16px;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            color: #666;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .layout-btn.active {
+            background: #5B5BFF;
+            color: white;
+            border-color: #5B5BFF;
+        }
+
+        .layout-btn:hover:not(.active) {
+            background: #f9f9f9;
+            border-color: #bbb;
+        }
+
+        /* Preview Viewport */
+        .preview-viewport {
+            flex: 1;
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+
+        /* WEB LAYOUT */
+        .preview-viewport.web-layout {
+            background: white;
+            padding: 40px 20px;
+        }
+
+        .preview-content-web {
+            max-width: 800px;
+            margin: 0 auto;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            font-family: 'Segoe UI', Arial, sans-serif;
+            font-size: 13px;
+            line-height: 1.6;
+            color: #1a1a1a;
+        }
+
+        /* PAPER LAYOUT */
+        .preview-viewport.paper-layout {
+            background: #888;
+            padding: 16px;
+        }
+
+        .pages-container {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            align-items: center;
+            margin: 0;
+            padding: 0;
+        }
+
+        .a4-page {
+            width: 210mm;
+            height: 297mm;
+            background: white;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            padding: 20mm;
+            overflow: hidden;
+            position: relative;
+            flex-shrink: 0;
+        }
+
+        .a4-page-content {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            font-family: 'Segoe UI', Arial, sans-serif;
+            font-size: 12px;
+            line-height: 1.5;
+            color: #1a1a1a;
+        }
+
+        /* Scrollbar */
+        .preview-viewport::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .preview-viewport::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .preview-viewport::-webkit-scrollbar-thumb {
+            background: #ccc;
+            border-radius: 4px;
+        }
+
+        .preview-viewport::-webkit-scrollbar-thumb:hover {
+            background: #999;
+        }
+
+        /* Stats Bar */
+        .stats-bar {
+            padding: 12px 20px;
+            background: white;
+            border-top: 1px solid #e0e0e0;
+            font-size: 12px;
+            color: #999;
+            display: flex;
+            gap: 16px;
+        }
+
+        @media (max-width: 1200px) {
+            .content {
+                flex-direction: column;
+            }
+
+            .editor-section, .preview-section {
+                flex: 1;
+                border-right: none;
+                border-bottom: 1px solid #e0e0e0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <div class="header">
+        <div class="header-left">
+            <div class="logo">📄</div>
+            <div class="header-title">TEXT EDITOR LIVE PREVIEW</div>
+        </div>
+        <div class="header-right">
+            <button class="btn-export">📥 Export</button>
+            <div class="user-avatar">MU</div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="content">
+        <!-- Editor -->
+        <div class="editor-section">
+            <textarea class="editor-textarea" id="editor" placeholder="Paste your text here...
+
+When you type or paste content, it will appear in the preview panel on the right.
+
+Switch between Web Layout (infinite scroll) and Paper Layout (A4 pages) using the buttons in the preview panel."></textarea>
+            <div class="stats-bar">
+                <span id="wordCount">0 words</span>
+                <span id="charCount">0 characters</span>
+                <span id="pageCount">∞ infinite</span>
+            </div>
+        </div>
+
+        <!-- Preview -->
+        <div class="preview-section">
+            <div class="preview-toolbar">
+                <button class="layout-btn active" data-layout="web">🌐 Web Layout</button>
+                <button class="layout-btn" data-layout="paper">📄 Paper Layout</button>
+            </div>
+            <div class="preview-viewport web-layout" id="previewViewport">
+                <div class="preview-content-web" id="previewContent"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const editor = document.getElementById('editor');
+        const previewViewport = document.getElementById('previewViewport');
+        const previewContent = document.getElementById('previewContent');
+        const wordCountEl = document.getElementById('wordCount');
+        const charCountEl = document.getElementById('charCount');
+        const pageCountEl = document.getElementById('pageCount');
+        const layoutBtns = document.querySelectorAll('.layout-btn');
+
+        let currentLayout = 'web';
+
+        // Event Listeners
+        editor.addEventListener('input', updatePreview);
+
+        layoutBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                layoutBtns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                currentLayout = btn.dataset.layout;
+                updatePreview();
+            });
+        });
+
+        function updatePreview() {
+            const text = editor.value;
+
+            if (currentLayout === 'web') {
+                // WEB LAYOUT - Infinite continuous
+                previewViewport.className = 'preview-viewport web-layout';
+                previewContent.className = 'preview-content-web';
+                previewContent.textContent = text;
+                pageCountEl.textContent = '∞ infinite';
+            } else {
+                // PAPER LAYOUT - A4 pages with proper pagination
+                const pages = paginateToA4Pages(text);
+                previewViewport.className = 'preview-viewport paper-layout';
+                
+                let html = '';
+                pages.forEach((pageText) => {
+                    html += `<div class="a4-page"><div class="a4-page-content">${escapeHtml(pageText)}</div></div>`;
+                });
+                
+                previewContent.className = 'pages-container';
+                previewContent.innerHTML = html;
+                pageCountEl.textContent = `${pages.length} pages`;
+            }
+
+            updateStats(text);
+        }
+
+        function paginateToA4Pages(text) {
+            // Calculate the number of characters that fit on an A4 page
+            const tempDiv = document.createElement('div');
+            tempDiv.className = 'a4-page';
+            tempDiv.style.visibility = 'hidden';
+            tempDiv.style.position = 'absolute';
+            tempDiv.style.top = '0';
+            tempDiv.style.left = '0';
+            
+            const tempContent = document.createElement('div');
+            tempContent.className = 'a4-page-content';
+            tempContent.textContent = 'M';
+            tempDiv.appendChild(tempContent);
+            document.body.appendChild(tempDiv);
+
+            // Get page dimensions
+            const pageHeight = tempDiv.offsetHeight; // 297mm
+            const contentHeight = tempContent.offsetHeight;
+            
+            // Calculate approximate characters per page
+            // Test with multiple lines to get accurate measurement
+            let testText = '';
+            for (let i = 0; i < 100; i++) {
+                testText += 'This is a test line of text to measure the height.\n';
+            }
+            tempContent.textContent = testText;
+            const contentUsed = tempContent.scrollHeight;
+            const charsUsed = testText.length;
+            
+            // Calculate chars per page
+            const charsPerPage = Math.floor((pageHeight / contentUsed) * charsUsed);
+
+            document.body.removeChild(tempDiv);
+
+            if (charsPerPage <= 0) {
+                return [text];
+            }
+
+            // Split text into pages based on character count
+            const pages = [];
+            let startIdx = 0;
+
+            while (startIdx < text.length) {
+                let endIdx = startIdx + charsPerPage;
+                
+                // Try not to break in the middle of a word
+                if (endIdx < text.length) {
+                    // Look for the last space before endIdx
+                    let lastSpace = text.lastIndexOf('\n', endIdx);
+                    if (lastSpace > startIdx) {
+                        endIdx = lastSpace;
+                    } else {
+                        lastSpace = text.lastIndexOf(' ', endIdx);
+                        if (lastSpace > startIdx) {
+                            endIdx = lastSpace + 1;
+                        }
+                    }
+                }
+
+                pages.push(text.substring(startIdx, endIdx));
+                startIdx = endIdx;
+            }
+
+            return pages.length > 0 ? pages : [text];
+        }
+
+        function escapeHtml(text) {
+            const map = {
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#039;'
+            };
+            return text.replace(/[&<>"']/g, m => map[m]);
+        }
+
+        function updateStats(text) {
+            const words = text.trim().split(/\s+/).filter(w => w).length;
+            const chars = text.length;
+
+            wordCountEl.textContent = `${words} words`;
+            charCountEl.textContent = `${chars} characters`;
+        }
+
+        // Initialize
+        updatePreview();
+    </script>
+</body>
+</html>

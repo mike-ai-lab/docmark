@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Validation Wizard - Premium Design</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Fira+Code&family=Inter:wght@400;500;600;700&display=swap');
+
+        body {
+            background-color: #09090b;
+            color: #e4e4e7;
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            margin: 0;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        .app-header {
+            height: 56px;
+            background: #18181b;
+            border-bottom: 1px solid #27272a;
+            display: flex;
+            align-items: center;
+            padding: 0 24px;
+            justify-content: space-between;
+            z-index: 50;
+        }
+
+        .main-container {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .resizer {
+            width: 4px;
+            cursor: col-resize;
+            background: #27272a;
+            transition: background 0.2s;
+            z-index: 40;
+        }
+        .resizer:hover, .resizer.dragging { background: #3b82f6; }
+
+        .panel {
+            overflow-y: auto;
+            position: relative;
+            padding: 40px;
+            scrollbar-width: thin;
+            scrollbar-color: #27272a transparent;
+        }
+
+        .editor-panel {
+            background: #121214;
+            font-family: 'Fira Code', monospace;
+            font-size: 13.5px;
+            line-height: 2.4;
+            color: #a1a1aa;
+            width: 50%;
+        }
+
+        .renderer-panel { background: #09090b; flex: 1; }
+
+        /* Minimalist Status Highlights */
+        .highlight-err { color: #f87171; font-weight: 500; }
+        .highlight-fixed { color: #34d399; font-weight: 500; }
+        .highlight-review { color: #60a5fa; font-weight: 500; }
+
+        /* GLASSMORPHISM WIZARD - DOCKED */
+        .wizard-docked {
+            position: fixed;
+            bottom: 32px;
+            left: 50% !important;
+            transform: translateX(-50%) !important;
+            width: min(720px, calc(100vw - 64px));
+            min-height: 52px;
+            background: rgba(24, 24, 27, 0.75);
+            backdrop-filter: blur(20px) saturate(180%);
+            -webkit-backdrop-filter: blur(20px) saturate(180%);
+            border: 1px solid rgba(63, 63, 70, 0.5);
+            border-radius: 14px;
+            padding: 8px 16px;
+            box-shadow: 
+                0 0 0 1px rgba(255, 255, 255, 0.03),
+                0 25px 50px -12px rgba(0, 0, 0, 0.8),
+                0 0 80px rgba(59, 130, 246, 0.12);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            z-index: 9999;
+            transition: opacity 0.2s;
+        }
+
+        /* GLASSMORPHISM WIZARD - INLINE */
+        .wizard-inline {
+            position: absolute;
+            width: calc(100% - 20px);
+            max-width: 680px;
+            min-height: 52px;
+            background: rgba(28, 28, 33, 0.85);
+            backdrop-filter: blur(16px) saturate(180%);
+            -webkit-backdrop-filter: blur(16px) saturate(180%);
+            border: 1px solid rgba(39, 39, 42, 0.6);
+            border-radius: 12px;
+            padding: 8px 14px;
+            margin: 12px 0;
+            box-shadow: 
+                0 0 0 1px rgba(255, 255, 255, 0.02),
+                0 15px 40px rgba(0, 0, 0, 0.7);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            z-index: 100;
+            left: 10px;
+            transform: none !important;
+            animation: floatIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        @keyframes floatIn {
+            from { opacity: 0; transform: translateY(10px) scale(0.98); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        .issue-content {
+            flex: 1;
+            padding: 0 12px;
+            font-size: 13px;
+            color: #e4e4e7;
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .issue-content code {
+            background: rgba(63, 63, 70, 0.5);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Fira Code', monospace;
+            font-size: 11px;
+            color: #60a5fa;
+        }
+
+        .nav-btn {
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #71717a;
+            cursor: pointer;
+            border-radius: 8px;
+            background: rgba(39, 39, 42, 0.3);
+            transition: all 0.2s;
+        }
+        .nav-btn:hover:not(.disabled) { background: rgba(59, 130, 246, 0.15); color: #fff; }
+        .nav-btn.disabled { opacity: 0.2; cursor: not-allowed; }
+
+        .btn-icon {
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            cursor: pointer;
+            color: #a1a1aa;
+            background: rgba(39, 39, 42, 0.3);
+            border: 1px solid rgba(63, 63, 70, 0.3);
+            transition: all 0.2s;
+        }
+        .btn-icon:hover { background: rgba(59, 130, 246, 0.1); border-color: #3b82f6; color: #fff; }
+        .btn-icon.active-fix { color: #3b82f6; background: rgba(59, 130, 246, 0.1); border-color: rgba(59, 130, 246, 0.3); }
+
+        .state-indicator { width: 6px; height: 6px; border-radius: 50%; }
+        .state-error { background: #f59e0b; box-shadow: 0 0 8px rgba(245, 158, 11, 0.6); }
+        .state-fixed { background: #10b981; box-shadow: 0 0 8px rgba(16, 185, 129, 0.6); }
+
+        .counter-badge {
+            font-size: 9px;
+            font-weight: 700;
+            color: #71717a;
+            padding: 4px 10px;
+            background: rgba(39, 39, 42, 0.5);
+            border-radius: 6px;
+            min-width: 65px;
+            text-align: center;
+        }
+
+        .divider { width: 1px; height: 24px; background: rgba(63, 63, 70, 0.5); margin: 0 4px; }
+        
+        .mode-transitioning { visibility: hidden !important; opacity: 0 !important; }
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+
+    <header class="app-header">
+        <div class="flex items-center gap-6">
+            <span class="text-white font-semibold text-sm">Muhamad's Fixer Wizard</span>
+            <div class="flex bg-zinc-800 p-1 rounded-md gap-1">
+                <button onclick="setMode('docked')" id="btn-docked" class="px-3 py-1 text-[10px] font-bold rounded bg-zinc-700 text-white uppercase">Docked</button>
+                <button onclick="setMode('inline')" id="btn-inline" class="px-3 py-1 text-[10px] font-bold rounded text-zinc-400 uppercase">Inline</button>
+            </div>
+        </div>
+        <button onclick="location.reload()" class="text-[10px] text-zinc-500 hover:text-white uppercase font-bold tracking-widest">Reset Demo</button>
+    </header>
+
+    <div class="main-container">
+        <div class="panel editor-panel" id="editor-panel">
+            <div id="content-area">
+                <p class="text-zinc-700"># Project Documentation</p>
+                <div id="line-1-wrapper" class="relative">
+                    <p id="line-1" class="highlight-err">* Item with asterisk marker</p>
+                    <div id="inline-target-1"></div>
+                </div>
+                <div id="line-2-wrapper" class="relative">
+                    <p id="line-2" class="highlight-err">+ Item with plus marker</p>
+                    <div id="inline-target-2"></div>
+                </div>
+                <div id="line-3-wrapper" class="relative">
+                    <p id="line-3" class="highlight-err">![Missing alt text]()</p>
+                    <div id="inline-target-3"></div>
+                </div>
+                <div id="line-4-wrapper" class="relative">
+                    <p id="line-4" class="highlight-err">###Heading with no space</p>
+                    <div id="inline-target-4"></div>
+                </div>
+                <div id="line-5-wrapper" class="relative">
+                    <p id="line-5" class="highlight-err">**Missing closing bold tags</p>
+                    <div id="inline-target-5"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="resizer" id="drag-handle"></div>
+
+        <div class="panel renderer-panel">
+            <div class="max-w-md text-sm text-zinc-500 italic">Preview items will turn white when fixed...</div>
+            <div class="mt-8 space-y-4">
+                <div id="render-1" class="text-red-400/40">• Item 1</div>
+                <div id="render-2" class="text-red-400/40">• Item 2</div>
+                <div id="render-3" class="w-20 h-20 bg-zinc-800 rounded"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Wizard Component -->
+    <div id="wizard-ui" class="wizard-docked">
+        <!-- Navigation -->
+        <div class="flex items-center gap-1 shrink-0">
+            <div id="prev-btn" class="nav-btn" onclick="navigate(-1)"><i class="fa-solid fa-chevron-up text-[10px]"></i></div>
+            <div id="next-btn" class="nav-btn" onclick="navigate(1)"><i class="fa-solid fa-chevron-down text-[10px]"></i></div>
+        </div>
+
+        <div class="divider shrink-0"></div>
+
+        <!-- Progress -->
+        <div class="flex items-center gap-3 shrink-0">
+            <span id="problem-count" class="counter-badge">01 / 05</span>
+            <div id="state-dot" class="state-indicator state-error"></div>
+        </div>
+
+        <!-- Issue Description -->
+        <div class="issue-content" id="issue-text">Loading issue...</div>
+
+        <div class="divider shrink-0"></div>
+
+        <!-- Actions -->
+        <div class="flex items-center gap-2 shrink-0">
+            <button id="fix-btn" class="btn-icon active-fix" title="Fix current" onclick="applyFix()"><i class="fa-solid fa-check text-xs"></i></button>
+            <button class="btn-icon" title="Fix all" onclick="applyAll()"><i class="fa-solid fa-wand-magic-sparkles text-xs"></i></button>
+            <button class="btn-icon" title="Skip" onclick="navigate(1)"><i class="fa-solid fa-forward text-xs"></i></button>
+        </div>
+
+        <div class="divider shrink-0"></div>
+
+        <!-- Close -->
+        <button class="btn-icon hover:!text-red-400 !border-none !bg-transparent" onclick="closeWizard()"><i class="fa-solid fa-xmark text-xs"></i></button>
+    </div>
+
+    <script>
+        const issues = [
+            { text: 'Standardize marker <code>*</code> to <code>-</code>', lineId: 'line-1', renderId: 'render-1', target: 'inline-target-1', fixed: false },
+            { text: 'Standardize marker <code>+</code> to <code>-</code>', lineId: 'line-2', renderId: 'render-2', target: 'inline-target-2', fixed: false },
+            { text: 'Add <code>alt text</code> to image', lineId: 'line-3', renderId: 'render-3', target: 'inline-target-3', fixed: false },
+            { text: 'Add space after <code>###</code>', lineId: 'line-4', renderId: null, target: 'inline-target-4', fixed: false },
+            { text: 'Close bold tag with <code>**</code>', lineId: 'line-5', renderId: null, target: 'inline-target-5', fixed: false }
+        ];
+
+        let currentIndex = 0;
+        let viewMode = 'docked';
+        const wiz = document.getElementById('wizard-ui');
+
+        function updateUI() {
+            const issue = issues[currentIndex];
+
+            // 1. Text & State
+            document.getElementById('problem-count').innerText = `${String(currentIndex + 1).padStart(2, '0')} / 05`;
+            document.getElementById('issue-text').innerHTML = issue.text;
+            document.getElementById('state-dot').className = 'state-indicator ' + (issue.fixed ? 'state-fixed' : 'state-error');
+            
+            // 2. Navigation State
+            document.getElementById('prev-btn').classList.toggle('disabled', currentIndex === 0);
+            document.getElementById('next-btn').classList.toggle('disabled', currentIndex === issues.length - 1);
+
+            // 3. Highlight Lines
+            issues.forEach((is, idx) => {
+                const el = document.getElementById(is.lineId);
+                el.classList.remove('highlight-err', 'highlight-fixed', 'highlight-review');
+                if (idx === currentIndex) el.classList.add('highlight-review');
+                else if (is.fixed) el.classList.add('highlight-fixed');
+                else el.classList.add('highlight-err');
+            });
+
+            // 4. Movement Logic (Fixed Bug)
+            wiz.classList.add('mode-transitioning');
+            
+            if (viewMode === 'inline') {
+                wiz.className = 'wizard-inline';
+                const target = document.getElementById(issue.target);
+                target.appendChild(wiz);
+            } else {
+                wiz.className = 'wizard-docked';
+                if (wiz.parentElement !== document.body) document.body.appendChild(wiz);
+            }
+
+            setTimeout(() => wiz.classList.remove('mode-transitioning'), 10);
+        }
+
+        function setMode(mode) {
+            viewMode = mode;
+            document.getElementById('btn-docked').className = mode === 'docked' ? 'px-3 py-1 text-[10px] font-bold rounded bg-zinc-700 text-white uppercase' : 'px-3 py-1 text-[10px] font-bold rounded text-zinc-400 uppercase';
+            document.getElementById('btn-inline').className = mode === 'inline' ? 'px-3 py-1 text-[10px] font-bold rounded bg-zinc-700 text-white uppercase' : 'px-3 py-1 text-[10px] font-bold rounded text-zinc-400 uppercase';
+            updateUI();
+        }
+
+        function navigate(dir) {
+            const next = currentIndex + dir;
+            if (next >= 0 && next < issues.length) {
+                currentIndex = next;
+                updateUI();
+            }
+        }
+
+        function applyFix() {
+            const issue = issues[currentIndex];
+            issue.fixed = true;
+            if (issue.renderId) document.getElementById(issue.renderId).className = 'text-white transition-all duration-500';
+            if (currentIndex < issues.length - 1) setTimeout(() => navigate(1), 300);
+            else updateUI();
+        }
+
+        function applyAll() {
+            issues.forEach(is => {
+                is.fixed = true;
+                if (is.renderId) document.getElementById(is.renderId).className = 'text-white';
+            });
+            updateUI();
+        }
+
+        function closeWizard() { wiz.classList.add('hidden'); }
+
+        // Resizer
+        const resizer = document.getElementById('drag-handle');
+        const editor = document.getElementById('editor-panel');
+        let isResizing = false;
+        resizer.addEventListener('mousedown', () => isResizing = true);
+        document.addEventListener('mousemove', (e) => {
+            if (isResizing) editor.style.width = (e.clientX / window.innerWidth) * 100 + '%';
+        });
+        document.addEventListener('mouseup', () => isResizing = false);
+
+        updateUI();
+    </script>
+</body>
+</html>
