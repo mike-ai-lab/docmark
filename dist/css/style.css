@@ -513,6 +513,14 @@ footer {
   background-color: #ffffff;
   height: 100%;
   box-sizing: border-box;
+  overflow-y: auto;
+}
+
+/* Output element - contains the rendered markdown */
+#output {
+  /* Base styles for normal web layout */
+  width: 100%;
+  min-height: 100%;
 }
 
 [data-theme="dark"] #preview-wrapper {
@@ -2365,7 +2373,7 @@ footer {
     margin-bottom: 28px;
 }
 
-/* Paper Layout - A4 Pages */
+/* Paper Layout - CSS-only visual effect (no DOM changes) */
 .preview-panel.paper-layout {
     background: #f5f5f5;
     padding: 20px;
@@ -2381,48 +2389,34 @@ footer {
     background: transparent !important;
 }
 
-.paper-pages-container {
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-    align-items: center;
+/* Paper layout active - applies to #output element directly */
+#output.paper-layout-active {
+    max-width: var(--paper-width, 21cm);
+    min-height: var(--paper-height, 29.7cm);
+    margin: 0 auto;
+    padding: var(--paper-margin-top, 2cm) var(--paper-margin-right, 2cm) var(--paper-margin-bottom, 2cm) var(--paper-margin-left, 2cm);
+    background: white;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    box-sizing: border-box;
+    transform: scale(var(--paper-zoom, 1));
     transform-origin: top center;
     transition: transform 0.2s ease;
 }
 
-.a4-page {
-    background: white;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-    box-sizing: border-box;
-    position: relative;
-}
-
-.a4-page .markdown-body {
-    height: 100%;
-    overflow: hidden;
-    padding: 0 !important;
-    margin: 0 !important;
-    display: flex;
-    flex-direction: column;
-}
-
-/* Footer positioning in paper layout */
-.a4-page .markdown-body [data-pdf-footer="true"] {
-    margin-top: auto;
-    padding-top: 20px;
+#output.paper-layout-active .markdown-body {
+    background: white !important;
 }
 
 [data-theme="dark"] .preview-panel.paper-layout {
     background: #0d0d0d;
 }
 
-[data-theme="dark"] .a4-page {
+[data-theme="dark"] #output.paper-layout-active {
     background: #1e1e1e;
     box-shadow: 0 4px 12px rgba(0,0,0,0.6);
 }
 
-
-[data-theme="dark"] .a4-page .markdown-body {
+[data-theme="dark"] #output.paper-layout-active .markdown-body {
     background: #ffffff !important;
     color: #24292f !important;
 }
@@ -2433,6 +2427,8 @@ footer {
     bottom: 36px;
     right: 20px;
     display: flex;
+    flex-direction: row;
+    align-items: center;
     gap: 8px;
     background: #ffffff;
     border: 1px solid #e2e8f0;

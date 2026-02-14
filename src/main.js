@@ -467,46 +467,41 @@ This web site is using ${"`"}markedjs/marked${"`"}.
     };
     
     // Apply paper layout to current content
+    // Apply paper layout - CSS-only, no DOM restructuring
     const applyPaperLayout = () => {
         const outputDiv = document.querySelector('#output');
         if (!outputDiv) return;
         
-        const currentHtml = outputDiv.innerHTML;
-        const pages = paginateToA4(currentHtml);
+        // Simply add a class - all styling done via CSS
+        outputDiv.classList.add('paper-layout-active');
         
-        // Create paper pages container
-        const container = document.createElement('div');
-        container.className = 'paper-pages-container';
-        
-        pages.forEach((pageHtml, index) => {
-            const page = document.createElement('div');
-            page.className = 'a4-page';
-            // NO inline styles - use CSS custom properties instead
-            page.style.setProperty('--page-width', pageSetup.width + 'cm');
-            page.style.setProperty('--page-height', pageSetup.height + 'cm');
-            page.style.setProperty('--page-margin-top', pageSetup.marginTop + 'cm');
-            page.style.setProperty('--page-margin-right', pageSetup.marginRight + 'cm');
-            page.style.setProperty('--page-margin-bottom', pageSetup.marginBottom + 'cm');
-            page.style.setProperty('--page-margin-left', pageSetup.marginLeft + 'cm');
-            
-            page.innerHTML = `<div class="paper-container"><div class="markdown-body">${pageHtml}</div></div>`;
-            container.appendChild(page);
-        });
-        
-        outputDiv.innerHTML = '';
-        outputDiv.appendChild(container);
+        // Store page setup as CSS variables on the output element
+        outputDiv.style.setProperty('--paper-width', pageSetup.width + 'cm');
+        outputDiv.style.setProperty('--paper-height', pageSetup.height + 'cm');
+        outputDiv.style.setProperty('--paper-margin-top', pageSetup.marginTop + 'cm');
+        outputDiv.style.setProperty('--paper-margin-right', pageSetup.marginRight + 'cm');
+        outputDiv.style.setProperty('--paper-margin-bottom', pageSetup.marginBottom + 'cm');
+        outputDiv.style.setProperty('--paper-margin-left', pageSetup.marginLeft + 'cm');
         
         applyPaperZoom();
     };
     
+    // Remove paper layout
+    const removePaperLayout = () => {
+        const outputDiv = document.querySelector('#output');
+        if (!outputDiv) return;
+        
+        outputDiv.classList.remove('paper-layout-active');
+    };
+    
     // Apply zoom to paper layout
     const applyPaperZoom = () => {
-        const container = document.querySelector('.paper-pages-container');
+        const outputDiv = document.querySelector('#output');
         const zoomLabel = document.querySelector('.paper-zoom-label');
         
-        if (container) {
+        if (outputDiv && outputDiv.classList.contains('paper-layout-active')) {
             const scale = paperZoomLevel / 100;
-            container.style.transform = `scale(${scale})`;
+            outputDiv.style.setProperty('--paper-zoom', scale);
         }
         
         if (zoomLabel) {
@@ -737,9 +732,16 @@ This web site is using ${"`"}markedjs/marked${"`"}.
         // Update the output
         document.querySelector('#output').innerHTML = finalHtml;
         
-        // Apply paper layout if enabled
-        if (previewLayout === 'paper') {
-            applyPaperLayout();
+        // Paper layout is managed by updatePreviewLayout(), not here
+        // Just ensure the output element has the right class if paper mode is active
+        const outputDiv = document.querySelector('#output');
+        if (previewLayout === 'paper' && outputDiv) {
+            if (!outputDiv.classList.contains('paper-layout-active')) {
+                outputDiv.classList.add('paper-layout-active');
+                applyPaperZoom();
+            }
+        } else if (outputDiv) {
+            outputDiv.classList.remove('paper-layout-active');
         }
         
         // Apply edit mode if enabled
@@ -2359,39 +2361,21 @@ let performBeautify = (content) => {
         
         /* Print-specific resets */
         @media print {
-            * {
-                box-sizing: border-box !important;
-            }
-            
             html, body {
                 margin: 0 !important;
                 padding: 0 !important;
                 background: white !important;
             }
             
-            /* Reset paper preview containers - no fixed widths */
-            .paper-pages-container,
-            .a4-page {
-                width: auto !important;
-                height: auto !important;
+            /* Reset paper layout preview styles */
+            #output {
+                max-width: none !important;
                 min-height: 0 !important;
                 margin: 0 !important;
                 padding: 0 !important;
                 box-shadow: none !important;
-                border: none !important;
-                background: transparent !important;
                 transform: none !important;
-            }
-            
-            .paper-container {
-                padding: 0 !important;
-                margin: 0 !important;
-                break-after: page;
-                break-inside: avoid;
-            }
-            
-            .paper-container:last-child {
-                break-after: auto;
+                background: white !important;
             }
             
             .markdown-body {
@@ -2406,18 +2390,6 @@ let performBeautify = (content) => {
                 padding-top: 20px;
                 page-break-inside: avoid;
                 break-inside: avoid;
-            }
-            
-            .paper-container:last-child,
-            body > div:last-child {
-                display: flex;
-                flex-direction: column;
-                min-height: 100%;
-            }
-            
-            .paper-container:last-child [data-pdf-footer="true"],
-            body > div:last-child [data-pdf-footer="true"] {
-                margin-top: auto;
             }
             
             /* Avoid breaking inside these elements */
@@ -4746,15 +4718,23 @@ let performBeautify = (content) => {
         const previewPanel = document.querySelector('.preview-pane');
         const paperControls = document.querySelector('.paper-controls');
         const layoutModeLabel = document.getElementById('status-layout-mode');
+        const outputDiv = document.querySelector('#output');
         
         if (previewLayout === 'paper') {
             if (previewPanel) previewPanel.classList.add('paper-layout');
             if (paperControls) paperControls.classList.add('visible');
             if (layoutModeLabel) layoutModeLabel.textContent = 'Paper Layout';
+            if (outputDiv) {
+                outputDiv.classList.add('paper-layout-active');
+                applyPaperZoom();
+            }
         } else {
             if (previewPanel) previewPanel.classList.remove('paper-layout');
             if (paperControls) paperControls.classList.remove('visible');
             if (layoutModeLabel) layoutModeLabel.textContent = 'Web Layout';
+            if (outputDiv) {
+                outputDiv.classList.remove('paper-layout-active');
+            }
         }
         
         // Re-render markdown with new layout
@@ -4921,6 +4901,7 @@ let performBeautify = (content) => {
         loadPaperLayoutSettings();
         loadPageSetupSettings();
         setupPaperControls();
+        updatePreviewLayout(); // Apply the loaded layout state to UI
         
         // Create page setup modal
         const modalHtml = `

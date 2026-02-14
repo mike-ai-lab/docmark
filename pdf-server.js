@@ -70,7 +70,7 @@ app.post('/generate-pdf', async (req, res) => {
         
         console.log('📄 Loading HTML...');
         
-        // Simple CSS reset - HTML is now clean with no inline styles
+        // Simple CSS reset - HTML structure is clean now
         const printCSS = `
             @page {
                 size: A4 portrait;
@@ -78,39 +78,21 @@ app.post('/generate-pdf', async (req, res) => {
             }
             
             @media print {
-                * {
-                    box-sizing: border-box !important;
-                }
-                
                 html, body {
                     margin: 0 !important;
                     padding: 0 !important;
                     background: white !important;
                 }
                 
-                /* Reset paper preview wrappers */
-                .paper-pages-container,
-                .a4-page {
-                    width: auto !important;
-                    height: auto !important;
+                /* Reset paper layout preview styles */
+                #output {
+                    max-width: none !important;
                     min-height: 0 !important;
                     margin: 0 !important;
                     padding: 0 !important;
                     box-shadow: none !important;
-                    border: none !important;
-                    background: transparent !important;
                     transform: none !important;
-                }
-                
-                .paper-container {
-                    padding: 0 !important;
-                    margin: 0 !important;
-                    break-after: page;
-                    break-inside: avoid;
-                }
-                
-                .paper-container:last-child {
-                    break-after: auto;
+                    background: white !important;
                 }
                 
                 .markdown-body {
