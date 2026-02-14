@@ -999,6 +999,8 @@ Creating and formatting tables efficiently.
 |:------|:------:|------:|
 | L     | C      | R     |
 
+THE NEW ==CONTENTS==  ~~(TEXTS)~~ FOR THE REMOVED CONTENTS
+
 ## Pro Tips
 
 - Use our **Table Generator** tool for complex tables

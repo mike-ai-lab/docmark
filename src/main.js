@@ -32,6 +32,34 @@ const init = () => {
     const localStorageValidationKey = 'validation_settings';
     const confirmationMessage = 'Are you sure you want to reset? Your changes will be lost.';
     
+    // Editor reference (will be set by setupEditor)
+    let editor;
+    
+    // Status bar update function (defined early so it can be used everywhere)
+    const updateStatusBar = () => {
+        if (!editor) return; // Guard against early calls
+        const content = editor.getValue();
+        const lines = content.split('\n');
+        
+        // Word count
+        const words = content.trim() ? content.trim().split(/\s+/).length : 0;
+        document.getElementById('status-word-count').textContent = words;
+        
+        // Character count
+        document.getElementById('status-char-count').textContent = content.length;
+        
+        // Line count
+        document.getElementById('status-line-count').textContent = lines.length;
+        
+        // Reading time (200 words per minute)
+        const readingMinutes = Math.ceil(words / 200);
+        document.getElementById('status-reading-time').textContent = readingMinutes + ' min';
+        
+        // PDF page estimate (500 words per page)
+        const pdfPages = Math.max(1, Math.ceil(words / 500));
+        document.getElementById('status-pdf-pages').textContent = '~' + pdfPages;
+    };
+    
     // Manual undo history management
     const saveToUndoHistory = (content) => {
         // Remove any future history if we're not at the end
@@ -214,32 +242,6 @@ This web site is using ${"`"}markedjs/marked${"`"}.
             'editor.lineHighlightBackground': '#1A1A1A'
         }
     });
-
-    // Status bar update function (defined at init scope so it can be used everywhere)
-    let editor; // Will be set by setupEditor
-    const updateStatusBar = () => {
-        if (!editor) return; // Guard against early calls
-        const content = editor.getValue();
-        const lines = content.split('\n');
-        
-        // Word count
-        const words = content.trim() ? content.trim().split(/\s+/).length : 0;
-        document.getElementById('status-word-count').textContent = words;
-        
-        // Character count
-        document.getElementById('status-char-count').textContent = content.length;
-        
-        // Line count
-        document.getElementById('status-line-count').textContent = lines.length;
-        
-        // Reading time (200 words per minute)
-        const readingMinutes = Math.ceil(words / 200);
-        document.getElementById('status-reading-time').textContent = readingMinutes + ' min';
-        
-        // PDF page estimate (500 words per page)
-        const pdfPages = Math.max(1, Math.ceil(words / 500));
-        document.getElementById('status-pdf-pages').textContent = '~' + pdfPages;
-    };
 
     let setupEditor = () => {
         editor = monaco.editor.create(document.querySelector('#editor'), {
@@ -6658,10 +6660,16 @@ let performBeautify = (content) => {
     // ============================================================================
     
     const localStorageVersionsKey = 'versions';
-    const AUTO_SAVE_INTERVAL_MS = 10 * 60 * 1000; // 10 minutes
+    const localStorageAutosaveConfigKey = 'autosave_config';
+    const AUTO_SAVE_INTERVAL_MS = 10 * 60 * 1000; // 10 minutes (default)
     const MAX_VERSIONS = 15; // Maximum stored versions (FIFO retention)
+    
     let versions = [];
     let autoSaveTimer = null;
+    let autosaveConfig = {
+        enabled: true,
+        intervalMinutes: 10
+    };
     
     // Load versions from localStorage
     const loadVersions = () => {
@@ -6679,6 +6687,27 @@ let performBeautify = (content) => {
         }
     };
     
+    // Load autosave config from localStorage
+    const loadAutosaveConfig = () => {
+        try {
+            const stored = localStorage.getItem(`${localStorageNamespace}.${localStorageAutosaveConfigKey}`);
+            if (stored) {
+                autosaveConfig = JSON.parse(stored);
+            }
+        } catch (e) {
+            console.error('Failed to load autosave config:', e);
+        }
+    };
+    
+    // Save autosave config to localStorage
+    const saveAutosaveConfig = () => {
+        try {
+            localStorage.setItem(`${localStorageNamespace}.${localStorageAutosaveConfigKey}`, JSON.stringify(autosaveConfig));
+        } catch (e) {
+            console.error('Failed to save autosave config:', e);
+        }
+    };
+    
     // Save versions to localStorage
     const saveVersionsToStorage = () => {
         try {
@@ -6691,6 +6720,13 @@ let performBeautify = (content) => {
     // Save current content as a version
     const saveVersion = () => {
         const content = editor.getValue();
+        
+        // Prevent duplicate snapshot if no changes
+        if (versions.length > 0 && versions[0].content === content) {
+            console.log('No changes detected, skipping version save');
+            return;
+        }
+        
         const words = content.trim() ? content.trim().split(/\s+/).length : 0;
         const timestamp = new Date();
         
@@ -6699,8 +6735,16 @@ let performBeautify = (content) => {
             content: content,
             timestamp: timestamp,
             words: words,
-            preview: content.substring(0, 100) + (content.length > 100 ? '...' : '')
+            preview: content.substring(0, 100) + (content.length > 100 ? '...' : ''),
+            title: '' // Empty title by default, user can rename
         };
+        
+        console.log('Saving version:', {
+            id: version.id,
+            contentLength: content.length,
+            preview: version.preview,
+            totalVersions: versions.length + 1
+        });
         
         // Add to beginning of array
         versions.unshift(version);
@@ -6713,15 +6757,10 @@ let performBeautify = (content) => {
         saveVersionsToStorage();
         updateVersionsPanel();
         updateStatusBar();
+        updateAutosaveTooltip();
         
-        // Update save indicator
-        const saveIndicator = document.getElementById('status-save-indicator');
-        if (saveIndicator) {
-            saveIndicator.textContent = 'Saved';
-            setTimeout(() => {
-                saveIndicator.textContent = 'Saved';
-            }, 2000);
-        }
+        // Update save indicator with timestamp
+        updateSaveIndicator();
     };
     
     // Format timestamp for display
@@ -6740,8 +6779,22 @@ let performBeautify = (content) => {
         return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
     };
     
+    // Update save indicator with last saved time
+    const updateSaveIndicator = () => {
+        const saveIndicator = document.getElementById('status-save-indicator');
+        if (!saveIndicator) return;
+        
+        if (versions.length > 0) {
+            const lastVersion = versions[0];
+            const timeAgo = formatTimestamp(lastVersion.timestamp);
+            saveIndicator.textContent = `Saved ${timeAgo}`;
+        } else {
+            saveIndicator.textContent = 'Not saved';
+        }
+    };
+    
     // Update versions panel UI
-    const updateVersionsPanel = () => {
+    const updateVersionsPanel = (searchQuery = '') => {
         const versionsList = document.getElementById('version-history-list');
         const versionsCount = document.getElementById('status-versions-count');
         const totalVersionsDisplay = document.getElementById('total-versions-display');
@@ -6756,14 +6809,45 @@ let performBeautify = (content) => {
             return;
         }
         
-        versionsList.innerHTML = versions.map(version => `
-            <div class="version-item">
-                <div class="version-timestamp">${formatTimestamp(version.timestamp)}</div>
+        // Filter versions based on search query
+        const filteredVersions = searchQuery.trim() === '' 
+            ? versions 
+            : versions.filter(v => {
+                const title = v.title || '';
+                const timestamp = formatTimestamp(v.timestamp);
+                const preview = v.preview || '';
+                const query = searchQuery.toLowerCase();
+                return title.toLowerCase().includes(query) || 
+                       timestamp.toLowerCase().includes(query) ||
+                       preview.toLowerCase().includes(query);
+            });
+        
+        if (filteredVersions.length === 0) {
+            versionsList.innerHTML = '<p class="version-empty-state">No versions match your search.</p>';
+            return;
+        }
+        
+        versionsList.innerHTML = filteredVersions.map(version => `
+            <div class="version-item" data-version-id="${version.id}">
+                <div class="version-header">
+                    <div class="version-title-container">
+                        ${version.title ? 
+                            `<input type="text" class="version-title-input" value="${escapeHtml(version.title)}" data-version-id="${version.id}" />` :
+                            `<input type="text" class="version-title-input" placeholder="${formatTimestamp(version.timestamp)}" data-version-id="${version.id}" />`
+                        }
+                        <button class="version-save-title-btn" data-version-id="${version.id}" title="Save title">
+                            <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor">
+                                <path d="M13.854 3.646a.5.5 0 0 1 0 .708l-7 7a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L6.5 10.293l6.646-6.647a.5.5 0 0 1 .708 0z"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                ${version.title ? '' : `<div class="version-timestamp-small">${formatTimestamp(version.timestamp)}</div>`}
                 <div class="version-meta">
                     <span>${version.words} words</span>
                     <span>${Math.ceil(version.words / 500)} pages</span>
                 </div>
-                <div class="version-preview">${version.preview}</div>
+                <div class="version-preview">${escapeHtml(version.preview)}</div>
                 <div class="version-actions">
                     <button class="version-btn" onclick="window.previewVersion(${version.id})">Preview</button>
                     <button class="version-btn" onclick="window.compareVersion(${version.id})">Compare</button>
@@ -6774,10 +6858,10 @@ let performBeautify = (content) => {
         `).join('');
     };
     
-    // Restore a version
+    // Restore a version (no confirmation needed)
     window.restoreVersion = (id) => {
         const version = versions.find(v => v.id === id);
-        if (version && confirm('Restore this version? Current content will be replaced.')) {
+        if (version) {
             editor.setValue(version.content);
             closeVersionModal();
             const panel = document.getElementById('version-history-panel');
@@ -6785,14 +6869,57 @@ let performBeautify = (content) => {
         }
     };
     
-    // Delete a version
+    // Custom confirmation dialog
+    let confirmCallback = null;
+    
+    const showConfirmDialog = (title, message, onConfirm) => {
+        const dialog = document.getElementById('confirm-dialog');
+        const titleEl = document.getElementById('confirm-dialog-title');
+        const messageEl = document.getElementById('confirm-dialog-message');
+        
+        if (titleEl) titleEl.textContent = title;
+        if (messageEl) messageEl.textContent = message;
+        
+        confirmCallback = onConfirm;
+        
+        if (dialog) dialog.classList.add('visible');
+    };
+    
+    const closeConfirmDialog = () => {
+        const dialog = document.getElementById('confirm-dialog');
+        if (dialog) dialog.classList.remove('visible');
+        confirmCallback = null;
+    };
+    
+    // Delete a version (with custom confirmation)
     window.deleteVersion = (id) => {
-        if (confirm('Delete this version?')) {
-            versions = versions.filter(v => v.id !== id);
-            saveVersionsToStorage();
-            updateVersionsPanel();
-            updateStatusBar();
-        }
+        showConfirmDialog(
+            'Delete Version',
+            'Are you sure you want to delete this version? This action cannot be undone.',
+            () => {
+                versions = versions.filter(v => v.id !== id);
+                saveVersionsToStorage();
+                updateVersionsPanel();
+                updateStatusBar();
+                updateAutosaveTooltip();
+                closeConfirmDialog();
+            }
+        );
+    };
+    
+    // Save version title from inline input
+    window.saveVersionTitle = (id) => {
+        const input = document.querySelector(`.version-title-input[data-version-id="${id}"]`);
+        if (!input) return;
+        
+        const version = versions.find(v => v.id === id);
+        if (!version) return;
+        
+        const newTitle = input.value.trim();
+        version.title = newTitle;
+        
+        saveVersionsToStorage();
+        updateVersionsPanel();
     };
     
     // Preview a version
@@ -6803,24 +6930,50 @@ let performBeautify = (content) => {
         const modalTitle = document.getElementById('version-modal-title');
         const modalBody = document.getElementById('version-modal-body');
         const restoreBtn = document.getElementById('version-modal-restore-btn');
+        const toggleBtn = document.getElementById('version-modal-toggle-btn');
         
-        if (modalTitle) modalTitle.textContent = 'Version Preview - ' + formatTimestamp(version.timestamp);
+        let isRawMode = false;
         
-        if (modalBody) {
-            const html = marked.parse(version.content);
-            const sanitized = DOMPurify.sanitize(html);
+        const renderPreview = () => {
+            const versionName = version.title || formatTimestamp(version.timestamp);
             
-            modalBody.innerHTML = `
-                <div style="max-width: 800px; margin: 0 auto;">
-                    <div style="margin-bottom: 16px; padding: 12px; background: #f8fafc; border-radius: 8px; font-size: 12px; color: #64748b;">
-                        <strong>${version.words}</strong> words • <strong>${Math.ceil(version.words / 500)}</strong> pages • Saved ${formatTimestamp(version.timestamp)}
+            if (modalTitle) {
+                modalTitle.innerHTML = `
+                    <div style="font-size: 16px; font-weight: 600; color: inherit;">${versionName}</div>
+                    <div style="font-size: 12px; color: #64748b; font-weight: normal; margin-top: 4px;">
+                        ${version.words} words • ${Math.ceil(version.words / 500)} pages • Saved ${formatTimestamp(version.timestamp)}
                     </div>
-                    <div class="markdown-body" style="padding: 20px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px;">
-                        ${sanitized}
-                    </div>
-                </div>
-            `;
-        }
+                `;
+            }
+            
+            if (toggleBtn) {
+                toggleBtn.style.display = 'block';
+                toggleBtn.textContent = isRawMode ? 'Show Formatted' : 'Show Raw';
+                toggleBtn.onclick = () => {
+                    isRawMode = !isRawMode;
+                    renderPreview();
+                };
+            }
+            
+            if (modalBody) {
+                if (isRawMode) {
+                    modalBody.innerHTML = `
+                        <pre style="margin: 0; padding: 20px; font-family: 'Courier New', monospace; font-size: 13px; white-space: pre-wrap; word-wrap: break-word;" class="raw-markdown-view">${escapeHtml(version.content)}</pre>
+                    `;
+                } else {
+                    const html = marked.parse(version.content);
+                    const sanitized = DOMPurify.sanitize(html);
+                    
+                    modalBody.innerHTML = `
+                        <div class="markdown-body" style="padding: 20px;">
+                            ${sanitized}
+                        </div>
+                    `;
+                }
+            }
+        };
+        
+        renderPreview();
         
         if (restoreBtn) {
             restoreBtn.style.display = 'block';
@@ -6839,27 +6992,142 @@ let performBeautify = (content) => {
         
         const currentContent = editor.getValue();
         const versionContent = version.content;
+        const currentWords = currentContent.trim() ? currentContent.trim().split(/\s+/).length : 0;
+        
+        console.log('Comparing versions:', {
+            versionId: id,
+            currentLength: currentContent.length,
+            versionLength: versionContent.length,
+            areSame: currentContent === versionContent,
+            currentPreview: currentContent.substring(0, 50),
+            versionPreview: versionContent.substring(0, 50)
+        });
         
         const modalTitle = document.getElementById('version-modal-title');
         const modalBody = document.getElementById('version-modal-body');
         const restoreBtn = document.getElementById('version-modal-restore-btn');
+        const toggleBtn = document.getElementById('version-modal-toggle-btn');
         
-        if (modalTitle) modalTitle.textContent = 'Compare Versions';
+        let isRawMode = false;
         
-        if (modalBody) {
-            modalBody.innerHTML = `
-                <div class="version-compare-view">
-                    <div class="compare-pane">
-                        <div class="compare-pane-header">Current Version</div>
-                        <div class="compare-pane-content">${highlightDiff(currentContent, versionContent, 'current')}</div>
+        const renderCompare = () => {
+            const versionName = version.title || formatTimestamp(version.timestamp);
+            
+            if (modalTitle) {
+                modalTitle.innerHTML = `
+                    <div style="font-size: 16px; font-weight: 600; color: inherit;">Compare: ${versionName}</div>
+                    <div style="display: flex; gap: 20px; font-size: 12px; color: #64748b; font-weight: normal; margin-top: 4px;">
+                        <span>Current: ${currentWords} words • ${Math.ceil(currentWords / 500)} pages</span>
+                        <span>Version: ${version.words} words • ${Math.ceil(version.words / 500)} pages • Saved ${formatTimestamp(version.timestamp)}</span>
                     </div>
-                    <div class="compare-pane">
-                        <div class="compare-pane-header">Version from ${formatTimestamp(version.timestamp)}</div>
-                        <div class="compare-pane-content">${highlightDiff(versionContent, currentContent, 'version')}</div>
-                    </div>
-                </div>
-            `;
-        }
+                `;
+            }
+            
+            if (toggleBtn) {
+                toggleBtn.style.display = 'block';
+                toggleBtn.textContent = isRawMode ? 'Show Formatted' : 'Show Raw Diff';
+                toggleBtn.onclick = () => {
+                    isRawMode = !isRawMode;
+                    renderCompare();
+                };
+            }
+            
+            if (modalBody) {
+                if (isRawMode) {
+                    modalBody.innerHTML = `
+                        <div class="version-compare-view">
+                            <div class="compare-pane">
+                                <div class="compare-pane-header">Current Version</div>
+                                <pre class="compare-pane-content raw-markdown-view" style="font-family: 'Courier New', monospace; font-size: 12px; white-space: pre-wrap; word-wrap: break-word; margin: 0; padding: 16px;">${highlightDiff(currentContent, versionContent, 'current')}</pre>
+                            </div>
+                            <div class="compare-pane">
+                                <div class="compare-pane-header">Saved Version</div>
+                                <pre class="compare-pane-content raw-markdown-view" style="font-family: 'Courier New', monospace; font-size: 12px; white-space: pre-wrap; word-wrap: break-word; margin: 0; padding: 16px;">${highlightDiff(versionContent, currentContent, 'version')}</pre>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    // Render with diff highlighting on formatted view
+                    const currentLines = currentContent.split('\n');
+                    const versionLines = versionContent.split('\n');
+                    const lcs = calculateLCS(currentLines, versionLines);
+                    
+                    // Build arrays to track which lines are added/removed
+                    const currentChanges = new Set();
+                    const versionChanges = new Set();
+                    
+                    let i = 0, j = 0, lcsIndex = 0;
+                    while (i < currentLines.length || j < versionLines.length) {
+                        if (lcsIndex < lcs.length && 
+                            i < currentLines.length && 
+                            j < versionLines.length && 
+                            currentLines[i] === lcs[lcsIndex] && 
+                            versionLines[j] === lcs[lcsIndex]) {
+                            i++; j++; lcsIndex++;
+                        } else if (i < currentLines.length && (lcsIndex >= lcs.length || currentLines[i] !== lcs[lcsIndex])) {
+                            currentChanges.add(i);
+                            i++;
+                        } else if (j < versionLines.length) {
+                            versionChanges.add(j);
+                            j++;
+                        }
+                    }
+                    
+                    // Render with highlighting - use different classes for added vs removed
+                    const renderWithHighlight = (content, changes, isAddition) => {
+                        const lines = content.split('\n');
+                        let highlightedContent = '';
+                        let inChangeBlock = false;
+                        const blockClass = isAddition ? 'diff-added-block' : 'diff-removed-block';
+                        
+                        lines.forEach((line, idx) => {
+                            if (changes.has(idx)) {
+                                if (!inChangeBlock) {
+                                    highlightedContent += `<div class="${blockClass}">`;
+                                    inChangeBlock = true;
+                                }
+                                highlightedContent += line + '\n';
+                            } else {
+                                if (inChangeBlock) {
+                                    highlightedContent += '</div>';
+                                    inChangeBlock = false;
+                                }
+                                highlightedContent += line + '\n';
+                            }
+                        });
+                        
+                        if (inChangeBlock) {
+                            highlightedContent += '</div>';
+                        }
+                        
+                        const html = marked.parse(highlightedContent);
+                        return DOMPurify.sanitize(html);
+                    };
+                    
+                    const currentSanitized = renderWithHighlight(currentContent, currentChanges, true);
+                    const versionSanitized = renderWithHighlight(versionContent, versionChanges, false);
+                    
+                    modalBody.innerHTML = `
+                        <div class="version-compare-view">
+                            <div class="compare-pane">
+                                <div class="compare-pane-header">Current Version</div>
+                                <div class="compare-pane-content markdown-body" style="padding: 16px;">
+                                    ${currentSanitized}
+                                </div>
+                            </div>
+                            <div class="compare-pane">
+                                <div class="compare-pane-header">Saved Version</div>
+                                <div class="compare-pane-content markdown-body" style="padding: 16px;">
+                                    ${versionSanitized}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
+            }
+        };
+        
+        renderCompare();
         
         if (restoreBtn) {
             restoreBtn.style.display = 'block';
@@ -6990,11 +7258,152 @@ let performBeautify = (content) => {
         });
     }
     
+    // Autosave settings modal
+    const autosaveModal = document.getElementById('autosave-modal');
+    const autosaveSettingsBtn = document.getElementById('version-settings-btn');
+    const autosaveCloseBtn = document.getElementById('autosave-modal-close-btn');
+    const autosaveCancelBtn = document.getElementById('autosave-cancel-btn');
+    const autosaveSaveBtn = document.getElementById('autosave-save-btn');
+    const autosaveEnabledToggle = document.getElementById('autosave-enabled-toggle');
+    const autosaveCustomMinutes = document.getElementById('autosave-custom-minutes');
+    
+    const openAutosaveModal = () => {
+        // Populate current settings
+        if (autosaveEnabledToggle) {
+            autosaveEnabledToggle.checked = autosaveConfig.enabled;
+        }
+        if (autosaveCustomMinutes) {
+            autosaveCustomMinutes.value = autosaveConfig.intervalMinutes;
+        }
+        
+        // Update active interval button
+        document.querySelectorAll('.interval-btn').forEach(btn => {
+            const minutes = parseInt(btn.dataset.minutes);
+            if (minutes === autosaveConfig.intervalMinutes) {
+                btn.classList.add('active');
+            } else {
+                btn.classList.remove('active');
+            }
+        });
+        
+        if (autosaveModal) {
+            autosaveModal.classList.add('visible');
+        }
+    };
+    
+    const closeAutosaveModal = () => {
+        if (autosaveModal) {
+            autosaveModal.classList.remove('visible');
+        }
+    };
+    
+    const saveAutosaveSettings = () => {
+        // Get enabled state
+        autosaveConfig.enabled = autosaveEnabledToggle ? autosaveEnabledToggle.checked : true;
+        
+        // Get interval from custom input or active button
+        const customValue = autosaveCustomMinutes ? parseInt(autosaveCustomMinutes.value) : null;
+        if (customValue && customValue >= 1) {
+            autosaveConfig.intervalMinutes = customValue;
+        } else {
+            const activeBtn = document.querySelector('.interval-btn.active');
+            if (activeBtn) {
+                autosaveConfig.intervalMinutes = parseInt(activeBtn.dataset.minutes);
+            }
+        }
+        
+        // Save to localStorage
+        saveAutosaveConfig();
+        
+        // Restart autosave with new settings
+        startAutoSave();
+        
+        closeAutosaveModal();
+    };
+    
+    if (autosaveSettingsBtn) {
+        autosaveSettingsBtn.addEventListener('click', openAutosaveModal);
+    }
+    
+    if (autosaveCloseBtn) {
+        autosaveCloseBtn.addEventListener('click', closeAutosaveModal);
+    }
+    
+    if (autosaveCancelBtn) {
+        autosaveCancelBtn.addEventListener('click', closeAutosaveModal);
+    }
+    
+    if (autosaveSaveBtn) {
+        autosaveSaveBtn.addEventListener('click', saveAutosaveSettings);
+    }
+    
+    // Interval button handlers
+    document.querySelectorAll('.interval-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.interval-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            if (autosaveCustomMinutes) {
+                autosaveCustomMinutes.value = '';
+            }
+        });
+    });
+    
+    // Close modal on background click
+    if (autosaveModal) {
+        autosaveModal.addEventListener('click', (e) => {
+            if (e.target === autosaveModal) {
+                closeAutosaveModal();
+            }
+        });
+    }
+    
+    // Confirmation dialog handlers
+    const confirmDialog = document.getElementById('confirm-dialog');
+    const confirmCancelBtn = document.getElementById('confirm-cancel-btn');
+    const confirmConfirmBtn = document.getElementById('confirm-confirm-btn');
+    
+    if (confirmCancelBtn) {
+        confirmCancelBtn.addEventListener('click', closeConfirmDialog);
+    }
+    
+    if (confirmConfirmBtn) {
+        confirmConfirmBtn.addEventListener('click', () => {
+            if (confirmCallback) {
+                confirmCallback();
+            }
+        });
+    }
+    
+    if (confirmDialog) {
+        confirmDialog.addEventListener('click', (e) => {
+            if (e.target === confirmDialog) {
+                closeConfirmDialog();
+            }
+        });
+    }
+    
+    // Delegate event for save title buttons (since they're dynamically generated)
+    document.addEventListener('click', (e) => {
+        if (e.target.closest('.version-save-title-btn')) {
+            const btn = e.target.closest('.version-save-title-btn');
+            const versionId = parseInt(btn.dataset.versionId);
+            window.saveVersionTitle(versionId);
+        }
+    });
+    
     // Save version now button
     const saveVersionNowBtn = document.getElementById('save-version-now-btn');
     if (saveVersionNowBtn) {
         saveVersionNowBtn.addEventListener('click', () => {
             saveVersion();
+        });
+    }
+    
+    // Version search box
+    const versionSearchBox = document.getElementById('version-search-box');
+    if (versionSearchBox) {
+        versionSearchBox.addEventListener('input', (e) => {
+            updateVersionsPanel(e.target.value);
         });
     }
     
@@ -7025,13 +7434,50 @@ let performBeautify = (content) => {
         if (autoSaveTimer) {
             clearInterval(autoSaveTimer);
         }
+        
+        if (!autosaveConfig.enabled) {
+            updateAutosaveTooltip();
+            return; // Don't start if disabled
+        }
+        
+        const intervalMs = autosaveConfig.intervalMinutes * 60 * 1000;
         autoSaveTimer = setInterval(() => {
             saveVersion();
-        }, AUTO_SAVE_INTERVAL_MS);
+        }, intervalMs);
+        
+        updateAutosaveTooltip();
     };
+    
+    // Update autosave status tooltip
+    const updateAutosaveTooltip = () => {
+        const statusVersionsBtn = document.getElementById('status-versions');
+        if (!statusVersionsBtn) return;
+        
+        let tooltipLines = ['Version History', ''];
+        
+        if (autosaveConfig.enabled) {
+            tooltipLines.push('Autosave: Enabled');
+            tooltipLines.push(`Interval: ${autosaveConfig.intervalMinutes} minutes`);
+            
+            if (versions.length > 0) {
+                const lastVersion = versions[0];
+                const timeSince = formatTimestamp(lastVersion.timestamp);
+                tooltipLines.push(`Last saved: ${timeSince}`);
+            } else {
+                tooltipLines.push('No versions saved yet');
+            }
+        } else {
+            tooltipLines.push('Autosave: Disabled');
+            tooltipLines.push('Save manually using "Save Version Now"');
+        }
+        
+        statusVersionsBtn.setAttribute('title', tooltipLines.join('\n'));
+    };
+    
     
     // Initialize version history
     loadVersions();
+    loadAutosaveConfig();
     startAutoSave();
     
     // Save initial version after a short delay
@@ -7427,6 +7873,34 @@ let performBeautify = (content) => {
                 setTimeout(copyReaction, 100);
             }
         });
+        
+        // Setup save indicator
+        const saveIndicator = document.getElementById('status-save-indicator');
+        if (saveIndicator) {
+            // Prevent text selection
+            saveIndicator.style.userSelect = 'none';
+            saveIndicator.style.webkitUserSelect = 'none';
+            saveIndicator.style.cursor = 'pointer';
+            saveIndicator.title = 'Double-click to save version now';
+            
+            // Add double-click handler to trigger manual save
+            saveIndicator.addEventListener('dblclick', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                saveVersion();
+            });
+            
+            // Prevent text selection on mousedown
+            saveIndicator.addEventListener('mousedown', (e) => {
+                e.preventDefault();
+            });
+            
+            // Initial update
+            updateSaveIndicator();
+            
+            // Update every 5 minutes (300000ms)
+            setInterval(updateSaveIndicator, 300000);
+        }
     };
     
     initMofuBlob();

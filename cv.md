@@ -71,7 +71,8 @@ Creative and technically skilled Interior Architect with 5+ years of experience 
 AutoCAD Architecture, 3ds Max, Revit, ArchiCAD, SketchUp, V-ray, Corona, Vantage, Enscape, D5 Render, Lumion, Twinmotion, Adobe Lightroom, Photoshop, Illustrator, Premiere Pro, PlanSwift, Microsoft Office.
 
 ## SOFT SKILLS
-Creativity, Attention to Detail, Diplomacy, Adaptability, Brainstorming, Analytical Thinking, Prompt Engineering.
+Creativity, Attention to Detail, Diplomacy, 
+Adaptability, Brainstorming, Analytical Thinking, Prompt Engineering.
 
 ---
 
@@ -87,5 +88,8 @@ Arabic, English, French, Turkish
 ---
 
 ## VOLUNTARY EXPERIENCE
+
 **Featured Interviewee in Agence France-Presse (AFP) Article:**
 Selected as a spokesperson to represent the impactful aid and assistance efforts during Lebanon's economic crisis in 2019. Interviewed by AFP to discuss the campaign's success in providing support to over 150 families across Lebanon. Highlighted the collaborative nature of the initiative and its significant contribution to alleviating hardship during challenging times.
+
+---

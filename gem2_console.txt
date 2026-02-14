@@ -1,0 +1,69 @@
+05:20:23.034 gem2.html:448 📍 Cursor at line: 6
+05:20:23.034 gem2.html:459 ⚠️ No exact match, finding closest block...
+05:20:23.034 gem2.html:476 🔍 Found closest block at line 1
+05:20:23.034 gem2.html:481 🎯 Found target block for line 6
+05:20:23.036 gem2.html:501 📜 Scrolling preview to: 0 Current: 0
+05:20:26.897 gem2.html:448 📍 Cursor at line: 3
+05:20:26.897 gem2.html:459 ⚠️ No exact match, finding closest block...
+05:20:26.897 gem2.html:476 🔍 Found closest block at line 1
+05:20:26.897 gem2.html:481 🎯 Found target block for line 3
+05:20:26.899 gem2.html:501 📜 Scrolling preview to: 0 Current: 0
+05:20:30.770 gem2.html:527 ⌨️ Input detected, updating...
+05:20:30.771 gem2.html:321 🔄 Updating from source
+05:20:30.807 gem2.html:304 📊 Line map coverage: 71 lines mapped
+05:20:30.814 gem2.html:332 🎯 Found 66 blocks to annotate
+05:20:30.817 gem2.html:366 ✓ Mapped block to lines 1 - 1 : MUHAMMAD SHKEIR
+05:20:30.818 gem2.html:366 ✓ Mapped block to lines 2 - 3 : INTERIOR AND ARCHITE
+05:20:30.819 gem2.html:366 ✓ Mapped block to lines 14 - 15 : Phone: +966 56 165 6
+05:20:30.820 gem2.html:366 ✓ Mapped block to lines 16 - 16 : 
+05:20:30.821 gem2.html:366 ✓ Mapped block to lines 20 - 20 : Creative and technic
+05:20:30.822 gem2.html:366 ✓ Mapped block to lines 21 - 21 : 
+05:20:30.823 gem2.html:366 ✓ Mapped block to lines 25 - 25 : E X P E R I E N C E
+05:20:30.824 gem2.html:366 ✓ Mapped block to lines 30 - 30 : MASARAT AL NODTHOM C
+05:20:30.825 gem2.html:366 ✓ Mapped block to lines 37 - 37 : December 2024 – Pres
+05:20:30.826 gem2.html:366 ✓ Mapped block to lines 54 - 54 : Designing and managi
+05:20:30.827 gem2.html:366 ✓ Mapped block to lines 60 - 64 : Creating interior la
+05:20:30.827 gem2.html:366 ✓ Mapped block to lines 67 - 67 : Coordinating with co
+05:20:30.828 gem2.html:366 ✓ Mapped block to lines 69 - 69 : ANMA SAUDI TRADING C
+05:20:30.829 gem2.html:366 ✓ Mapped block to lines 72 - 72 : 2024 – Present
+05:20:30.830 gem2.html:366 ✓ Mapped block to lines 74 - 75 : Delivering 3D landsc
+05:20:30.830 gem2.html:366 ✓ Mapped block to lines 77 - 77 : Developing CAD drawi
+05:20:30.831 gem2.html:366 ✓ Mapped block to lines 81 - 81 : SIHAM AL MODON – Riy
+05:20:30.832 gem2.html:366 ✓ Mapped block to lines 82 - 84 : 2022 – Present
+05:20:30.832 gem2.html:366 ✓ Mapped block to lines 86 - 86 : Managing facade clad
+05:20:30.833 gem2.html:366 ✓ Mapped block to lines 87 - 87 : 
+05:20:30.834 gem2.html:374 ✅ Update complete
+05:20:33.645 gem2.html:385 👆 Clicked block: 20 - 20
+05:20:33.647 gem2.html:397 📜 Scrolling editor to line 20 scroll position: 256.5
+05:20:34.989 gem2.html:385 👆 Clicked block: 77 - 77
+05:20:34.993 gem2.html:397 📜 Scrolling editor to line 77 scroll position: 1852.5
+05:20:44.138 gem2.html:448 📍 Cursor at line: 91
+05:20:44.139 gem2.html:459 ⚠️ No exact match, finding closest block...
+05:20:44.139 gem2.html:476 🔍 Found closest block at line 87
+05:20:44.139 gem2.html:481 🎯 Found target block for line 91
+05:20:44.145 gem2.html:501 📜 Scrolling preview to: 3743.5 Current: 3267
+05:20:46.138 gem2.html:448 📍 Cursor at line: 66
+05:20:46.138 gem2.html:459 ⚠️ No exact match, finding closest block...
+05:20:46.139 gem2.html:476 🔍 Found closest block at line 60
+05:20:46.139 gem2.html:481 🎯 Found target block for line 66
+05:20:46.144 gem2.html:501 📜 Scrolling preview to: 791 Current: 3744
+05:20:49.971 gem2.html:448 📍 Cursor at line: 55
+05:20:49.971 gem2.html:459 ⚠️ No exact match, finding closest block...
+05:20:49.971 gem2.html:476 🔍 Found closest block at line 54
+05:20:49.971 gem2.html:481 🎯 Found target block for line 55
+05:20:49.978 gem2.html:501 📜 Scrolling preview to: 731 Current: 791
+05:20:52.410 gem2.html:448 📍 Cursor at line: 45
+05:20:52.410 gem2.html:459 ⚠️ No exact match, finding closest block...
+05:20:52.411 gem2.html:476 🔍 Found closest block at line 37
+05:20:52.411 gem2.html:481 🎯 Found target block for line 45
+05:20:52.414 gem2.html:501 📜 Scrolling preview to: 653 Current: 731
+05:20:54.194 gem2.html:448 📍 Cursor at line: 36
+05:20:54.194 gem2.html:459 ⚠️ No exact match, finding closest block...
+05:20:54.195 gem2.html:476 🔍 Found closest block at line 30
+05:20:54.195 gem2.html:481 🎯 Found target block for line 36
+05:20:54.200 gem2.html:501 📜 Scrolling preview to: 605 Current: 653
+05:20:55.210 gem2.html:448 📍 Cursor at line: 42
+05:20:55.211 gem2.html:459 ⚠️ No exact match, finding closest block...
+05:20:55.211 gem2.html:476 🔍 Found closest block at line 37
+05:20:55.211 gem2.html:481 🎯 Found target block for line 42
+05:20:55.217 gem2.html:501 📜 Scrolling preview to: 653 Current: 605

@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pro-Draft | Live Bidirectional Editor</title>
+    <!-- Dependencies -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/turndown/dist/turndown.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --accent: #2563eb;
+            --bg-main: #ffffff;
+            --bg-sidebar: #f8fafc;
+            --border: #e2e8f0;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-main);
+            color: #1e293b;
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        .editor-wrapper {
+            display: flex;
+            height: calc(100vh - 64px);
+            width: 100%;
+            position: relative;
+        }
+
+        .pane-left, .pane-right {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        .scroll-container {
+            flex: 1;
+            overflow-y: auto;
+            scroll-behavior: smooth;
+            position: relative;
+        }
+
+        .editor-container {
+            display: flex;
+            position: relative;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .line-numbers {
+            background: #f1f5f9;
+            color: #94a3b8;
+            padding: 40px 12px;
+            font-family: 'Fira Code', monospace;
+            font-size: 13px;
+            line-height: 24px; /* Matches textarea */
+            text-align: right;
+            user-select: none;
+            border-right: 1px solid #e2e8f0;
+            min-width: 48px;
+            overflow: hidden;
+        }
+
+        .line-num { display: block; height: 24px; }
+        .line-num.active { color: var(--accent); font-weight: 700; background: rgba(37, 99, 235, 0.1); }
+
+        .resizer {
+            width: 6px;
+            cursor: col-resize;
+            background: var(--border);
+            z-index: 20;
+            transition: background 0.2s;
+        }
+        
+        .resizer:hover, .resizer.dragging { background: var(--accent); }
+
+        #markdown-editor {
+            font-family: 'Fira Code', monospace;
+            background: transparent;
+            resize: none;
+            outline: none;
+            line-height: 24px; /* Fixed for precise math */
+            font-size: 13px;
+            width: 100%;
+            min-height: 100%;
+            padding: 40px 20px;
+            color: #334155;
+            display: block;
+            border: none;
+            white-space: pre;
+            tab-size: 4;
+            overflow-x: auto;
+        }
+
+        .preview-area { padding: 40px 60px; max-width: 800px; margin: 0 auto; min-height: 100%; }
+
+        /* Bidirectional Interaction Styles */
+        .preview-area > * {
+            outline: none;
+            border-left: 3px solid transparent;
+            padding-left: 15px;
+            margin-left: -18px;
+            transition: all 0.15s ease-out;
+            position: relative;
+        }
+
+        .preview-area > *:hover { border-left-color: #cbd5e1; }
+        .preview-area .active-block { 
+            background: rgba(37, 99, 235, 0.05); 
+            border-left-color: var(--accent);
+        }
+
+        /* Prose styles */
+        .prose h1 { font-weight: 800; font-size: 2.25rem; margin-bottom: 1.5rem; color: #0f172a; line-height: 1.2; }
+        .prose h2 { font-weight: 700; font-size: 1.5rem; margin-top: 2rem; margin-bottom: 1rem; color: #334155; }
+        .prose h3 { font-weight: 600; font-size: 1.25rem; margin-top: 1.5rem; margin-bottom: 0.75rem; }
+        .prose p { margin-bottom: 1.25rem; line-height: 1.7; color: #475569; }
+        .prose ul { list-style: disc; padding-left: 1.5rem; margin-bottom: 1.25rem; }
+        .prose li { margin-bottom: 0.5rem; }
+        .prose blockquote { border-left: 4px solid var(--accent); padding-left: 1rem; font-style: italic; color: #64748b; background: #f8fafc; padding: 1rem; border-radius: 0 4px 4px 0; margin: 1.5rem 0; }
+        .prose strong { color: #0f172a; font-weight: 600; }
+    </style>
+</head>
+<body class="bg-slate-50">
+
+    <header class="h-16 border-b border-slate-200 bg-white flex items-center justify-between px-6 z-30 relative shadow-sm">
+        <div class="flex items-center gap-4">
+            <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold shadow-md">P</div>
+            <h1 class="font-semibold text-slate-800 tracking-tight">Pro-Draft <span class="text-slate-400 font-normal">/ Architecture Studio</span></h1>
+        </div>
+        <div id="sync-status" class="text-[10px] font-bold text-emerald-600 uppercase flex items-center gap-2 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-100">
+            <span class="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span> System Ready
+        </div>
+    </header>
+
+    <div class="editor-wrapper" id="container">
+        <!-- Left Pane: Source Code -->
+        <section class="pane-left border-r border-slate-200" style="width: 45%;">
+            <div class="px-4 py-2 border-b border-slate-200 bg-slate-50 flex justify-between items-center text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                <span>Source Editor</span>
+                <span id="line-indicator">Ln 1</span>
+            </div>
+            <div class="editor-container">
+                <div id="line-numbers" class="line-numbers"></div>
+                <div class="scroll-container" id="left-scroll">
+                    <textarea id="markdown-editor" spellcheck="false"># MUHAMMAD SHKEIR
+INTERIOR AND ARCHITECTURAL DESIGNER
+
+## CONTACT
+**Location:** Riyadh, Saudi Arabia
+**Phone:** +966 56 165 6XXX
+**Email:** muhamad@example.com
+
+## PROFESSIONAL SUMMARY
+Creative and technical Interior & Architectural Designer based in Riyadh.
+Specializing in blending traditional Saudi heritage with modern AI-driven design efficiency.
+
+## EXPERIENCE
+
+**MASARAT AL NODTHOM CONTRACTING**
+*Riyadh, Saudi Arabia*
+*December 2024 – Present*
+- Designing and managing architectural projects focused on commercial spaces.
+- Creating interior layouts that optimize thermal comfort.
+- Coordinating with construction teams for on-site execution.
+
+**ANMA SAUDI TRADING CO.**
+*Riyadh, Saudi Arabia*
+*2024 – Present*
+- Delivering 3D landscape visualizations using AI tools.
+- Developing CAD drawings for urban planning.
+
+**SIHAM AL MODON**
+*Riyadh, Saudi Arabia*
+*2022 – Present*
+- Managing facade cladding projects for residential villas.
+</textarea>
+                </div>
+            </div>
+        </section>
+
+        <!-- Resizer -->
+        <div class="resizer" id="drag-bar"></div>
+
+        <!-- Right Pane: Visual Canvas -->
+        <section class="pane-right" style="flex: 1;">
+            <div class="px-4 py-2 border-b border-slate-200 bg-white flex justify-between items-center text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                <span>Live Blueprint</span>
+                <span id="debug-info" class="text-blue-400">Ready</span>
+            </div>
+            <div class="scroll-container" id="right-scroll">
+                <div id="preview" class="preview-area prose prose-slate"></div>
+            </div>
+        </section>
+    </div>
+
+    <script>
+        // --- CONFIGURATION ---
+        const LINE_HEIGHT = 24; // Must match CSS .line-num height
+        const PADDING_TOP = 40; // Must match CSS #markdown-editor padding-top
+
+        // --- DOM ELEMENTS ---
+        const editor = document.getElementById('markdown-editor');
+        const preview = document.getElementById('preview');
+        const leftScroll = document.getElementById('left-scroll');
+        const rightScroll = document.getElementById('right-scroll');
+        const lineNumbers = document.getElementById('line-numbers');
+        const lineIndicator = document.getElementById('line-indicator');
+        const debugInfo = document.getElementById('debug-info');
+        const dragBar = document.getElementById('drag-bar');
+        const leftPane = document.querySelector('.pane-left');
+
+        // --- STATE ---
+        const turndown = new TurndownService({ headingStyle: 'atx', bulletListMarker: '-' });
+        let isSyncing = false;
+        let lineToBlockMap = []; // Array where index = line number, value = DOM Element
+        
+        console.log("🚀 App initialized");
+
+        // --- CORE FUNCTIONS ---
+
+        function updateLineNumbers(count) {
+            const currentCount = lineNumbers.children.length;
+            if (count === currentCount) return;
+            
+            let html = '';
+            for (let i = 1; i <= count; i++) {
+                html += `<span class="line-num">${i}</span>`;
+            }
+            lineNumbers.innerHTML = html;
+        }
+
+        function render() {
+            if (isSyncing) return;
+            console.log("🔄 Updating from source");
+            
+            const content = editor.value;
+            const lines = content.split('\n');
+            updateLineNumbers(lines.length);
+
+            // 1. Render HTML
+            preview.innerHTML = marked.parse(content);
+
+            // 2. Map Blocks to Lines (The "Extremely Accurate" Logic)
+            mapSourceToElements(lines);
+        }
+
+        function mapSourceToElements(lines) {
+            lineToBlockMap = new Array(lines.length + 1).fill(null);
+            const blocks = preview.querySelectorAll('h1, h2, h3, p, ul, ol, blockquote, pre');
+            
+            let searchIndex = 0;
+            let mappedCount = 0;
+
+            console.log(`🎯 Found ${blocks.length} blocks to annotate`);
+
+            blocks.forEach((block, index) => {
+                // Get clean text content of the block
+                const blockText = block.innerText.trim();
+                if (!blockText) return;
+
+                // Heuristic: Match the first 15 chars to find start
+                const startSnippet = blockText.substring(0, 15);
+                // Heuristic: Match the last 15 chars to find end
+                const endSnippet = blockText.substring(Math.max(0, blockText.length - 15));
+
+                let startLine = -1;
+                let endLine = -1;
+
+                // Find Start Line
+                for (let i = searchIndex; i < lines.length; i++) {
+                    if (lines[i].includes(startSnippet)) {
+                        startLine = i;
+                        break;
+                    }
+                }
+
+                if (startLine !== -1) {
+                    // Find End Line (scan forward from startLine)
+                    // We assume the block ends when we find the endSnippet
+                    for (let i = startLine; i < lines.length; i++) {
+                        if (lines[i].includes(endSnippet)) {
+                            endLine = i;
+                            break;
+                        }
+                    }
+                    
+                    // Fallback: if end line not found (rare), assume single line
+                    if (endLine === -1) endLine = startLine;
+
+                    // Annotate DOM
+                    block.setAttribute('data-start', startLine + 1);
+                    block.setAttribute('data-end', endLine + 1);
+                    block.setAttribute('contenteditable', 'true'); // Prepare for ghost writing
+
+                    // Fill Lookup Map for EVERY line in this block
+                    for (let k = startLine; k <= endLine; k++) {
+                        lineToBlockMap[k + 1] = block;
+                    }
+
+                    console.log(`✓ Mapped block to lines ${startLine + 1} - ${endLine + 1} : ${startSnippet.replace(/\n/g, '')}...`);
+                    
+                    searchIndex = endLine + 1; // Optimize search for next block
+                    mappedCount++;
+                }
+            });
+
+            console.log(`📊 Line map coverage: ${mappedCount} blocks mapped`);
+            updateActiveLine(); // Refresh highlight
+        }
+
+        // --- INTERACTION HANDLERS ---
+
+        // 1. Line Tracking (Cursor -> Visual)
+        function updateActiveLine() {
+            // Calculate current line based on cursor position
+            const cursorPos = editor.selectionStart;
+            const contentUpToCursor = editor.value.substr(0, cursorPos);
+            const currentLine = contentUpToCursor.split('\n').length;
+
+            lineIndicator.innerText = `Ln ${currentLine}`;
+            debugInfo.innerText = `Cursor: Ln ${currentLine}`;
+
+            // Highlight Line Number
+            const nums = lineNumbers.querySelectorAll('.line-num');
+            nums.forEach(n => n.classList.remove('active'));
+            if (nums[currentLine - 1]) nums[currentLine - 1].classList.add('active');
+
+            // Find visual block
+            const targetBlock = lineToBlockMap[currentLine];
+            
+            // Remove old highlights
+            preview.querySelectorAll('.active-block').forEach(el => el.classList.remove('active-block'));
+
+            if (targetBlock) {
+                targetBlock.classList.add('active-block');
+                
+                // Smart Scroll: Only scroll if out of view
+                const blockRect = targetBlock.getBoundingClientRect();
+                const containerRect = rightScroll.getBoundingClientRect();
+                
+                // Check if element is significantly out of view
+                const isOutOfView = blockRect.top < containerRect.top + 20 || blockRect.bottom > containerRect.bottom - 20;
+
+                if (isOutOfView) {
+                    console.log(`📜 Scrolling preview to match Line ${currentLine}`);
+                    targetBlock.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+            } else {
+                console.log(`⚠️ No mapped block for Line ${currentLine} (likely whitespace)`);
+            }
+        }
+
+        // 2. Instant Focus (Visual Click -> Source)
+        preview.addEventListener('click', (e) => {
+            const block = e.target.closest('[data-start]');
+            if (!block) return;
+
+            const startLine = parseInt(block.getAttribute('data-start'));
+            console.log(`👆 Clicked block lines: ${startLine} - ${block.getAttribute('data-end')}`);
+
+            // Scroll Editor
+            const scrollTarget = (startLine - 1) * LINE_HEIGHT + PADDING_TOP;
+            leftScroll.scrollTo({ top: scrollTarget - 100, behavior: 'smooth' }); // -100 for context
+
+            // Move Cursor to Start of Line
+            const lines = editor.value.split('\n');
+            let charCount = 0;
+            for (let i = 0; i < startLine - 1; i++) {
+                charCount += lines[i].length + 1; // +1 for newline
+            }
+            editor.focus();
+            editor.setSelectionRange(charCount, charCount);
+            
+            updateActiveLine(); // Update UI
+        });
+
+        // 3. Ghost Writing (Visual Edit -> Source)
+        preview.addEventListener('input', (e) => {
+            if (isSyncing) return;
+            const block = e.target.closest('[data-start]');
+            if (!block) return;
+
+            console.log("⌨️ Visual edit detected");
+            isSyncing = true;
+            
+            // We only want to update ONLY the text, but Turndown converts the whole doc.
+            // For stability, we convert the whole doc. 
+            // In a production app, we would patch only the specific range.
+            const newMarkdown = turndown.turndown(preview.innerHTML);
+            
+            // Preserve cursor position roughly
+            const cursorRatio = editor.selectionStart / editor.value.length;
+            
+            editor.value = newMarkdown;
+            
+            // Restore cursor
+            const newCursorPos = Math.floor(cursorRatio * editor.value.length);
+            editor.setSelectionRange(newCursorPos, newCursorPos);
+            
+            setTimeout(() => { isSyncing = false; }, 50);
+        });
+
+        // --- EVENT LISTENERS ---
+
+        // Editor Events
+        editor.addEventListener('input', render);
+        editor.addEventListener('keyup', updateActiveLine);
+        editor.addEventListener('click', updateActiveLine);
+        
+        // Synced Scrolling for Line Numbers
+        leftScroll.addEventListener('scroll', () => {
+            lineNumbers.scrollTop = leftScroll.scrollTop;
+        });
+
+        // Resizer Logic
+        let isResizing = false;
+        dragBar.addEventListener('mousedown', () => { 
+            isResizing = true; 
+            document.body.style.cursor = 'col-resize'; 
+            dragBar.classList.add('dragging');
+        });
+        document.addEventListener('mousemove', (e) => {
+            if (!isResizing) return;
+            const val = (e.clientX / window.innerWidth) * 100;
+            if (val > 25 && val < 75) {
+                leftPane.style.width = `${val}%`;
+            }
+        });
+        document.addEventListener('mouseup', () => { 
+            isResizing = false; 
+            document.body.style.cursor = 'default';
+            dragBar.classList.remove('dragging');
+        });
+
+        // Init
+        window.addEventListener('load', () => {
+            console.log("🎬 Loading app...");
+            render();
+            updateActiveLine();
+            console.log("✨ App ready!");
+        });
+
+    </script>
+</body>
+</html>

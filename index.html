@@ -367,7 +367,15 @@
     <div class="version-history-panel" id="version-history-panel">
         <div class="version-history-header">
             <h3>Version History</h3>
-            <button class="version-history-close" id="version-history-close-btn">×</button>
+            <div class="version-history-header-actions">
+                <button class="version-settings-btn" id="version-settings-btn" title="Autosave Settings">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                        <path d="M8 10.5a2.5 2.5 0 100-5 2.5 2.5 0 000 5z"/>
+                        <path d="M14 8a1.5 1.5 0 01-1.5 1.5h-.5a.5.5 0 00-.5.5v.5a1.5 1.5 0 01-1.5 1.5h-.5a.5.5 0 00-.5.5v.5a1.5 1.5 0 01-1.5 1.5h-1a1.5 1.5 0 01-1.5-1.5v-.5a.5.5 0 00-.5-.5h-.5A1.5 1.5 0 012 10.5v-.5a.5.5 0 00-.5-.5h-.5A1.5 1.5 0 010 8a1.5 1.5 0 011.5-1.5h.5a.5.5 0 00.5-.5v-.5A1.5 1.5 0 014 4h.5a.5.5 0 00.5-.5v-.5A1.5 1.5 0 016.5 1.5h1A1.5 1.5 0 019 3v.5a.5.5 0 00.5.5h.5A1.5 1.5 0 0111.5 5.5v.5a.5.5 0 00.5.5h.5A1.5 1.5 0 0114 8z"/>
+                    </svg>
+                </button>
+                <button class="version-history-close" id="version-history-close-btn">×</button>
+            </div>
         </div>
         <div class="version-history-actions">
             <div class="version-info">
@@ -375,8 +383,62 @@
             </div>
             <button class="version-action-btn" id="save-version-now-btn">Save Version Now</button>
         </div>
+        <div style="padding: 0 20px;">
+            <input type="text" class="version-search-box" id="version-search-box" placeholder="Search versions by name...">
+        </div>
         <div class="version-history-list" id="version-history-list">
             <p class="version-empty-state">No versions saved yet. Versions are auto-saved every 10 minutes.</p>
+        </div>
+    </div>
+
+    <!-- Autosave Settings Modal -->
+    <div class="autosave-modal" id="autosave-modal">
+        <div class="autosave-modal-content">
+            <div class="autosave-modal-header">
+                <h3>Autosave Settings</h3>
+                <button class="autosave-modal-close" id="autosave-modal-close-btn">×</button>
+            </div>
+            <div class="autosave-modal-body">
+                <div class="autosave-setting">
+                    <label class="autosave-toggle">
+                        <input type="checkbox" id="autosave-enabled-toggle" checked>
+                        <span>Enable Autosave</span>
+                    </label>
+                </div>
+                <div class="autosave-setting">
+                    <label>Autosave Interval</label>
+                    <div class="autosave-interval-options">
+                        <button class="interval-btn" data-minutes="5">5 min</button>
+                        <button class="interval-btn active" data-minutes="10">10 min</button>
+                        <button class="interval-btn" data-minutes="30">30 min</button>
+                        <button class="interval-btn" data-minutes="60">60 min</button>
+                    </div>
+                    <div class="autosave-custom-interval">
+                        <label>Custom (minutes):</label>
+                        <input type="number" id="autosave-custom-minutes" min="1" max="1440" placeholder="10">
+                    </div>
+                </div>
+            </div>
+            <div class="autosave-modal-footer">
+                <button class="autosave-btn-cancel" id="autosave-cancel-btn">Cancel</button>
+                <button class="autosave-btn-save" id="autosave-save-btn">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Custom Confirmation Dialog -->
+    <div class="confirm-dialog" id="confirm-dialog">
+        <div class="confirm-dialog-content">
+            <div class="confirm-dialog-header">
+                <h3 id="confirm-dialog-title">Confirm Action</h3>
+            </div>
+            <div class="confirm-dialog-body">
+                <p id="confirm-dialog-message">Are you sure?</p>
+            </div>
+            <div class="confirm-dialog-footer">
+                <button class="confirm-btn-cancel" id="confirm-cancel-btn">Cancel</button>
+                <button class="confirm-btn-confirm" id="confirm-confirm-btn">Confirm</button>
+            </div>
         </div>
     </div>
 
@@ -384,7 +446,10 @@
     <div class="version-modal" id="version-modal">
         <div class="version-modal-content">
             <div class="version-modal-header">
-                <h3 id="version-modal-title">Version Preview</h3>
+                <div style="flex: 1;">
+                    <h3 id="version-modal-title">Version Preview</h3>
+                </div>
+                <button class="modal-btn modal-btn-secondary" id="version-modal-toggle-btn" style="display: none; margin-right: 12px;">Toggle View</button>
                 <button class="version-modal-close" id="version-modal-close-btn">×</button>
             </div>
             <div class="version-modal-body" id="version-modal-body">
