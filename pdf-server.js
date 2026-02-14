@@ -60,16 +60,17 @@ app.post('/generate-pdf', async (req, res) => {
         
         const page = await browser.newPage();
         
-        // Set viewport
+        // Set viewport to A4 dimensions (210mm x 297mm at 96 DPI = 794px x 1123px)
+        // This ensures the PDF is generated at correct A4 size, not A3
         await page.setViewport({
-            width: 1200,
-            height: 1600,
-            deviceScaleFactor: 2
+            width: 794,   // A4 width: 210mm = 8.27" = 794px at 96 DPI
+            height: 1123, // A4 height: 297mm = 11.69" = 1123px at 96 DPI
+            deviceScaleFactor: 1
         });
         
         console.log('📄 Loading HTML...');
         
-        // Inject proper print CSS with @page rules using custom margins
+        // Simple CSS reset - HTML is now clean with no inline styles
         const printCSS = `
             @page {
                 size: A4 portrait;
@@ -77,21 +78,33 @@ app.post('/generate-pdf', async (req, res) => {
             }
             
             @media print {
-                html, body {
-                    width: 100% !important;
-                    height: 100% !important;
-                    background: white !important;
-                    padding: 0 !important;
-                    margin: 0 !important;
+                * {
+                    box-sizing: border-box !important;
                 }
                 
-                .paper-container {
-                    max-width: 100% !important;
-                    width: 100% !important;
+                html, body {
+                    margin: 0 !important;
+                    padding: 0 !important;
+                    background: white !important;
+                }
+                
+                /* Reset paper preview wrappers */
+                .paper-pages-container,
+                .a4-page {
+                    width: auto !important;
+                    height: auto !important;
+                    min-height: 0 !important;
                     margin: 0 !important;
                     padding: 0 !important;
                     box-shadow: none !important;
                     border: none !important;
+                    background: transparent !important;
+                    transform: none !important;
+                }
+                
+                .paper-container {
+                    padding: 0 !important;
+                    margin: 0 !important;
                     break-after: page;
                     break-inside: avoid;
                 }
@@ -101,8 +114,8 @@ app.post('/generate-pdf', async (req, res) => {
                 }
                 
                 .markdown-body {
-                    max-width: 100% !important;
                     padding: 0 !important;
+                    margin: 0 !important;
                 }
                 
                 /* Avoid breaking inside these elements */

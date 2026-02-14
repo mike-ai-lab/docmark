@@ -1,4 +1,4 @@
-﻿import Storehouse from 'storehouse-js';
+import Storehouse from 'storehouse-js';
 import * as monaco from 'https://cdn.jsdelivr.net/npm/monaco-editor@0.52.2/+esm';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
@@ -481,10 +481,15 @@ This web site is using ${"`"}markedjs/marked${"`"}.
         pages.forEach((pageHtml, index) => {
             const page = document.createElement('div');
             page.className = 'a4-page';
-            page.style.width = pageSetup.width + 'cm';
-            page.style.minHeight = pageSetup.height + 'cm';
-            page.style.padding = `${pageSetup.marginTop}cm ${pageSetup.marginRight}cm ${pageSetup.marginBottom}cm ${pageSetup.marginLeft}cm`;
-            page.innerHTML = `<div class="markdown-body">${pageHtml}</div>`;
+            // NO inline styles - use CSS custom properties instead
+            page.style.setProperty('--page-width', pageSetup.width + 'cm');
+            page.style.setProperty('--page-height', pageSetup.height + 'cm');
+            page.style.setProperty('--page-margin-top', pageSetup.marginTop + 'cm');
+            page.style.setProperty('--page-margin-right', pageSetup.marginRight + 'cm');
+            page.style.setProperty('--page-margin-bottom', pageSetup.marginBottom + 'cm');
+            page.style.setProperty('--page-margin-left', pageSetup.marginLeft + 'cm');
+            
+            page.innerHTML = `<div class="paper-container"><div class="markdown-body">${pageHtml}</div></div>`;
             container.appendChild(page);
         });
         
@@ -913,6 +918,40 @@ This web site is using ${"`"}markedjs/marked${"`"}.
     };
 
     let showInlineDiff = (original, modified) => {
+        // Get current theme FIRST (before using colors)
+        const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+        
+        // Theme-aware colors
+        const colors = isDark ? {
+            bg: '#1e1e1e',
+            text: '#e0e0e0',
+            border: '#333',
+            contextText: '#999',
+            addedBg: '#1a3d1a',
+            addedText: '#7ee87e',
+            removedBg: '#3d1a1a',
+            removedText: '#ff7b7b',
+            separatorBg: '#2a2a2a',
+            separatorText: '#888',
+            buttonBg: '#2a2a2a',
+            buttonBorder: '#444',
+            buttonText: '#e0e0e0'
+        } : {
+            bg: 'white',
+            text: 'black',
+            border: '#ddd',
+            contextText: '#666',
+            addedBg: '#e6ffed',
+            addedText: '#22863a',
+            removedBg: '#ffeef0',
+            removedText: '#d73a49',
+            separatorBg: '#f0f0f0',
+            separatorText: '#666',
+            buttonBg: 'white',
+            buttonBorder: '#ddd',
+            buttonText: 'black'
+        };
+        
         // Hide the regular editor
         const editorWrapper = document.getElementById('editor-wrapper');
         const originalEditorDiv = document.getElementById('editor');
@@ -922,17 +961,44 @@ This web site is using ${"`"}markedjs/marked${"`"}.
         diffContainer.id = 'diff-editor-container';
         diffContainer.style.cssText = 'width: 100%; height: 100%; position: relative; display: flex; flex-direction: column;';
         
+        // Add scrollbar styling for theme
+        const scrollbarStyle = document.createElement('style');
+        scrollbarStyle.textContent = `
+            #diff-editor-container ::-webkit-scrollbar {
+                width: 12px;
+                height: 12px;
+            }
+            #diff-editor-container ::-webkit-scrollbar-track {
+                background: ${colors.bg};
+            }
+            #diff-editor-container ::-webkit-scrollbar-thumb {
+                background: ${isDark ? '#444' : '#ccc'};
+                border-radius: 6px;
+            }
+            #diff-editor-container ::-webkit-scrollbar-thumb:hover {
+                background: ${isDark ? '#555' : '#999'};
+            }
+            #diff-editor-container {
+                scrollbar-width: thin;
+                scrollbar-color: ${isDark ? '#444 #1e1e1e' : '#ccc #ffffff'};
+            }
+        `;
+        diffContainer.appendChild(scrollbarStyle);
+        
         // Create header with stats
         const headerBar = document.createElement('div');
         headerBar.style.cssText = `
             padding: 12px 16px;
-            background: var(--bg-color, white);
-            border-bottom: 1px solid #ddd;
+            background: ${colors.bg};
+            border-bottom: 1px solid ${colors.border};
             display: flex;
             justify-content: space-between;
             align-items: center;
             font-size: 13px;
-            color: var(--text-color, black);
+            color: ${colors.text};
+            gap: 16px;
+            overflow-x: auto;
+            overflow-y: hidden;
         `;
         
         // Create action buttons overlay
@@ -940,15 +1006,16 @@ This web site is using ${"`"}markedjs/marked${"`"}.
         actionsBar.style.cssText = `
             display: flex;
             gap: 8px;
+            flex-shrink: 0;
         `;
         
         actionsBar.innerHTML = `
             <button id="diff-copy-btn" title="Copy Diff" style="
                 height: 32px;
                 padding: 0 12px;
-                background: var(--bg-color, white);
-                color: var(--text-color, black);
-                border: 1px solid #ddd;
+                background: ${colors.buttonBg};
+                color: ${colors.buttonText};
+                border: 1px solid ${colors.buttonBorder};
                 border-radius: 4px;
                 cursor: pointer;
                 font-size: 13px;
@@ -965,9 +1032,9 @@ This web site is using ${"`"}markedjs/marked${"`"}.
             <button id="diff-discard-btn" title="Cancel" style="
                 height: 32px;
                 padding: 0 12px;
-                background: var(--bg-color, white);
-                color: var(--text-color, black);
-                border: 1px solid #ddd;
+                background: ${colors.buttonBg};
+                color: ${colors.buttonText};
+                border: 1px solid ${colors.buttonBorder};
                 border-radius: 4px;
                 cursor: pointer;
                 font-size: 13px;
@@ -1005,7 +1072,7 @@ This web site is using ${"`"}markedjs/marked${"`"}.
         
         // Create scrollable diff view
         const diffScrollContainer = document.createElement('div');
-        diffScrollContainer.style.cssText = 'flex: 1; overflow-y: auto; background: var(--bg-color, white);';
+        diffScrollContainer.style.cssText = `flex: 1; overflow-y: auto; background: ${colors.bg};`;
         diffContainer.appendChild(diffScrollContainer);
         
         // Hide original editor and show diff container
@@ -1014,9 +1081,6 @@ This web site is using ${"`"}markedjs/marked${"`"}.
         
         // Update preview with beautified content immediately
         convert(modified);
-        
-        // Get current theme
-        const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
         
         // Generate compact diff with only changed lines + context
         const originalLines = original.split('\n');
@@ -1065,7 +1129,7 @@ This web site is using ${"`"}markedjs/marked${"`"}.
         
         diffBlocks.forEach((block, blockIdx) => {
             if (blockIdx > 0) {
-                diffHTML += '<div style="padding: 8px 16px; background: #f0f0f0; color: #666; border-top: 1px solid #ddd; border-bottom: 1px solid #ddd; margin: 8px 0;">...</div>';
+                diffHTML += `<div style="padding: 8px 16px; background: ${colors.separatorBg}; color: ${colors.separatorText}; border-top: 1px solid ${colors.border}; border-bottom: 1px solid ${colors.border}; margin: 8px 0;">...</div>`;
             }
             
             block.forEach(i => {
@@ -1075,9 +1139,9 @@ This web site is using ${"`"}markedjs/marked${"`"}.
                 
                 if (origLine === modLine) {
                     // Unchanged context line
-                    diffHTML += `<div style="padding: 2px 16px; background: transparent; color: var(--text-color, #666);">
-                        <span style="display: inline-block; width: 40px; text-align: right; margin-right: 16px; color: #999;">${lineNum}</span>
-                        <span style="color: #999; margin-right: 8px;"> </span>
+                    diffHTML += `<div style="padding: 2px 16px; background: transparent; color: ${colors.contextText};">
+                        <span style="display: inline-block; width: 40px; text-align: right; margin-right: 16px; color: ${colors.contextText};">${lineNum}</span>
+                        <span style="color: ${colors.contextText}; margin-right: 8px;"> </span>
                         ${escapeHtml(origLine || '')}
                     </div>`;
                 } else {
@@ -1092,7 +1156,7 @@ This web site is using ${"`"}markedjs/marked${"`"}.
                         let removedHTML = '';
                         wordDiff.forEach(part => {
                             if (part.type === 'removed') {
-                                removedHTML += `<span style="background: #ffeef0; color: #d73a49; text-decoration: line-through;">${escapeHtml(part.text)}</span>`;
+                                removedHTML += `<span style="background: ${colors.removedBg}; color: ${colors.removedText}; text-decoration: line-through;">${escapeHtml(part.text)}</span>`;
                                 removedCount++;
                             } else if (part.type === 'common') {
                                 removedHTML += escapeHtml(part.text);
@@ -1103,39 +1167,39 @@ This web site is using ${"`"}markedjs/marked${"`"}.
                         let addedHTML = '';
                         wordDiff.forEach(part => {
                             if (part.type === 'added') {
-                                addedHTML += `<span style="background: #e6ffed; color: #22863a; font-weight: 500;">${escapeHtml(part.text)}</span>`;
+                                addedHTML += `<span style="background: ${colors.addedBg}; color: ${colors.addedText}; font-weight: 500;">${escapeHtml(part.text)}</span>`;
                                 addedCount++;
                             } else if (part.type === 'common') {
                                 addedHTML += escapeHtml(part.text);
                             }
                         });
                         
-                        diffHTML += `<div style="padding: 2px 16px; background: #ffeef0;">
-                            <span style="display: inline-block; width: 40px; text-align: right; margin-right: 16px; color: #d73a49;">${lineNum}</span>
-                            <span style="color: #d73a49; margin-right: 8px;">-</span>
+                        diffHTML += `<div style="padding: 2px 16px; background: ${colors.removedBg};">
+                            <span style="display: inline-block; width: 40px; text-align: right; margin-right: 16px; color: ${colors.removedText};">${lineNum}</span>
+                            <span style="color: ${colors.removedText}; margin-right: 8px;">-</span>
                             ${removedHTML}
                         </div>`;
                         
-                        diffHTML += `<div style="padding: 2px 16px; background: #e6ffed;">
-                            <span style="display: inline-block; width: 40px; text-align: right; margin-right: 16px; color: #22863a;">${lineNum}</span>
-                            <span style="color: #22863a; margin-right: 8px;">+</span>
+                        diffHTML += `<div style="padding: 2px 16px; background: ${colors.addedBg};">
+                            <span style="display: inline-block; width: 40px; text-align: right; margin-right: 16px; color: ${colors.addedText};">${lineNum}</span>
+                            <span style="color: ${colors.addedText}; margin-right: 8px;">+</span>
                             ${addedHTML}
                         </div>`;
                     } else if (origLine !== undefined) {
                         // Line deleted
                         removedCount++;
-                        diffHTML += `<div style="padding: 2px 16px; background: #ffeef0;">
-                            <span style="display: inline-block; width: 40px; text-align: right; margin-right: 16px; color: #d73a49;">${lineNum}</span>
-                            <span style="color: #d73a49; margin-right: 8px;">-</span>
-                            <span style="color: #d73a49; text-decoration: line-through;">${escapeHtml(origLine)}</span>
+                        diffHTML += `<div style="padding: 2px 16px; background: ${colors.removedBg};">
+                            <span style="display: inline-block; width: 40px; text-align: right; margin-right: 16px; color: ${colors.removedText};">${lineNum}</span>
+                            <span style="color: ${colors.removedText}; margin-right: 8px;">-</span>
+                            <span style="color: ${colors.removedText}; text-decoration: line-through;">${escapeHtml(origLine)}</span>
                         </div>`;
                     } else if (modLine !== undefined) {
                         // Line added
                         addedCount++;
-                        diffHTML += `<div style="padding: 2px 16px; background: #e6ffed;">
-                            <span style="display: inline-block; width: 40px; text-align: right; margin-right: 16px; color: #22863a;">${lineNum}</span>
-                            <span style="color: #22863a; margin-right: 8px;">+</span>
-                            <span style="color: #22863a; font-weight: 500;">${escapeHtml(modLine)}</span>
+                        diffHTML += `<div style="padding: 2px 16px; background: ${colors.addedBg};">
+                            <span style="display: inline-block; width: 40px; text-align: right; margin-right: 16px; color: ${colors.addedText};">${lineNum}</span>
+                            <span style="color: ${colors.addedText}; margin-right: 8px;">+</span>
+                            <span style="color: ${colors.addedText}; font-weight: 500;">${escapeHtml(modLine)}</span>
                         </div>`;
                     }
                 }
@@ -1146,11 +1210,11 @@ This web site is using ${"`"}markedjs/marked${"`"}.
         
         // Update header with stats
         headerBar.innerHTML = `
-            <div style="display: flex; gap: 16px; align-items: center;">
-                <span style="font-weight: 600;">Beautify Changes</span>
-                <span style="color: #22863a;">+${addedCount} additions</span>
-                <span style="color: #d73a49;">-${removedCount} deletions</span>
-                <span style="color: #666;">${changedCount} lines changed</span>
+            <div style="display: flex; gap: 12px; align-items: center; flex-shrink: 0;">
+                <span style="font-weight: 600; color: ${colors.text}; white-space: nowrap;">Beautify Changes</span>
+                <span style="color: ${colors.addedText}; white-space: nowrap; font-size: 12px;">+${addedCount}</span>
+                <span style="color: ${colors.removedText}; white-space: nowrap; font-size: 12px;">-${removedCount}</span>
+                <span style="color: ${colors.contextText}; white-space: nowrap; font-size: 12px;">${changedCount} lines</span>
             </div>
         `;
         headerBar.appendChild(actionsBar);
@@ -1182,11 +1246,12 @@ This web site is using ${"`"}markedjs/marked${"`"}.
                 await navigator.clipboard.writeText(plainDiff);
                 const btn = document.getElementById('diff-copy-btn');
                 const originalBg = btn.style.background;
+                const originalColor = btn.style.color;
                 btn.style.background = '#28a745';
                 btn.style.color = 'white';
                 setTimeout(() => {
                     btn.style.background = originalBg;
-                    btn.style.color = 'var(--text-color, black)';
+                    btn.style.color = originalColor;
                 }, 1500);
             } catch (err) {
                 showMofuHelper('Failed to copy to clipboard');
@@ -1699,7 +1764,7 @@ let performBeautify = (content) => {
             tooltip.innerHTML = `
                 <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 8px;">
                     <strong style="font-size: 14px; color: ${textColor};">${info.name}</strong>
-                    <button id="close-style-tooltip" style="background: none; border: none; font-size: 18px; cursor: pointer; padding: 0; margin-left: 10px; color: ${textColor};">Ã—</button>
+                    <button id="close-style-tooltip" style="background: none; border: none; font-size: 18px; cursor: pointer; padding: 0; margin-left: 10px; color: ${textColor};">×</button>
                 </div>
                 <p style="margin: 4px 0; font-size: 12px; color: ${mutedColor};">${info.description}</p>
                 <div style="margin-top: 8px; font-size: 11px; line-height: 1.6; color: ${textColor};">
@@ -2180,1139 +2245,240 @@ let performBeautify = (content) => {
         return exportLightCssPromise;
     };
 
+    // ===== PDF EXPORT WITH PUPPETEER =====
+    
     let exportPreviewToPdf = async () => {
+        console.log('🚀 [PUPPETEER PDF EXPORT] Starting export...');
+        
         const outputElement = document.querySelector('#output');
         if (!outputElement) {
+            alert('No content to export');
             return;
         }
 
-        // Wait for jsPDF to load if not available yet
-        if (typeof window.jspdf === 'undefined') {
-            // Wait up to 5 seconds for jsPDF to load
-            let attempts = 0;
-            while (typeof window.jspdf === 'undefined' && attempts < 50) {
-                await new Promise(resolve => setTimeout(resolve, 100));
-                attempts++;
-            }
-            
-            if (typeof window.jspdf === 'undefined') {
-                window.alert('PDF export library failed to load. Please refresh the page and try again.');
-                return;
-            }
-        }
-
         try {
-            // Get style-specific settings
-            const styleSettings = getStylePdfSettings(currentStyle);
+            console.log('[PDF Export] Using Puppeteer server at localhost:3000');
             
-            // Use current font settings merged with style-specific settings
-            const fontSizes = { ...pdfFontSettings, ...styleSettings };
-            const { jsPDF } = window.jspdf;
-            const doc = new jsPDF({
-                orientation: 'portrait',
-                unit: 'mm',
-                format: 'a4'
-            });
+            // Show loading indicator
+            showLoadingIndicator('Generating PDF...');
 
-            const pageWidth = doc.internal.pageSize.getWidth();
-            const pageHeight = doc.internal.pageSize.getHeight();
-            const margin = styleSettings.margin || 15;
-            const maxWidth = pageWidth - (margin * 2);
-            let yPosition = margin;
+            // Get page setup settings (includes margins)
+            const pageSettings = loadPageSetupSettings();
+            const margins = pageSettings.margins || { top: 20, right: 20, bottom: 20, left: 20 };
 
-            // Helper to sanitize text for PDF - replace Unicode with ASCII equivalents
-            const sanitizeForPdf = (text) => {
-                if (!text) return '';
-                
-                // 1. Map known special characters to ASCII equivalents
-                const charMap = {
-                    '\u2248': '~',      // approximately equal
-                    '\u2192': '->',     // right arrow
-                    '\u2190': '<-',     // left arrow
-                    '\u2194': '<->',    // left-right arrow
-                    '\u00B2': '2',      // superscript 2
-                    '\u00B3': '3',      // superscript 3
-                    '\u00D7': 'x',      // multiplication sign
-                    '\u00F7': '/',      // division
-                    '\u00D8': 'O',      // diameter
-                    '\u00F8': 'o',      // diameter lowercase
-                    '\u00B0': ' deg',   // degree
-                    '\u00B1': '+/-',    // plus-minus
-                    '\u2013': '-',      // en dash
-                    '\u2014': '--',     // em dash
-                    '\u2011': '-',      // non-breaking hyphen
-                    '\u2018': "'",      // left single quote
-                    '\u2019': "'",      // right single quote
-                    '\u201C': '"',      // left double quote
-                    '\u201D': '"',      // right double quote
-                    '\u2026': '...',    // ellipsis
-                    '\u2022': '*',      // bullet
-                    '\u20AC': 'EUR',    // euro
-                    '\u00A3': 'GBP',    // pound
-                    '\u00A5': 'JPY',    // yen
-                    '\u0637': 'm.l',    // Arabic letter
-                    '\u0645': 'm'       // Arabic letter
-                };
-                
-                let result = text;
-                for (const [unicode, ascii] of Object.entries(charMap)) {
-                    result = result.split(unicode).join(ascii);
-                }
-                
-                // 2. Normalize ALL Unicode spaces to a standard space (Fixes "2400 mm" spacing issues)
-                result = result.replace(/[\u00A0\u2000-\u200A\u202F\u205F\u3000]/g, ' ');
-                
-                // 3. Normalize ALL Unicode dashes/hyphens to a standard minus sign
-                result = result.replace(/[\u2010-\u2015\u2212]/g, '-');
-                
-                // 4. CRITICAL FIX: Strip all invisible Bidirectional (RTL/LTR) & formatting marks
-                // These are injected by AI and completely break jsPDF text generation
-                result = result.replace(/[\u200B-\u200F\u202A-\u202E\u2060-\u2064\uFEFF]/g, '');
-                
-                // 5. Strip standard non-printable control characters
-                result = result.replace(/[\x00-\x08\x0B-\x0C\x0E-\x1F\x7F-\x9F]/g, '');
-                
-                // 6. Ultimate Fallback: Remove any remaining non-ASCII characters
-                // (jsPDF's default Helvetica only supports standard Latin characters. This stops the "&" garbling entirely)
-                result = result.replace(/[^\x20-\x7E]/g, '');
-                
-                return result;
-            };
+            console.log('[PDF Export] Using margins:', margins);
 
-            // Helper function to add text with word wrapping and inline formatting - Unicode safe
-            const addText = (text, fontSize, isBold = false, isItalic = false) => {
-                if (!text || text.trim() === '') return;
-                
-                // Sanitize text for PDF
-                text = sanitizeForPdf(text);
-                
-                doc.setFontSize(fontSize);
-                if (isBold && isItalic) {
-                    doc.setFont('helvetica', 'bolditalic');
-                } else if (isBold) {
-                    doc.setFont('helvetica', 'bold');
-                } else if (isItalic) {
-                    doc.setFont('helvetica', 'italic');
-                } else {
-                    doc.setFont('helvetica', 'normal');
-                }
+            // Collect HTML with all styles (async - fetches CSS)
+            const fullHtml = await collectHtmlForPuppeteer(outputElement);
 
-                // Split text into words and wrap properly
-                const words = text.split(' ');
-                const lineHeight = fontSize * 0.5;
-                let currentLine = '';
-                
-                words.forEach((word, index) => {
-                    const testLine = currentLine ? currentLine + ' ' + word : word;
-                    const testWidth = doc.getStringUnitWidth(testLine) * fontSize / doc.internal.scaleFactor;
-                    
-                    if (testWidth > maxWidth && currentLine) {
-                        // Line is too long, output current line
-                        if (yPosition + lineHeight > pageHeight - margin) {
-                            doc.addPage();
-                            yPosition = margin;
-                        }
-                        doc.text(currentLine, margin, yPosition);
-                        yPosition += lineHeight;
-                        currentLine = word;
-                    } else {
-                        currentLine = testLine;
-                    }
-                });
-                
-                // Output remaining text
-                if (currentLine) {
-                    if (yPosition + lineHeight > pageHeight - margin) {
-                        doc.addPage();
-                        yPosition = margin;
-                    }
-                    doc.text(currentLine, margin, yPosition);
-                    yPosition += lineHeight;
-                }
-            };
-
-            // Helper to extract formatted text from element with inline styles
-            const getFormattedText = (element) => {
-                let result = [];
-                
-                const processNode = (node, inheritBold = false, inheritItalic = false) => {
-                    if (node.nodeType === Node.TEXT_NODE) {
-                        const text = node.textContent;
-                        if (text.trim()) {
-                            result.push({ text, bold: inheritBold, italic: inheritItalic });
-                        }
-                    } else if (node.nodeType === Node.ELEMENT_NODE) {
-                        const tag = node.tagName.toLowerCase();
-                        const isBold = inheritBold || tag === 'strong' || tag === 'b';
-                        const isItalic = inheritItalic || tag === 'em' || tag === 'i';
-                        
-                        if (tag === 'br') {
-                            result.push({ text: '\n', bold: false, italic: false });
-                        } else if (tag === 'a') {
-                            // For links, store the URL separately for clickable links
-                            const linkText = node.textContent;
-                            const href = node.getAttribute('href');
-                            result.push({ 
-                                text: linkText, 
-                                bold: isBold, 
-                                italic: isItalic,
-                                link: href || null,
-                                isLink: true
-                            });
-                        } else if (tag === 'code' && node.parentElement.tagName.toLowerCase() !== 'pre') {
-                            // Inline code
-                            result.push({ text: node.textContent, bold: false, italic: false, code: true });
-                        } else {
-                            // Recursively process children
-                            node.childNodes.forEach(child => processNode(child, isBold, isItalic));
-                        }
-                    }
-                };
-                
-                element.childNodes.forEach(child => processNode(child));
-                return result;
-            };
-
-            // Helper to render formatted text segments - Unicode safe with clickable links
-            const addFormattedText = (segments, fontSize) => {
-                if (!segments || segments.length === 0) return;
-                
-                doc.setFontSize(fontSize);
-                const lineHeight = fontSize * 0.5;
-                let currentX = margin;
-                
-                segments.forEach((seg) => {
-                    // Sanitize text for PDF
-                    let text = sanitizeForPdf(seg.text);
-                    
-                    // Set font style and color
-                    if (seg.isLink) {
-                        // Links: use style-specific color, underlined
-                        doc.setFont('helvetica', 'normal');
-                        const linkColor = fontSizes.linkColor || [0, 102, 204];
-                        doc.setTextColor(linkColor[0], linkColor[1], linkColor[2]);
-                    } else if (seg.code) {
-                        doc.setFont('courier', 'normal');
-                        doc.setTextColor(0, 0, 0);
-                    } else if (seg.bold && seg.italic) {
-                        doc.setFont('helvetica', 'bolditalic');
-                        doc.setTextColor(0, 0, 0);
-                    } else if (seg.bold) {
-                        doc.setFont('helvetica', 'bold');
-                        doc.setTextColor(0, 0, 0);
-                    } else if (seg.italic) {
-                        doc.setFont('helvetica', 'italic');
-                        doc.setTextColor(0, 0, 0);
-                    } else {
-                        doc.setFont('helvetica', 'normal');
-                        doc.setTextColor(0, 0, 0);
-                    }
-                    
-                    // Split by newlines
-                    const parts = text.split('\n');
-                    parts.forEach((part, partIdx) => {
-                        if (partIdx > 0) {
-                            // New line
-                            yPosition += lineHeight;
-                            currentX = margin;
-                            if (yPosition > pageHeight - margin) {
-                                doc.addPage();
-                                yPosition = margin;
-                            }
-                        }
-                        
-                        if (part) {
-                            // Word wrap using proper Unicode width calculation
-                            const words = part.split(' ');
-                            words.forEach((word) => {
-                                if (!word) return;
-                                
-                                const spaceWidth = currentX === margin ? 0 : doc.getStringUnitWidth(' ') * fontSize / doc.internal.scaleFactor;
-                                const wordWidth = doc.getStringUnitWidth(word) * fontSize / doc.internal.scaleFactor;
-                                const totalWidth = spaceWidth + wordWidth;
-                                
-                                if (currentX + totalWidth > pageWidth - margin && currentX > margin) {
-                                    // Need to wrap
-                                    yPosition += lineHeight;
-                                    currentX = margin;
-                                    if (yPosition > pageHeight - margin) {
-                                        doc.addPage();
-                                        yPosition = margin;
-                                    }
-                                    doc.text(word, currentX, yPosition);
-                                    
-                                    // Add clickable link
-                                    if (seg.isLink && seg.link) {
-                                        doc.link(currentX, yPosition - fontSize * 0.8, wordWidth, fontSize, { url: seg.link });
-                                        // Add underline
-                                        doc.setDrawColor(0, 102, 204);
-                                        doc.setLineWidth(0.1);
-                                        doc.line(currentX, yPosition + 0.5, currentX + wordWidth, yPosition + 0.5);
-                                    }
-                                    
-                                    currentX += wordWidth;
-                                } else {
-                                    const startX = currentX;
-                                    if (currentX > margin) {
-                                        doc.text(' ' + word, currentX, yPosition);
-                                        currentX += totalWidth;
-                                    } else {
-                                        doc.text(word, currentX, yPosition);
-                                        currentX += wordWidth;
-                                    }
-                                    
-                                    // Add clickable link
-                                    if (seg.isLink && seg.link) {
-                                        const linkX = startX + (startX > margin ? spaceWidth : 0);
-                                        doc.link(linkX, yPosition - fontSize * 0.8, wordWidth, fontSize, { url: seg.link });
-                                        // Add underline
-                                        doc.setDrawColor(0, 102, 204);
-                                        doc.setLineWidth(0.1);
-                                        doc.line(linkX, yPosition + 0.5, linkX + wordWidth, yPosition + 0.5);
-                                    }
-                                }
-                            });
-                        }
-                    });
-                    
-                    // Reset color after link
-                    if (seg.isLink) {
-                        doc.setTextColor(0, 0, 0);
-                    }
-                });
-                
-                // Move to next line after formatted text
-                yPosition += lineHeight;
-            };
-
-            // Helper function to add spacing
-            const addSpacing = (space) => {
-                yPosition += space;
-                if (yPosition > pageHeight - margin) {
-                    doc.addPage();
-                    yPosition = margin;
-                }
-            };
-
-            // Parse HTML and extract text content
-            const parseElement = async (element) => {
-                // Skip elements marked to skip (like date divs already processed)
-                if (element._skipInPdf) return;
-                
-                const tagName = element.tagName.toLowerCase();
-
-                switch (tagName) {
-                    case 'h1':
-                        addSpacing(5); // More space before h1 to separate sections
-                        
-                        // Check if next sibling is a date div (right-aligned with negative margin)
-                        const nextSibling = element.nextElementSibling;
-                        const isDateDiv = nextSibling && 
-                                         nextSibling.tagName.toLowerCase() === 'div' && 
-                                         nextSibling.style.textAlign === 'right' &&
-                                         nextSibling.style.marginTop.includes('-');
-                        
-                        if (isDateDiv) {
-                            // Render H1 and date side-by-side
-                            const h1Text = sanitizeForPdf(element.textContent);
-                            const dateText = sanitizeForPdf(nextSibling.textContent);
-                            
-                            doc.setFont('helvetica', 'bold');
-                            doc.setFontSize(fontSizes.h1);
-                            doc.text(h1Text, margin, yPosition);
-                            
-                            // Add date on the right
-                            doc.setFont('helvetica', 'normal');
-                            doc.setFontSize(fontSizes.h1 * 0.6);
-                            doc.setTextColor(100, 100, 100);
-                            const dateWidth = doc.getTextWidth(dateText);
-                            doc.text(dateText, pageWidth - margin - dateWidth, yPosition);
-                            doc.setTextColor(0, 0, 0);
-                            
-                            yPosition += fontSizes.h1 * 0.5;
-                            
-                            // Skip the date div in the next iteration
-                            element.nextElementSibling._skipInPdf = true;
-                        } else {
-                            addText(element.textContent, fontSizes.h1, true);
-                        }
-                        addSpacing(0.2); // Very tight to content below
-                        break;
-                    case 'h2':
-                        addSpacing(5); // More space before h2 to separate sections
-                        addText(element.textContent, fontSizes.h2, true);
-                        addSpacing(0.2); // Very tight to content below
-                        break;
-                    case 'h3':
-                        addSpacing(4); // More space before h3 to separate sections
-                        addText(element.textContent, fontSizes.h3, true);
-                        addSpacing(0.2); // Very tight to content below
-                        break;
-                    case 'h4':
-                    case 'h5':
-                    case 'h6':
-                        addSpacing(2);
-                        addText(element.textContent, fontSizes.h4, true);
-                        addSpacing(1);
-                        break;
-                    case 'p':
-                        // Check if paragraph contains only an image
-                        if (element.children.length === 1 && element.children[0].tagName.toLowerCase() === 'img') {
-                            const img = element.children[0];
-                            const alt = img.getAttribute('alt') || 'Image';
-                            const src = img.getAttribute('src') || '';
-                            
-                            console.log('[PDF] Processing image:', { alt, src });
-                            
-                            // Try to embed the actual image
-                            if (src) {
-                                try {
-                                    console.log('[PDF] Attempting to load image from:', src);
-                                    
-                                    // Load image with CORS proxy fallback
-                                    const imageData = await new Promise((resolve, reject) => {
-                                        const image = new Image();
-                                        image.crossOrigin = 'Anonymous';
-                                        
-                                        image.onload = () => {
-                                            console.log('[PDF] Image loaded successfully');
-                                            const canvas = document.createElement('canvas');
-                                            canvas.width = image.width;
-                                            canvas.height = image.height;
-                                            const ctx = canvas.getContext('2d');
-                                            
-                                            try {
-                                                ctx.drawImage(image, 0, 0);
-                                                const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
-                                                console.log('[PDF] Canvas conversion successful');
-                                                resolve({
-                                                    dataUrl,
-                                                    width: image.width,
-                                                    height: image.height
-                                                });
-                                            } catch (e) {
-                                                console.error('[PDF] Canvas tainted (CORS issue):', e.message);
-                                                reject(new Error('CORS: ' + e.message));
-                                            }
-                                        };
-                                        
-                                        image.onerror = (e) => {
-                                            console.error('[PDF] Image load failed:', e);
-                                            reject(new Error('Image load failed'));
-                                        };
-                                        
-                                        setTimeout(() => {
-                                            console.error('[PDF] Image load timeout');
-                                            reject(new Error('Timeout'));
-                                        }, 5000);
-                                        
-                                        // Try direct load first
-                                        image.src = src;
-                                    });
-                                    
-                                    // Calculate dimensions
-                                    const maxImgWidth = maxWidth * 0.7;
-                                    const aspectRatio = imageData.height / imageData.width;
-                                    let imgWidth = Math.min(maxImgWidth, imageData.width / 3.78);
-                                    let imgHeight = imgWidth * aspectRatio;
-                                    
-                                    const maxImgHeight = 100;
-                                    if (imgHeight > maxImgHeight) {
-                                        imgHeight = maxImgHeight;
-                                        imgWidth = imgHeight / aspectRatio;
-                                    }
-                                    
-                                    if (yPosition + imgHeight > pageHeight - margin) {
-                                        doc.addPage();
-                                        yPosition = margin;
-                                    }
-                                    
-                                    const imgX = margin + (maxWidth - imgWidth) / 2;
-                                    doc.addImage(imageData.dataUrl, 'JPEG', imgX, yPosition, imgWidth, imgHeight);
-                                    console.log('[PDF] Image embedded successfully!', { imgWidth, imgHeight });
-                                    yPosition += imgHeight;
-                                    addSpacing(2);
-                                    
-                                } catch (error) {
-                                    console.error('[PDF] Failed to embed image:', error.message);
-                                    
-                                    // Show helpful error message based on error type
-                                    if (error.message.includes('CORS')) {
-                                        console.log('[PDF] CORS blocked - using placeholder with link');
-                                        console.log('[PDF] TIP: Use data URLs or same-origin images for embedding');
-                                    }
-                                    
-                                    // Fallback to placeholder with clickable link
-                                    doc.setFont('helvetica', 'italic');
-                                    doc.setFontSize(10);
-                                    doc.setTextColor(100, 100, 100);
-                                    
-                                    const imageText = `[Image: ${sanitizeForPdf(alt)}]`;
-                                    doc.text(imageText, margin, yPosition);
-                                    yPosition += 5;
-                                    
-                                    // Add URL as clickable link
-                                    doc.setFont('helvetica', 'normal');
-                                    doc.setFontSize(9);
-                                    doc.setTextColor(0, 102, 204);
-                                    const urlText = sanitizeForPdf(src);
-                                    const urlLines = doc.splitTextToSize(urlText, maxWidth);
-                                    urlLines.forEach(line => {
-                                        if (yPosition + 5 > pageHeight - margin) {
-                                            doc.addPage();
-                                            yPosition = margin;
-                                        }
-                                        doc.textWithLink(line, margin, yPosition, { url: src });
-                                        yPosition += 5;
-                                    });
-                                    
-                                    doc.setTextColor(0, 0, 0);
-                                    addSpacing(2);
-                                }
-                            } else {
-                                console.log('[PDF] No image src provided');
-                                // No src, use placeholder
-                                doc.setFont('helvetica', 'italic');
-                                doc.setFontSize(10);
-                                doc.setTextColor(100, 100, 100);
-                                doc.text(`[Image: ${sanitizeForPdf(alt)}]`, margin, yPosition);
-                                yPosition += 5;
-                                doc.setTextColor(0, 0, 0);
-                                addSpacing(2);
-                            }
-                        } else {
-                            // Handle inline formatting (bold, italic, links, inline code)
-                            const formatted = getFormattedText(element);
-                            if (formatted.length > 0) {
-                                addFormattedText(formatted, fontSizes.paragraph);
-                                addSpacing(1);
-                            }
-                        }
-                        break;
-                    case 'ul':
-                    case 'ol':
-                        const items = element.querySelectorAll(':scope > li');
-                        items.forEach((item, index) => {
-                            const bullet = tagName === 'ul' ? 'â€¢ ' : `${index + 1}. `;
-                            
-                            // Check if item has nested lists
-                            const nestedList = item.querySelector('ul, ol');
-                            let itemContent = item;
-                            
-                            if (nestedList) {
-                                // Clone item and remove nested list to get only direct content
-                                itemContent = item.cloneNode(true);
-                                const nestedInClone = itemContent.querySelector('ul, ol');
-                                if (nestedInClone) {
-                                    nestedInClone.remove();
-                                }
-                            }
-                            
-                            const formatted = getFormattedText(itemContent);
-                            if (formatted.length > 0) {
-                                // Check if we need a new page
-                                if (yPosition + 5.5 > pageHeight - margin) {
-                                    doc.addPage();
-                                    yPosition = margin;
-                                }
-                                
-                                // Add bullet/number
-                                doc.setFont('helvetica', 'normal');
-                                doc.setFontSize(fontSizes.list);
-                                doc.text(bullet, margin, yPosition);
-                                const bulletWidth = doc.getTextWidth(bullet);
-                                
-                                // Render formatted content with indent
-                                doc.setFontSize(fontSizes.list);
-                                const lineHeight = fontSizes.list * 0.5;
-                                let currentX = margin + bulletWidth;
-                                
-                                formatted.forEach(seg => {
-                                    if (seg.code) {
-                                        doc.setFont('courier', 'normal');
-                                    } else if (seg.bold && seg.italic) {
-                                        doc.setFont('helvetica', 'bolditalic');
-                                    } else if (seg.bold) {
-                                        doc.setFont('helvetica', 'bold');
-                                    } else if (seg.italic) {
-                                        doc.setFont('helvetica', 'italic');
-                                    } else {
-                                        doc.setFont('helvetica', 'normal');
-                                    }
-                                    
-                                    // Better word splitting - handle multiple spaces and newlines
-                                    const words = seg.text.trim().split(/\s+/);
-                                    words.forEach((word, wordIdx) => {
-                                        if (!word) return; // Skip empty strings
-                                        
-                                        const testText = wordIdx === 0 && currentX === margin + bulletWidth ? word : ' ' + word;
-                                        const textWidth = doc.getTextWidth(testText);
-                                        
-                                        if (currentX + textWidth > pageWidth - margin && currentX > margin + bulletWidth) {
-                                            yPosition += lineHeight;
-                                            currentX = margin + bulletWidth;
-                                            if (yPosition > pageHeight - margin) {
-                                                doc.addPage();
-                                                yPosition = margin;
-                                            }
-                                            doc.text(word, currentX, yPosition);
-                                            currentX += doc.getTextWidth(word);
-                                        } else {
-                                            doc.text(testText, currentX, yPosition);
-                                            currentX += textWidth;
-                                        }
-                                    });
-                                });
-                                
-                                yPosition += lineHeight;
-                            }
-                            
-                            // Handle nested list if exists
-                            if (nestedList) {
-                                const oldMarginValue = margin;
-                                // Indent nested list
-                                const indentAmount = 8;
-                                
-                                // Temporarily increase margin for nested list
-                                const nestedItems = nestedList.querySelectorAll(':scope > li');
-                                const nestedTag = nestedList.tagName.toLowerCase();
-                                
-                                nestedItems.forEach((nestedItem, nestedIndex) => {
-                                    // Use simple dash for nested bullets or letters for nested numbers
-                                    const nestedBullet = nestedTag === 'ul' ? '- ' : `${String.fromCharCode(97 + nestedIndex)}. `;
-                                    const nestedFormatted = getFormattedText(nestedItem);
-                                    
-                                    if (nestedFormatted.length > 0) {
-                                        // Check if we need a new page
-                                        if (yPosition + 5.5 > pageHeight - margin) {
-                                            doc.addPage();
-                                            yPosition = margin;
-                                        }
-                                        
-                                        doc.setFont('helvetica', 'normal');
-                                        doc.setFontSize(fontSizes.list);
-                                        doc.text(nestedBullet, oldMarginValue + indentAmount, yPosition);
-                                        const nestedBulletWidth = doc.getTextWidth(nestedBullet);
-                                        
-                                        const lineHeight = fontSizes.list * 0.5;
-                                        let currentX = oldMarginValue + indentAmount + nestedBulletWidth;
-                                        
-                                        nestedFormatted.forEach(seg => {
-                                            if (seg.code) {
-                                                doc.setFont('courier', 'normal');
-                                            } else if (seg.bold && seg.italic) {
-                                                doc.setFont('helvetica', 'bolditalic');
-                                            } else if (seg.bold) {
-                                                doc.setFont('helvetica', 'bold');
-                                            } else if (seg.italic) {
-                                                doc.setFont('helvetica', 'italic');
-                                            } else {
-                                                doc.setFont('helvetica', 'normal');
-                                            }
-                                            
-                                            const words = seg.text.trim().split(/\s+/);
-                                            words.forEach((word, wordIdx) => {
-                                                if (!word) return;
-                                                
-                                                const testText = wordIdx === 0 && currentX === oldMarginValue + indentAmount + nestedBulletWidth ? word : ' ' + word;
-                                                const textWidth = doc.getTextWidth(testText);
-                                                
-                                                if (currentX + textWidth > pageWidth - oldMarginValue && currentX > oldMarginValue + indentAmount + nestedBulletWidth) {
-                                                    yPosition += lineHeight;
-                                                    currentX = oldMarginValue + indentAmount + nestedBulletWidth;
-                                                    if (yPosition > pageHeight - oldMarginValue) {
-                                                        doc.addPage();
-                                                        yPosition = oldMarginValue;
-                                                    }
-                                                    doc.text(word, currentX, yPosition);
-                                                    currentX += doc.getTextWidth(word);
-                                                } else {
-                                                    doc.text(testText, currentX, yPosition);
-                                                    currentX += textWidth;
-                                                }
-                                            });
-                                        });
-                                        
-                                        yPosition += lineHeight;
-                                    }
-                                });
-                            }
-                        });
-                        addSpacing(2);
-                        break;
-                    case 'blockquote':
-                        doc.setTextColor(100, 100, 100);
-                        addText(element.textContent, fontSizes.blockquote, false, true);
-                        doc.setTextColor(0, 0, 0);
-                        addSpacing(2);
-                        break;
-                    case 'pre':
-                    case 'code':
-                        doc.setFont('courier', 'normal');
-                        doc.setFontSize(fontSizes.code);
-                        const codeLines = element.textContent.split('\n');
-                        const codeLineHeight = fontSizes.code * 0.5;
-                        codeLines.forEach(line => {
-                            if (yPosition + codeLineHeight > pageHeight - margin) {
-                                doc.addPage();
-                                yPosition = margin;
-                            }
-                            doc.text(sanitizeForPdf(line || ' '), margin + 5, yPosition);
-                            yPosition += codeLineHeight;
-                        });
-                        doc.setFont('helvetica', 'normal');
-                        addSpacing(2);
-                        break;
-                    case 'table':
-                        // Minimal spacing before table - keep tight to heading
-                        addSpacing(0.1); // Almost no space - very close to heading above
-                        
-                        // Enhanced table rendering with proper Unicode support
-                        const thead = element.querySelector('thead');
-                        const tbody = element.querySelector('tbody');
-                        
-                        if (!thead && !tbody) break;
-                        
-                        // Get all rows
-                        const allRows = element.querySelectorAll('tr');
-                        if (allRows.length === 0) break;
-                        
-                        // TABLE FONT SIZE - use configurable setting
-                        const TABLE_FONT_SIZE = fontSizes.table;
-                        
-                        // Calculate column widths based on content
-                        let maxCols = 0;
-                        const columnData = [];
-                        
-                        allRows.forEach(row => {
-                            const cells = row.querySelectorAll('td, th');
-                            maxCols = Math.max(maxCols, cells.length);
-                            
-                            cells.forEach((cell, colIndex) => {
-                                if (!columnData[colIndex]) {
-                                    columnData[colIndex] = { maxWidth: 0, texts: [] };
-                                }
-                                
-                                // Extract text and sanitize for PDF
-                                let cellText = sanitizeForPdf(cell.textContent.trim());
-                                columnData[colIndex].texts.push(cellText);
-                                
-                                // Measure text width with new font size
-                                doc.setFontSize(TABLE_FONT_SIZE);
-                                doc.setFont('helvetica', 'normal');
-                                const textWidth = doc.getStringUnitWidth(cellText) * TABLE_FONT_SIZE / doc.internal.scaleFactor;
-                                columnData[colIndex].maxWidth = Math.max(columnData[colIndex].maxWidth, textWidth);
-                            });
-                        });
-                        
-                        // Calculate proportional column widths
-                        const totalContentWidth = columnData.reduce((sum, col) => sum + col.maxWidth, 0);
-                        const availableWidth = maxWidth - 4; // Leave some margin
-                        
-                        const colWidths = columnData.map(col => {
-                            const proportionalWidth = (col.maxWidth / totalContentWidth) * availableWidth;
-                            return Math.max(proportionalWidth, 20); // Minimum 20mm per column
-                        });
-                        
-                        // Adjust if total width exceeds available width
-                        const totalWidth = colWidths.reduce((sum, w) => sum + w, 0);
-                        if (totalWidth > availableWidth) {
-                            const scale = availableWidth / totalWidth;
-                            colWidths.forEach((w, i) => colWidths[i] = w * scale);
-                        }
-                        
-                        // Check if we need a new page
-                        if (yPosition + 10 > pageHeight - margin) {
-                            doc.addPage();
-                            yPosition = margin;
-                        }
-                        
-                        let tableY = yPosition;
-                        
-                        allRows.forEach((row, rowIndex) => {
-                            const cells = row.querySelectorAll('td, th');
-                            const isHeader = row.parentElement.tagName.toLowerCase() === 'thead';
-                            
-                            // Calculate row height based on content
-                            let maxRowHeight = 7;
-                            const cellLines = [];
-                            
-                            cells.forEach((cell, colIndex) => {
-                                const cellText = sanitizeForPdf(cell.textContent.trim());
-                                const colWidth = colWidths[colIndex] || 30;
-                                
-                                doc.setFontSize(TABLE_FONT_SIZE);
-                                doc.setFont('helvetica', isHeader ? 'bold' : 'normal');
-                                
-                                // Split text to fit column width - handle Unicode properly
-                                const words = cellText.split(' ');
-                                const lines = [];
-                                let currentLine = '';
-                                
-                                words.forEach(word => {
-                                    const testLine = currentLine ? currentLine + ' ' + word : word;
-                                    const testWidth = doc.getStringUnitWidth(testLine) * TABLE_FONT_SIZE / doc.internal.scaleFactor;
-                                    
-                                    if (testWidth > colWidth - 2) {
-                                        if (currentLine) {
-                                            lines.push(currentLine);
-                                            currentLine = word;
-                                        } else {
-                                            // Word is too long, force break
-                                            lines.push(word);
-                                            currentLine = '';
-                                        }
-                                    } else {
-                                        currentLine = testLine;
-                                    }
-                                });
-                                
-                                if (currentLine) {
-                                    lines.push(currentLine);
-                                }
-                                
-                                cellLines[colIndex] = lines;
-                                maxRowHeight = Math.max(maxRowHeight, lines.length * 4 + 3);
-                            });
-                            
-                            // Check if row fits on current page
-                            if (tableY + maxRowHeight > pageHeight - margin) {
-                                doc.addPage();
-                                tableY = margin;
-                            }
-                            
-                            // Draw cells with borders based on style settings
-                            let xPos = margin;
-                            cells.forEach((cell, colIndex) => {
-                                const colWidth = colWidths[colIndex] || 30;
-                                
-                                // Apply header background color if this is a header row
-                                if (isHeader && fontSizes.tableHeaderBg && fontSizes.tableHeaderBg !== 'none') {
-                                    const hexColor = fontSizes.tableHeaderBg;
-                                    const r = parseInt(hexColor.slice(1, 3), 16);
-                                    const g = parseInt(hexColor.slice(3, 5), 16);
-                                    const b = parseInt(hexColor.slice(5, 7), 16);
-                                    doc.setFillColor(r, g, b);
-                                    doc.rect(xPos, tableY, colWidth, maxRowHeight, 'F');
-                                }
-                                
-                                // Draw text and detect URLs
-                                doc.setFontSize(TABLE_FONT_SIZE);
-                                doc.setFont('helvetica', isHeader ? 'bold' : 'normal');
-                                
-                                const lines = cellLines[colIndex] || [];
-                                
-                                // Check if cell contains a link
-                                const linkElement = cell.querySelector('a');
-                                const isLinkCell = linkElement !== null;
-                                const linkUrl = isLinkCell ? linkElement.getAttribute('href') : null;
-                                
-                                lines.forEach((line, lineIdx) => {
-                                    const textY = tableY + 4 + (lineIdx * 4);
-                                    
-                                    if (isLinkCell && linkUrl) {
-                                        // Render as clickable link with style-specific color
-                                        const linkColor = fontSizes.linkColor || [0, 102, 204];
-                                        doc.setTextColor(linkColor[0], linkColor[1], linkColor[2]);
-                                        doc.text(line, xPos + 1, textY, { 
-                                            maxWidth: colWidth - 2,
-                                            align: 'left'
-                                        });
-                                        
-                                        // Add clickable area and underline
-                                        const textWidth = Math.min(
-                                            doc.getStringUnitWidth(line) * TABLE_FONT_SIZE / doc.internal.scaleFactor,
-                                            colWidth - 2
-                                        );
-                                        doc.link(xPos + 1, textY - 3, textWidth, 4, { url: linkUrl });
-                                        
-                                        // Add underline
-                                        doc.setDrawColor(0, 102, 204);
-                                        doc.setLineWidth(0.1);
-                                        doc.line(xPos + 1, textY + 0.5, xPos + 1 + textWidth, textY + 0.5);
-                                        
-                                        doc.setTextColor(0, 0, 0); // Reset color
-                                    } else {
-                                        // Regular text
-                                        doc.setTextColor(0, 0, 0);
-                                        doc.text(line, xPos + 1, textY, { 
-                                            maxWidth: colWidth - 2,
-                                            align: 'left'
-                                        });
-                                    }
-                                });
-                                
-                                xPos += colWidth;
-                            });
-                            
-                            // Draw borders based on style settings
-                            const borderStyle = fontSizes.tableBorders || 'horizontal';
-                            const borderWeight = fontSizes.tableBorderWeight || 0.1;
-                            const borderColor = fontSizes.tableBorderColor || '#cccccc';
-                            
-                            // Parse hex color
-                            const r = parseInt(borderColor.slice(1, 3), 16);
-                            const g = parseInt(borderColor.slice(3, 5), 16);
-                            const b = parseInt(borderColor.slice(5, 7), 16);
-                            doc.setDrawColor(r, g, b);
-                            
-                            if (borderStyle === 'all') {
-                                // Draw all borders (horizontal and vertical)
-                                doc.setLineWidth(isHeader ? borderWeight * 2 : borderWeight);
-                                
-                                // Horizontal line after row
-                                doc.line(margin, tableY + maxRowHeight, margin + colWidths.reduce((a, b) => a + b, 0), tableY + maxRowHeight);
-                                
-                                // Vertical lines between columns
-                                let vertX = margin;
-                                colWidths.forEach((width, idx) => {
-                                    if (idx > 0) {
-                                        doc.line(vertX, tableY, vertX, tableY + maxRowHeight);
-                                    }
-                                    vertX += width;
-                                });
-                                
-                                // Right border
-                                doc.line(vertX, tableY, vertX, tableY + maxRowHeight);
-                                
-                                // Top border for first row
-                                if (rowIndex === 0) {
-                                    doc.line(margin, tableY, margin + colWidths.reduce((a, b) => a + b, 0), tableY);
-                                }
-                            } else if (borderStyle === 'horizontal') {
-                                // Draw only horizontal lines
-                                doc.setLineWidth(isHeader ? borderWeight * 2 : borderWeight);
-                                doc.line(margin, tableY + maxRowHeight, margin + colWidths.reduce((a, b) => a + b, 0), tableY + maxRowHeight);
-                                
-                                // Top border for first row
-                                if (rowIndex === 0) {
-                                    doc.line(margin, tableY, margin + colWidths.reduce((a, b) => a + b, 0), tableY);
-                                }
-                            }
-                            // If borderStyle === 'none', don't draw any borders
-                            
-                            tableY += maxRowHeight;
-                        });
-                        
-                        yPosition = tableY;
-                        // Large spacing after table to separate sections
-                        addSpacing(8); // Very large gap - clear visual separation between sections
-                        break;
-                    case 'hr':
-                        // Render HR as visual separator between sections
-                        addSpacing(2);
-                        if (yPosition + 5 > pageHeight - margin) {
-                            doc.addPage();
-                            yPosition = margin;
-                        }
-                        doc.setDrawColor(200, 200, 200);  // Light gray
-                        doc.setLineWidth(0.3);
-                        doc.line(margin, yPosition, pageWidth - margin, yPosition);
-                        addSpacing(3);
-                        break;
-                    default:
-                        // Check if it's a page break div
-                        if (tagName === 'div' && element.style.pageBreakAfter === 'always') {
-                            // Add a new page
-                            doc.addPage();
-                            yPosition = margin;
-                            return;
-                        }
-                        
-                        // Check if it's a page break before div
-                        if (tagName === 'div' && element.style.pageBreakBefore === 'always') {
-                            // Add a new page
-                            doc.addPage();
-                            yPosition = margin;
-                            return;
-                        }
-                        
-                        // Check if it's a fixed position footer div
-                        if (tagName === 'div' && element.style.position === 'fixed' && element.style.bottom === '0') {
-                            // Force footer to bottom of page - calculate actual bottom position
-                            const footerContentHeight = 30; // Approximate height needed for footer content
-                            yPosition = pageHeight - margin - footerContentHeight;
-                            
-                            // Process footer content
-                            Array.from(element.children).forEach(child => parseElement(child));
-                            return;
-                        }
-                        
-                        // Check if it's a flexbox footer div
-                        if (tagName === 'div' && element.style.display === 'flex' && element.style.justifyContent === 'space-between') {
-                            // Check if this is inside a fixed footer wrapper
-                            const isInFixedFooter = element.parentElement && 
-                                                   element.parentElement.style.position === 'fixed' && 
-                                                   element.parentElement.style.bottom === '0';
-                            
-                            if (isInFixedFooter) {
-                                // Force to bottom of page
-                                yPosition = pageHeight - margin - 30;
-                            }
-                            
-                            // This is a flexbox footer - render side by side
-                            const leftDiv = element.children[0];
-                            const rightDiv = element.children[1];
-                            
-                            if (leftDiv && rightDiv) {
-                                // Left side
-                                doc.setFont('helvetica', 'bold');
-                                doc.setFontSize(fontSizes.paragraph);
-                                const leftStrong = leftDiv.querySelector('strong');
-                                if (leftStrong) {
-                                    doc.text(sanitizeForPdf(leftStrong.textContent), margin, yPosition);
-                                    yPosition += fontSizes.paragraph * 0.5;
-                                }
-                                
-                                doc.setFont('helvetica', 'normal');
-                                doc.setTextColor(100, 100, 100);
-                                const leftSpan = leftDiv.querySelector('span');
-                                if (leftSpan) {
-                                    doc.text(sanitizeForPdf(leftSpan.textContent), margin, yPosition);
-                                }
-                                doc.setTextColor(0, 0, 0);
-                                
-                                // Right side
-                                const rightY = yPosition - fontSizes.paragraph * 0.5;
-                                doc.setFont('helvetica', 'bold');
-                                const rightStrong = rightDiv.querySelector('strong');
-                                if (rightStrong) {
-                                    const sanitizedRightStrong = sanitizeForPdf(rightStrong.textContent);
-                                    const rightStrongWidth = doc.getTextWidth(sanitizedRightStrong);
-                                    doc.text(sanitizedRightStrong, pageWidth - margin - rightStrongWidth, rightY);
-                                }
-                                
-                                doc.setFont('helvetica', 'normal');
-                                doc.setTextColor(100, 100, 100);
-                                const rightSpan = rightDiv.querySelector('span');
-                                if (rightSpan) {
-                                    const sanitizedRightSpan = sanitizeForPdf(rightSpan.textContent);
-                                    const rightSpanWidth = doc.getTextWidth(sanitizedRightSpan);
-                                    doc.text(sanitizedRightSpan, pageWidth - margin - rightSpanWidth, yPosition);
-                                }
-                                doc.setTextColor(0, 0, 0);
-                                
-                                yPosition += fontSizes.paragraph * 0.5;
-                                addSpacing(2);
-                            }
-                        } else {
-                            // For other elements, just extract text
-                            if (element.textContent && element.textContent.trim()) {
-                                const children = element.children;
-                                if (children.length === 0) {
-                                    addText(element.textContent, fontSizes.paragraph);
-                                } else {
-                                    Array.from(children).forEach(child => parseElement(child));
-                                }
-                            }
-                        }
-                }
-            };
-
-            // Add Table of Contents if enabled - on dedicated page
-            const tocData = getTocForPdf();
-            if (tocData && tocData.length > 0) {
-                // Center the TOC title vertically on the page
-                const tocStartY = pageHeight / 3;
-                yPosition = tocStartY;
-                
-                // Add "TABLE OF CONTENTS" title - centered and bold
-                doc.setFont('helvetica', 'bold');
-                doc.setFontSize(18);
-                const tocTitle = 'TABLE OF CONTENTS';
-                const titleWidth = doc.getTextWidth(tocTitle);
-                const titleX = (pageWidth - titleWidth) / 2;
-                doc.text(tocTitle, titleX, yPosition);
-                yPosition += 15;
-                
-                // Add decorative line under title
-                const lineMargin = pageWidth * 0.3;
-                doc.setDrawColor(100, 100, 100);
-                doc.setLineWidth(0.5);
-                doc.line(lineMargin, yPosition, pageWidth - lineMargin, yPosition);
-                yPosition += 10;
-                
-                // Add TOC items with proper formatting
-                doc.setFont('helvetica', 'normal');
-                doc.setFontSize(11);
-                
-                // Count H1 items for numbering
-                let h1Counter = 0;
-                
-                tocData.forEach((item) => {
-                    const indent = (item.level - 1) * 8;
-                    const itemText = sanitizeForPdf(item.text);
-                    const leftMargin = pageWidth * 0.2;
-                    
-                    // Check if we need a new page
-                    if (yPosition + 7 > pageHeight - margin * 2) {
-                        doc.addPage();
-                        yPosition = margin * 2;
-                    }
-                    
-                    // Add bullet or number based on level
-                    let prefix = '';
-                    if (item.level === 1) {
-                        h1Counter++;
-                        prefix = h1Counter + '. ';
-                        doc.setFont('helvetica', 'bold');
-                    } else if (item.level === 2) {
-                        prefix = '  â€¢ ';
-                        doc.setFont('helvetica', 'normal');
-                    } else {
-                        prefix = '    - ';
-                        doc.setFont('helvetica', 'normal');
-                    }
-                    
-                    // Add TOC item with indentation
-                    const fullText = prefix + itemText;
-                    doc.text(fullText, leftMargin + indent, yPosition);
-                    yPosition += 7;
-                });
-                
-                // Add new page for content
-                doc.addPage();
-                yPosition = margin;
-            }
-
-            // Process all children of the output element, but skip footer
-            let footerElement = null;
-            for (const child of outputElement.children) {
-                // Check if this is the PDF footer
-                if (child.getAttribute('data-pdf-footer') === 'true') {
-                    footerElement = child;
-                    continue; // Skip processing it now
-                }
-                await parseElement(child);
-            }
-
-            // Render footer at the bottom of the last page if it exists
-            if (footerElement) {
-                const footerBottomMargin = 12.75; // Distance from page bottom (15% closer)
-                const footerHeight = 25; // Approximate height needed for footer
-                const footerY = pageHeight - footerBottomMargin - footerHeight;
-                
-                // If current content is too close to footer area, add new page
-                if (yPosition > footerY - 10) {
-                    doc.addPage();
-                }
-                
-                // Position at bottom of page
-                yPosition = footerY;
-                
-                // Process footer elements
-                for (const child of footerElement.children) {
-                    await parseElement(child);
-                }
-            }
-
-            // Save the PDF with style and timestamp
+            // Generate filename
             const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
             const styleName = currentStyle.charAt(0).toUpperCase() + currentStyle.slice(1);
-            doc.save(`Marco_${styleName}_${timestamp}.pdf`);
+            const filename = `DocMark_${styleName}_${timestamp}.pdf`;
+
+            // Send to Puppeteer server
+            const response = await fetch('http://localhost:3000/generate-pdf', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    html: fullHtml,
+                    filename: filename,
+                    margins: margins
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error('PDF generation failed');
+            }
+
+            // Download PDF
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+
+            hideLoadingIndicator();
+            console.log('[PDF Export] Success!');
+
         } catch (error) {
-            console.error('Failed to export PDF:', error);
-            window.alert('Failed to export PDF. Please try again.');
+            console.error('[PDF Export] Failed:', error);
+            hideLoadingIndicator();
+            
+            if (error.message.includes('Failed to fetch')) {
+                alert('PDF server not running!\n\nPlease start it with:\nnode pdf-server.js');
+            } else {
+                alert('PDF export failed: ' + error.message);
+            }
+        }
+    };
+
+    // Helper function to collect HTML with inline styles for Puppeteer
+    let collectHtmlForPuppeteer = async (outputElement) => {
+        console.log('[PDF Export] Collecting HTML and CSS for Puppeteer...');
+        
+        // Get the current style CSS link
+        const ghMarkdownLink = document.getElementById('gh-markdown-link');
+        let markdownCss = '';
+        
+        if (ghMarkdownLink && ghMarkdownLink.href) {
+            console.log('[PDF Export] Fetching CSS from:', ghMarkdownLink.href);
+            try {
+                // Fetch the CSS content
+                const response = await fetch(ghMarkdownLink.href);
+                markdownCss = await response.text();
+                console.log('[PDF Export] CSS fetched successfully, length:', markdownCss.length);
+            } catch (e) {
+                console.error('[PDF Export] Failed to fetch CSS:', e);
+            }
+        }
+        
+        // Get all CSS from style tags
+        let inlineCss = '';
+        const styleTags = document.querySelectorAll('style');
+        styleTags.forEach(tag => {
+            inlineCss += tag.textContent + '\n';
+        });
+
+        // Build complete HTML document with all CSS inlined
+        const htmlContent = `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <style>
+        /* Markdown body styles */
+        ${markdownCss}
+        
+        /* Inline styles from page */
+        ${inlineCss}
+        
+        /* Print-specific resets */
+        @media print {
+            * {
+                box-sizing: border-box !important;
+            }
+            
+            html, body {
+                margin: 0 !important;
+                padding: 0 !important;
+                background: white !important;
+            }
+            
+            /* Reset paper preview containers - no fixed widths */
+            .paper-pages-container,
+            .a4-page {
+                width: auto !important;
+                height: auto !important;
+                min-height: 0 !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                box-shadow: none !important;
+                border: none !important;
+                background: transparent !important;
+                transform: none !important;
+            }
+            
+            .paper-container {
+                padding: 0 !important;
+                margin: 0 !important;
+                break-after: page;
+                break-inside: avoid;
+            }
+            
+            .paper-container:last-child {
+                break-after: auto;
+            }
+            
+            .markdown-body {
+                padding: 0 !important;
+                margin: 0 !important;
+            }
+            
+            /* Footer positioning */
+            [data-pdf-footer="true"] {
+                display: block;
+                margin-top: auto;
+                padding-top: 20px;
+                page-break-inside: avoid;
+                break-inside: avoid;
+            }
+            
+            .paper-container:last-child,
+            body > div:last-child {
+                display: flex;
+                flex-direction: column;
+                min-height: 100%;
+            }
+            
+            .paper-container:last-child [data-pdf-footer="true"],
+            body > div:last-child [data-pdf-footer="true"] {
+                margin-top: auto;
+            }
+            
+            /* Avoid breaking inside these elements */
+            h1, h2, h3, h4, h5, h6 {
+                break-after: avoid;
+                page-break-after: avoid;
+            }
+            
+            p, ul, ol, table {
+                break-inside: avoid;
+                page-break-inside: avoid;
+            }
+        }
+    </style>
+</head>
+<body>
+    ${outputElement.innerHTML}
+</body>
+</html>`;
+
+        return htmlContent;
+    };
+
+    // Loading indicator functions
+    let showLoadingIndicator = (message) => {
+        // Remove existing indicator if any
+        const existing = document.getElementById('pdf-loading-indicator');
+        if (existing) {
+            existing.remove();
+        }
+
+        const indicator = document.createElement('div');
+        indicator.id = 'pdf-loading-indicator';
+        indicator.innerHTML = `
+            <div style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; 
+                        background: rgba(0,0,0,0.5); z-index: 10000; 
+                        display: flex; align-items: center; justify-content: center;">
+                <div style="background: white; padding: 30px; border-radius: 8px; 
+                            text-align: center; box-shadow: 0 4px 12px rgba(0,0,0,0.3);">
+                    <div style="font-size: 18px; font-weight: 600; margin-bottom: 15px; color: #333;">
+                        ${message}
+                    </div>
+                    <div style="width: 40px; height: 40px; margin: 0 auto; 
+                                border: 4px solid #f3f3f3; border-top: 4px solid #007bff; 
+                                border-radius: 50%; animation: spin 1s linear infinite;"></div>
+                </div>
+            </div>
+            <style>
+                @keyframes spin {
+                    0% { transform: rotate(0deg); }
+                    100% { transform: rotate(360deg); }
+                }
+            </style>
+        `;
+        document.body.appendChild(indicator);
+    };
+
+    let hideLoadingIndicator = () => {
+        const indicator = document.getElementById('pdf-loading-indicator');
+        if (indicator) {
+            indicator.remove();
         }
     };
 
@@ -3327,17 +2493,6 @@ let performBeautify = (content) => {
             }
         } catch (e) {
             console.error('Failed to load PDF settings', e);
-        }
-    };
-    
-    let savePdfSettings = () => {
-        try {
-            localStorage.setItem(
-                localStorageNamespace + '.' + localStoragePdfSettingsKey,
-                JSON.stringify(pdfFontSettings)
-            );
-        } catch (e) {
-            console.error('Failed to save PDF settings', e);
         }
     };
     
@@ -3390,7 +2545,7 @@ let performBeautify = (content) => {
         panel.innerHTML = `
             <div style="position: sticky; top: 0; background: var(--bg-color, white); padding: 15px; border-bottom: 1px solid #ddd; display: flex; justify-content: space-between; align-items: center;">
                 <h3 style="margin: 0; font-size: 16px;">PDF Export Settings</h3>
-                <button id="pdf-close-panel" style="background: none; border: none; font-size: 20px; cursor: pointer; padding: 0; width: 24px; height: 24px;">Ã—</button>
+                <button id="pdf-close-panel" style="background: none; border: none; font-size: 20px; cursor: pointer; padding: 0; width: 24px; height: 24px;">×</button>
             </div>
             
             <div style="padding: 15px;">
@@ -4667,7 +3822,8 @@ let performBeautify = (content) => {
     let setupValidationCheckbox = () => {
         const checkbox = document.querySelector('#validation-checkbox');
         const exportLink = document.querySelector('#export-validation-link');
-        const autofixLink = document.querySelector('#autofix-validation-link');
+        // Auto-fix button is always visible, no need to control it here
+        
         if (!checkbox) return;
         
         // Load saved setting
@@ -4678,12 +3834,9 @@ let performBeautify = (content) => {
             if (editor && editor._setValidationEnabled) {
                 editor._setValidationEnabled(savedSetting);
             }
-            // Show/hide links based on validation state
+            // Show/hide export link based on validation state
             if (exportLink) {
                 exportLink.style.display = savedSetting ? 'block' : 'none';
-            }
-            if (autofixLink) {
-                autofixLink.style.display = savedSetting ? 'block' : 'none';
             }
         }
         
@@ -4693,12 +3846,9 @@ let performBeautify = (content) => {
             if (editor && editor._setValidationEnabled) {
                 editor._setValidationEnabled(enabled);
             }
-            // Show/hide links
+            // Show/hide export link
             if (exportLink) {
                 exportLink.style.display = enabled ? 'block' : 'none';
-            }
-            if (autofixLink) {
-                autofixLink.style.display = enabled ? 'block' : 'none';
             }
         });
     };
@@ -4839,7 +3989,7 @@ let performBeautify = (content) => {
     
     let loadValidationSettings = () => {
         let last = Storehouse.getItem(localStorageNamespace, localStorageValidationKey);
-        return last || false;
+        return last === null ? true : last; // Default to true
     };
     
     let saveValidationSettings = (enabled) => {
@@ -5421,6 +4571,15 @@ let performBeautify = (content) => {
         autofixLink.addEventListener('click', (e) => {
             e.preventDefault();
             console.log('[DEBUG] Autofix link clicked');
+            
+            // Enable validation if not already enabled
+            const validationCheckbox = document.querySelector('#validation-checkbox');
+            if (validationCheckbox && !validationCheckbox.checked) {
+                validationCheckbox.checked = true;
+                validationCheckbox.dispatchEvent(new Event('change'));
+                console.log('[DEBUG] Validation auto-enabled');
+            }
+            
             console.log('[DEBUG] Editor exists:', !!editor);
             console.log('[DEBUG] _interactiveFixWizard exists:', !!(editor && editor._interactiveFixWizard));
             
@@ -5455,10 +4614,8 @@ let performBeautify = (content) => {
     // Force update validation link visibility after editor is ready
     setTimeout(() => {
         const checkbox = document.querySelector('#validation-checkbox');
-        const autofixLink = document.querySelector('#autofix-validation-link');
         const exportLink = document.querySelector('#export-validation-link');
         if (checkbox && checkbox.checked) {
-            if (autofixLink) autofixLink.style.display = 'block';
             if (exportLink) exportLink.style.display = 'block';
         }
     }, 100);
@@ -5513,7 +4670,7 @@ let performBeautify = (content) => {
     document.getElementById('status-pdf-estimate').addEventListener('click', () => {
         const words = parseInt(document.getElementById('status-word-count').textContent);
         const pages = Math.max(1, Math.ceil(words / 500));
-        const message = `PDF Page Estimate\n\nBased on approximately 500 words per page:\n${words} words â‰ˆ ${pages} page${pages !== 1 ? 's' : ''}\n\nNote: Actual page count may vary based on:\nâ€¢ Font size and family\nâ€¢ Line height\nâ€¢ Images and tables\nâ€¢ Margins and spacing`;
+        const message = `PDF Page Estimate\n\nBased on approximately 500 words per page:\n${words} words ≈ ${pages} page${pages !== 1 ? 's' : ''}\n\nNote: Actual page count may vary based on:\n• Font size and family\n• Line height\n• Images and tables\n• Margins and spacing`;
         alert(message);
     });
     
@@ -5551,6 +4708,18 @@ let performBeautify = (content) => {
         } catch (e) {
             console.error('Failed to load page setup settings:', e);
         }
+        
+        // Return settings with margins in mm for PDF export
+        return {
+            pageSize: 'A4',
+            pageOrientation: 'portrait',
+            margins: {
+                top: (pageSetup.marginTop || 2.54) * 10,    // Convert cm to mm
+                right: (pageSetup.marginRight || 2.54) * 10,
+                bottom: (pageSetup.marginBottom || 2.54) * 10,
+                left: (pageSetup.marginLeft || 2.54) * 10
+            }
+        };
     };
     
     // Save page setup settings
@@ -5759,7 +4928,7 @@ let performBeautify = (content) => {
                 <div class="page-setup-modal-content">
                     <div class="page-setup-modal-header">
                         <h3>Page Setup</h3>
-                        <button class="page-setup-modal-close" id="page-setup-close-btn">×</button>
+                        <button class="page-setup-modal-close" id="page-setup-close-btn">�</button>
                     </div>
                     <div class="page-setup-modal-body">
                         <div class="page-setup-section">
@@ -6105,7 +5274,7 @@ let performBeautify = (content) => {
                 modalTitle.innerHTML = `
                     <div style="font-size: 16px; font-weight: 600; color: inherit;">${versionName}</div>
                     <div style="font-size: 12px; color: #64748b; font-weight: normal; margin-top: 4px;">
-                        ${version.words} words â€¢ ${Math.ceil(version.words / 500)} pages â€¢ Saved ${formatTimestamp(version.timestamp)}
+                        ${version.words} words • ${Math.ceil(version.words / 500)} pages • Saved ${formatTimestamp(version.timestamp)}
                     </div>
                 `;
             }
@@ -6181,8 +5350,8 @@ let performBeautify = (content) => {
                 modalTitle.innerHTML = `
                     <div style="font-size: 16px; font-weight: 600; color: inherit;">Compare: ${versionName}</div>
                     <div style="display: flex; gap: 20px; font-size: 12px; color: #64748b; font-weight: normal; margin-top: 4px;">
-                        <span>Current: ${currentWords} words â€¢ ${Math.ceil(currentWords / 500)} pages</span>
-                        <span>Version: ${version.words} words â€¢ ${Math.ceil(version.words / 500)} pages â€¢ Saved ${formatTimestamp(version.timestamp)}</span>
+                        <span>Current: ${currentWords} words • ${Math.ceil(currentWords / 500)} pages</span>
+                        <span>Version: ${version.words} words • ${Math.ceil(version.words / 500)} pages • Saved ${formatTimestamp(version.timestamp)}</span>
                     </div>
                 `;
             }
@@ -6826,7 +5995,7 @@ let performBeautify = (content) => {
         let editorScrollFrame = null;
         let previewScrollFrame = null;
         
-        // Editor scroll â†’ Preview scroll (Element-based sync)
+        // Editor scroll → Preview scroll (Element-based sync)
         editor.onDidScrollChange((e) => {
             if (isPreviewScrolling || !scrollBarSync) return;
             
@@ -6881,7 +6050,7 @@ let performBeautify = (content) => {
             }, 200);
         });
         
-        // Preview scroll â†’ Editor scroll
+        // Preview scroll → Editor scroll
         previewElement.addEventListener('scroll', () => {
             if (isEditorScrolling || !scrollBarSync) return;
             
@@ -7078,6 +6247,57 @@ let performBeautify = (content) => {
     };
     
     initMofuBlob();
+    
+    // ============================================================================
+    // SETTINGS PANEL
+    // ============================================================================
+    
+    const settingsPanel = document.getElementById('settings-panel');
+    const settingsButton = document.getElementById('settings-button');
+    const settingsTabs = document.querySelectorAll('.settings-tab');
+    const settingsTabContents = document.querySelectorAll('.settings-tab-content');
+    
+    // Open settings panel
+    if (settingsButton) {
+        settingsButton.addEventListener('click', () => {
+            settingsPanel.classList.add('visible');
+        });
+    }
+    
+    // Close settings panel
+    const closeSettingsPanel = () => {
+        settingsPanel.classList.remove('visible');
+    };
+    
+    // Close on overlay click
+    settingsPanel.querySelector('.settings-panel-overlay').addEventListener('click', closeSettingsPanel);
+    
+    // Close on Escape key
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && settingsPanel.classList.contains('visible')) {
+            closeSettingsPanel();
+        }
+    });
+    
+    // Tab switching
+    settingsTabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            const tabName = tab.dataset.tab;
+            
+            // Update active tab
+            settingsTabs.forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+            
+            // Update active content
+            settingsTabContents.forEach(content => {
+                if (content.dataset.tabContent === tabName) {
+                    content.classList.add('active');
+                } else {
+                    content.classList.remove('active');
+                }
+            });
+        });
+    });
 };
 
 window.addEventListener("load", () => {

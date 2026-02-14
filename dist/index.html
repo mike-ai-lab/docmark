@@ -65,10 +65,9 @@
       // Make hljs and TurndownService available globally for the module
       window.hljs = hljs;
       window.TurndownService = TurndownService;
-    </script>
-    <script defer src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" integrity="sha512-qZvrmS2ekKPF2mSznTQsxqPgnpkI4DNTlrdUmTzrDgektczlKNRRhy5X5AAOnx5S09ydFYWWNSfcEqDTTHgtNA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    </script>
     <title>Markdown Live Preview</title>
-    <script type="module" crossorigin src="/assets/index-alaLaxpE.js"></script>
+    <script type="module" crossorigin src="/assets/index-CUUWWWZ5.js"></script>
   </head>
 
   <body>
@@ -146,6 +145,17 @@
             </div>
             
             <div class="button-group">
+                <div class="btn-item icon-btn" id="autofix-validation-link" title="Auto-Fix Issues">
+                    <a href="#">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M20 6 9 17l-5-5"/>
+                            <path d="M12 2v4"/>
+                            <path d="M12 18v4"/>
+                            <path d="M4.93 4.93l2.83 2.83"/>
+                            <path d="M16.24 16.24l2.83 2.83"/>
+                        </svg>
+                    </a>
+                </div>
                 <div class="btn-item" id="insert-header-button"><a href="#">+ Header</a></div>
                 <div class="btn-item" id="insert-footer-button"><a href="#">+ Footer</a></div>
                 <div class="btn-item" id="insert-image-button"><a href="#">+ Image</a></div>
@@ -161,68 +171,13 @@
                         <a href="#" id="export-html-link">Export HTML</a>
                     </div>
                 </div>
-                <div class="btn-item dropdown" id="settings-dropdown">
-                    <a href="#">Settings ▾</a>
-                    <div class="dropdown-content">
-                        <label class="dropdown-item">
-                            <input type="checkbox" id="sync-scroll-checkbox">
-                            <span>Sync Scroll</span>
-                        </label>
-                        <label class="dropdown-item">
-                            <input type="checkbox" id="sync-cursor-checkbox">
-                            <span>Sync Cursor</span>
-                        </label>
-                        <label class="dropdown-item">
-                            <input type="checkbox" id="helper-messages-checkbox">
-                            <span>Helper Messages</span>
-                        </label>
-                        <label class="dropdown-item">
-                            <input type="checkbox" id="style-tooltips-checkbox">
-                            <span>Style Info Tooltips</span>
-                        </label>
-                        <label class="dropdown-item">
-                            <input type="checkbox" id="theme-checkbox">
-                            <span>Dark Mode</span>
-                        </label>
-                        <label class="dropdown-item">
-                            <input type="checkbox" id="flip-panels-checkbox">
-                            <span>Flip Panels</span>
-                        </label>
-                        <label class="dropdown-item">
-                            <input type="checkbox" id="vertical-layout-checkbox">
-                            <span>Vertical Layout</span>
-                        </label>
-                        <label class="dropdown-item">
-                            <input type="checkbox" id="toc-checkbox">
-                            <span>Table of Contents</span>
-                        </label>
-                        <label class="dropdown-item">
-                            <input type="checkbox" id="validation-checkbox">
-                            <span>Markdown Validation</span>
-                        </label>
-                        <label class="dropdown-item">
-                            <input type="checkbox" id="edit-mode-checkbox">
-                            <span>Edit Mode (Preview)</span>
-                        </label>
-                        <label class="dropdown-item">
-                            <input type="checkbox" id="word-wrap-checkbox" checked>
-                            <span>Word Wrap</span>
-                        </label>
-                        <a href="#" id="export-validation-link" style="display: none;">Export Validation Report</a>
-                        <a href="#" id="autofix-validation-link" style="display: none;">Auto-Fix Issues</a>
-                        <div class="dropdown-item">
-                            <label>
-                                <span>Style:</span>
-                                <select id="style-selector">
-                                    <option value="github">GitHub</option>
-                                    <option value="gitbook">GitBook</option>
-                                    <option value="vscode">VSCode</option>
-                                </select>
-                            </label>
-                        </div>
-                        <a href="#" id="pdf-settings-link">PDF Settings</a>
-                    </div>
-                </div>
+                <button class="icon-button" id="settings-button" title="Settings">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="3"></circle>
+                        <path d="M12 1v6m0 6v6m-6-6h6m6 0h6"></path>
+                        <path d="M19.07 4.93l-4.24 4.24m0 5.66l4.24 4.24M4.93 4.93l4.24 4.24m0 5.66l-4.24 4.24"></path>
+                    </svg>
+                </button>
                 <div class="btn-item" id="cheatsheet-button">
                     <a href="#">Syntax Guide</a>
                 </div>
@@ -464,6 +419,129 @@
             <div class="version-modal-footer">
                 <button class="modal-btn modal-btn-secondary" id="version-modal-cancel-btn">Close</button>
                 <button class="modal-btn modal-btn-primary" id="version-modal-restore-btn" style="display: none;">Restore This Version</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Panel Modal -->
+    <div class="settings-panel" id="settings-panel">
+        <div class="settings-panel-overlay"></div>
+        <div class="settings-panel-content">
+            
+            <div class="settings-tabs">
+                <button class="settings-tab active" data-tab="editor">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                    </svg>
+                    <span>Editor</span>
+                </button>
+                <button class="settings-tab" data-tab="view">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                        <circle cx="12" cy="12" r="3"></circle>
+                    </svg>
+                    <span>View</span>
+                </button>
+                <button class="settings-tab" data-tab="advanced">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="3"></circle>
+                        <path d="M12 1v6m0 6v6"></path>
+                        <path d="M17 7l-10 10M7 7l10 10"></path>
+                    </svg>
+                    <span>Advanced</span>
+                </button>
+            </div>
+            
+            <div class="settings-content">
+                <!-- Editor Tab -->
+                <div class="settings-tab-content active" data-tab-content="editor">
+                    <div class="settings-section">
+                        <h4>Editor Settings</h4>
+                        <label class="settings-item">
+                            <input type="checkbox" id="word-wrap-checkbox" checked>
+                            <span>Word Wrap</span>
+                        </label>
+                        <label class="settings-item">
+                            <input type="checkbox" id="edit-mode-checkbox">
+                            <span>Edit Mode (Preview)</span>
+                        </label>
+                    </div>
+                </div>
+                
+                <!-- View Tab -->
+                <div class="settings-tab-content" data-tab-content="view">
+                    <div class="settings-section">
+                        <h4>Appearance</h4>
+                        <label class="settings-item">
+                            <input type="checkbox" id="theme-checkbox">
+                            <span>Dark Mode</span>
+                        </label>
+                    </div>
+                    <div class="settings-section">
+                        <h4>Layout</h4>
+                        <label class="settings-item">
+                            <input type="checkbox" id="flip-panels-checkbox">
+                            <span>Flip Panels</span>
+                        </label>
+                        <label class="settings-item">
+                            <input type="checkbox" id="vertical-layout-checkbox">
+                            <span>Vertical Layout</span>
+                        </label>
+                        <label class="settings-item">
+                            <input type="checkbox" id="toc-checkbox">
+                            <span>Table of Contents</span>
+                        </label>
+                    </div>
+                    <div class="settings-section">
+                        <h4>Preview Style</h4>
+                        <div class="settings-item">
+                            <label>
+                                <span>Style:</span>
+                                <select id="style-selector">
+                                    <option value="github">GitHub</option>
+                                    <option value="gitbook">GitBook</option>
+                                    <option value="vscode">VSCode</option>
+                                </select>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Advanced Tab -->
+                <div class="settings-tab-content" data-tab-content="advanced">
+                    <div class="settings-section">
+                        <h4>Synchronization</h4>
+                        <label class="settings-item">
+                            <input type="checkbox" id="sync-scroll-checkbox">
+                            <span>Sync Scroll</span>
+                        </label>
+                        <label class="settings-item">
+                            <input type="checkbox" id="sync-cursor-checkbox">
+                            <span>Sync Cursor</span>
+                        </label>
+                    </div>
+                    <div class="settings-section">
+                        <h4>Validation</h4>
+                        <label class="settings-item">
+                            <input type="checkbox" id="validation-checkbox">
+                            <span>Markdown Validation</span>
+                        </label>
+                        <a href="#" id="export-validation-link" class="settings-link" style="display: none;">Export Validation Report</a>
+                    </div>
+                    <div class="settings-section">
+                        <h4>Other</h4>
+                        <label class="settings-item">
+                            <input type="checkbox" id="helper-messages-checkbox">
+                            <span>Helper Messages</span>
+                        </label>
+                        <label class="settings-item">
+                            <input type="checkbox" id="style-tooltips-checkbox">
+                            <span>Style Info Tooltips</span>
+                        </label>
+                        <a href="#" id="pdf-settings-link" class="settings-link">PDF Settings</a>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
