@@ -60,13 +60,15 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css" id="hljs-dark-theme" disabled>
     <link rel="icon" type="image/png" href="favicon.png">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/turndown@7.1.2/dist/turndown.min.js"></script>
     <script>
-      // Make hljs available globally for the module
+      // Make hljs and TurndownService available globally for the module
       window.hljs = hljs;
+      window.TurndownService = TurndownService;
     </script>
     <script defer src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" integrity="sha512-qZvrmS2ekKPF2mSznTQsxqPgnpkI4DNTlrdUmTzrDgektczlKNRRhy5X5AAOnx5S09ydFYWWNSfcEqDTTHgtNA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <title>Markdown Live Preview</title>
-    <script type="module" crossorigin src="/assets/index-DsEypLfp.js"></script>
+    <script type="module" crossorigin src="/assets/index-DqZl9WUS.js"></script>
   </head>
 
   <body>
@@ -197,6 +199,10 @@
                         <label class="dropdown-item">
                             <input type="checkbox" id="validation-checkbox">
                             <span>Markdown Validation</span>
+                        </label>
+                        <label class="dropdown-item">
+                            <input type="checkbox" id="edit-mode-checkbox">
+                            <span>Edit Mode (Preview)</span>
                         </label>
                         <label class="dropdown-item">
                             <input type="checkbox" id="word-wrap-checkbox" checked>

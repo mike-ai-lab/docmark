@@ -2024,6 +2024,11 @@ This web site is using ${"`"}markedjs/marked${"`"}.
         
         // Update the output
         document.querySelector('#output').innerHTML = finalHtml;
+        
+        // Apply edit mode if enabled
+        if (editModeEnabled) {
+            applyEditMode();
+        }
     };
 
     // Cursor synchronization: highlight preview element based on editor cursor
@@ -5984,32 +5989,140 @@ let performBeautify = (content) => {
                 autofixLink.style.display = enabled ? 'block' : 'none';
             }
         });
+    };
+    
+    // Edit Mode state and setup
+    let editModeEnabled = false;
+    const localStorageEditModeKey = 'edit_mode';
+    
+    const loadEditModeSettings = () => {
+        const saved = Storehouse.getItem(localStorageNamespace, localStorageEditModeKey);
+        return saved === true;
+    };
+    
+    const saveEditModeSettings = (enabled) => {
+        Storehouse.setItem(localStorageNamespace, localStorageEditModeKey, enabled);
+    };
+    
+    let setupEditModeCheckbox = () => {
+        const checkbox = document.querySelector('#edit-mode-checkbox');
+        if (!checkbox) return;
         
-        // Setup export validation report button
-        if (exportLink) {
-            exportLink.addEventListener('click', (e) => {
-                e.preventDefault();
-                if (!editor || !editor._exportValidationErrors) return;
-                
-                const report = editor._exportValidationErrors();
-                navigator.clipboard.writeText(report).then(() => {
-                    console.log('Validation report copied to clipboard');
-                }).catch(err => {
-                    console.error('Failed to copy validation report:', err);
-                });
-            });
+        // Load saved setting
+        editModeEnabled = loadEditModeSettings();
+        checkbox.checked = editModeEnabled;
+        
+        // Apply initial state
+        if (editModeEnabled) {
+            document.documentElement.classList.add('edit-mode-active');
         }
         
-        // Setup auto-fix button (now interactive wizard)
-        if (autofixLink) {
-            autofixLink.textContent = 'Fix Issues (Interactive)';
-            autofixLink.addEventListener('click', async (e) => {
-                e.preventDefault();
-                if (!editor || !editor._interactiveFixWizard) return;
-                
-                await editor._interactiveFixWizard();
-            });
+        checkbox.addEventListener('change', (event) => {
+            editModeEnabled = event.currentTarget.checked;
+            saveEditModeSettings(editModeEnabled);
+            
+            if (editModeEnabled) {
+                document.documentElement.classList.add('edit-mode-active');
+                applyEditMode();
+            } else {
+                document.documentElement.classList.remove('edit-mode-active');
+                removeEditMode();
+            }
+        });
+    };
+    
+    // Initialize Turndown for HTML to Markdown conversion
+    let turndownService = null;
+    if (window.TurndownService) {
+        turndownService = new window.TurndownService({
+            headingStyle: 'atx',
+            bulletListMarker: '-',
+            codeBlockStyle: 'fenced'
+        });
+    }
+    
+    // Handle contenteditable input and sync to editor
+    const handleContentEditableInput = (element) => {
+        if (!turndownService || !editor) return;
+        
+        // Get the source line number from data attribute
+        const sourceLine = element.getAttribute('data-source-line');
+        if (!sourceLine) return;
+        
+        const lineNumber = parseInt(sourceLine, 10);
+        if (isNaN(lineNumber)) return;
+        
+        // Convert edited HTML back to Markdown
+        const htmlContent = element.innerHTML;
+        let markdownContent = turndownService.turndown(htmlContent);
+        
+        // Handle heading levels
+        const tagName = element.tagName.toLowerCase();
+        if (tagName.match(/^h[1-6]$/)) {
+            const level = parseInt(tagName[1], 10);
+            const prefix = '#'.repeat(level);
+            // Ensure heading has proper prefix
+            if (!markdownContent.startsWith(prefix)) {
+                markdownContent = `${prefix} ${markdownContent}`;
+            }
         }
+        
+        // Handle blockquotes
+        if (tagName === 'blockquote') {
+            const lines = markdownContent.split('\n');
+            markdownContent = lines.map(line => line.startsWith('>') ? line : `> ${line}`).join('\n');
+        }
+        
+        // Update the editor at the specific line
+        const model = editor.getModel();
+        if (!model) return;
+        
+        const lineContent = model.getLineContent(lineNumber);
+        const range = new monaco.Range(lineNumber, 1, lineNumber, lineContent.length + 1);
+        
+        // Apply edit without triggering cursor sync
+        const edit = { range, text: markdownContent };
+        model.pushEditOperations([], [edit], () => null);
+    };
+    
+    // Apply edit mode to preview elements
+    const applyEditMode = () => {
+        const output = document.querySelector('#output');
+        if (!output) return;
+        
+        // Make block elements contenteditable
+        const elements = output.querySelectorAll('h1, h2, h3, h4, h5, h6, p, li, blockquote');
+        elements.forEach(el => {
+            el.setAttribute('contenteditable', 'true');
+            
+            // Store handler reference for later removal
+            const inputHandler = (e) => {
+                handleContentEditableInput(e.target);
+            };
+            el._editModeInputHandler = inputHandler;
+            el.addEventListener('input', inputHandler);
+            
+            // Store original content for comparison
+            el.setAttribute('data-original-html', el.innerHTML);
+        });
+    };
+    
+    // Remove edit mode from preview elements
+    const removeEditMode = () => {
+        const output = document.querySelector('#output');
+        if (!output) return;
+        
+        const elements = output.querySelectorAll('[contenteditable="true"]');
+        elements.forEach(el => {
+            el.removeAttribute('contenteditable');
+            el.removeAttribute('data-original-html');
+            
+            // Remove event listener using stored reference
+            if (el._editModeInputHandler) {
+                el.removeEventListener('input', el._editModeInputHandler);
+                delete el._editModeInputHandler;
+            }
+        });
     };
     
     let loadValidationSettings = () => {
@@ -6586,6 +6699,46 @@ let performBeautify = (content) => {
     setupCheatSheetButton();
     setupTocCheckbox();
     setupValidationCheckbox();
+    setupEditModeCheckbox();
+    
+    // Setup validation link click handlers
+    const autofixLink = document.querySelector('#autofix-validation-link');
+    const exportLink = document.querySelector('#export-validation-link');
+    
+    if (autofixLink) {
+        autofixLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            console.log('[DEBUG] Autofix link clicked');
+            console.log('[DEBUG] Editor exists:', !!editor);
+            console.log('[DEBUG] _interactiveFixWizard exists:', !!(editor && editor._interactiveFixWizard));
+            
+            if (editor && editor._interactiveFixWizard) {
+                console.log('[DEBUG] Calling _interactiveFixWizard');
+                editor._interactiveFixWizard();
+            } else {
+                console.error('[DEBUG] Cannot call _interactiveFixWizard - editor or function not available');
+            }
+        });
+    } else {
+        console.error('[DEBUG] Autofix link not found in DOM');
+    }
+    
+    if (exportLink) {
+        exportLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            console.log('[DEBUG] Export validation link clicked');
+            
+            if (editor && editor._exportValidationErrors) {
+                const report = editor._exportValidationErrors();
+                navigator.clipboard.writeText(report).then(() => {
+                    showMofuHelper('Validation report copied to clipboard!');
+                }).catch(err => {
+                    console.error('Failed to copy:', err);
+                    showMofuHelper('Failed to copy report');
+                });
+            }
+        });
+    }
     
     // Force update validation link visibility after editor is ready
     setTimeout(() => {
@@ -7641,6 +7794,16 @@ let performBeautify = (content) => {
     const previewElement = document.querySelector('#preview');
     if (previewElement) {
         previewElement.addEventListener('click', (e) => {
+            // Skip cursor sync if edit mode is enabled and clicking on or inside contenteditable element
+            if (editModeEnabled) {
+                let element = e.target;
+                while (element && element !== previewElement) {
+                    if (element.hasAttribute('contenteditable') && element.getAttribute('contenteditable') === 'true') {
+                        return; // Let the browser handle contenteditable focus
+                    }
+                    element = element.parentElement;
+                }
+            }
             syncCursorToEditor(e.target);
         });
         
