@@ -32,11 +32,14 @@
     "vite": "^6.4.1"
   },
   "dependencies": {
+    "cors": "^2.8.6",
     "dompurify": "^3.2.5",
+    "express": "^5.2.1",
     "github-markdown-css": "^5.8.1",
     "jspdf": "^4.1.0",
     "marked": "^15.0.7",
     "monaco-editor": "^0.52.2",
+    "puppeteer": "^24.37.2",
     "storehouse-js": "github:tanabe/Storehouse-js"
   },
   "type": "commonjs"

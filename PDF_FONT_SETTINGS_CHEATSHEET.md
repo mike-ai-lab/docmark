@@ -1,162 +1,167 @@
-# PDF Font Settings Cheat Sheet
+# PDF Font Settings Cheatsheet
 
-> **How to use:** Export this file to PDF and adjust the settings to see what each one controls!
+## Font Size Calibration
 
----
+### The Problem
+HTML uses pixels (px) while PDF uses points (pt). Direct conversion doesn't work because:
+- 1px ≈ 0.75pt (theoretical)
+- But visual rendering differs between browsers and PDF viewers
+- Font families render at different sizes even with same pt value
 
-## H1 Setting (Currently: 10pt)
-# This is an H1 Heading - Main Title
-Use this for the biggest titles in your document. Increase this number to make H1 headings larger.
+### The Solution
+Through testing, we found that **10.5pt in PDF ≈ 14px in HTML** when using Roboto font.
 
----
+## Font Size Mapping
 
-## H2 Setting (Currently: 10pt)
-## This is an H2 Heading - Section Title
-Use this for major sections. Increase this number to make H2 headings larger.
+| Element | HTML Size | PDF Size (pt) | Multiplier | Notes |
+|---------|-----------|---------------|------------|-------|
+| Base text (p, li) | 14px | 10.5 | 1.0x | Body text |
+| H1 | 28px | 21 | 2.0x | Main title |
+| H2 | 21px | 16 | 1.5x | Section headers |
+| H3 | 17.5px | 13 | 1.25x | Subsection headers |
+| H4 | 16px | 11.5 | 1.1x | Minor headers |
+| H5 | 14px | 10.5 | 1.0x | Same as body |
+| H6 | 13px | 10 | 0.95x | Smallest header |
 
----
+## Line Height Settings
 
-## H3 Setting (Currently: 10pt)
-### This is an H3 Heading - Subsection Title
-Use this for subsections. Increase this number to make H3 headings larger.
+| Element | HTML | PDF | Purpose |
+|---------|------|-----|---------|
+| Body text | 1.6 | 1.6 | Comfortable reading |
+| Headings | 1.25 | 1.25 | Tighter spacing |
+| Lists | 1.6 | 1.6 | Match body text |
 
----
+## Spacing (Margins)
 
-## H4 Setting (Currently: 10pt)
-#### This is an H4 Heading - Minor Section
-##### This is an H5 Heading
-###### This is an H6 Heading
-H4, H5, and H6 all use the same setting. Increase this number to make these smaller headings larger.
+All margins in PDF are in points [left, top, right, bottom]:
 
----
+| Element | Top | Bottom | Notes |
+|---------|-----|--------|-------|
+| H1 | 15pt | 10pt | Large breathing room |
+| H2 | 12pt | 8pt | Section separation |
+| H3 | 10pt | 6pt | Subsection separation |
+| Paragraph | 0pt | 10pt | Space after only |
+| List | 5pt | 10pt | Compact but readable |
+| List item | 3pt | 3pt | Tight spacing |
 
-## Paragraph Setting (Currently: 8pt)
+## Color Palette
 
-This is regular paragraph text. Most of your document content will use this setting. If you want all your body text to be larger or smaller, adjust the "Paragraph" setting.
-
-This includes any normal text that isn't in a table, list, or special formatting. Multiple paragraphs all use this same setting.
-
----
-
-## List Setting (Currently: 8pt)
-
-### Unordered Lists:
-* This is a bullet point - uses List setting
-* Another bullet point
-* Third bullet point
-  * Nested bullet point also uses List setting
-
-### Ordered Lists:
-1. First numbered item - uses List setting
-2. Second numbered item
-3. Third numbered item
-   1. Nested numbered item also uses List setting
-
----
-
-## Blockquote Setting (Currently: 8pt)
-
-> This is a blockquote. It's used for quotes or special notes.
-> 
-> Blockquotes use the "Blockquote" setting. Adjust this to make quoted text larger or smaller.
->
->> Nested blockquotes also use this setting.
-
----
-
-## Code Setting (Currently: 8pt)
-
-```
-This is a code block
-It uses the "Code" setting
-function example() {
-    return "Adjust Code setting to change this size";
+```javascript
+{
+    bodyText: '#24292f',      // GitHub dark gray
+    headings: '#1a1a1a',      // Near black
+    links: '#0969da',         // GitHub blue
+    mutedText: '#666666',     // Gray for quotes/meta
+    lightText: '#999999'      // Very light for footers
 }
 ```
 
-Inline code like `this code here` also uses the Code setting.
+## Font Weights
 
----
+pdfmake uses Roboto with these variants:
+- **Regular**: Default body text
+- **Bold**: Headings, strong, b tags
+- **Italic**: em, i tags, blockquotes
+- **BoldItalic**: Combined formatting
 
-## Table Setting (Currently: 8pt)
+## Quick Reference Code
 
-| Column 1 | Column 2 | Column 3 |
-|----------|----------|----------|
-| All table text uses the "Table" setting | You can see it here | And here too |
-| Row 2 | Data | More data |
-| Row 3 | Adjust "Table" setting | To change table text size |
+```javascript
+const FONT_CONFIG = {
+    baseFontSize: 10.5,  // Calibrated to match HTML 14px
+    
+    defaultStyle: {
+        font: 'Roboto',
+        fontSize: 10.5,
+        lineHeight: 1.6,
+        color: '#24292f'
+    },
+    
+    styles: {
+        h1: {fontSize: 21, bold: true, lineHeight: 1.25},
+        h2: {fontSize: 16, bold: true, lineHeight: 1.25},
+        h3: {fontSize: 13, bold: true, lineHeight: 1.25},
+        body: {fontSize: 10.5, lineHeight: 1.6}
+    }
+};
+```
 
-**Table with your actual data:**
+## Testing Checklist
 
-| Supplier | Product | Price (SAR) | Notes |
-|----------|---------|-------------|-------|
-| Madar Building Materials | Saveto Premix Plaster | 24.15 | Coverage info |
-| Luxury Land | Galaxy Granite | 80.50 | Natural granite |
+When adjusting fonts, verify:
+- [ ] Body text is readable (not too small/large)
+- [ ] Heading hierarchy is clear (size differences visible)
+- [ ] Line spacing prevents text from feeling cramped
+- [ ] Bold and italic render correctly
+- [ ] Links are distinguishable
+- [ ] Page margins feel balanced
+- [ ] Text is selectable in PDF viewer
+- [ ] File size is reasonable (<1MB for typical docs)
 
----
+## Common Issues & Fixes
 
-## Quick Reference Guide
+### Issue: Text too small in PDF
+**Fix**: Increase `baseFontSize` from 10.5 to 11 or 11.5
 
-| Setting Name | What It Controls | Current Default |
-|--------------|------------------|-----------------|
-| **H1** | # Main titles (one #) | 10pt |
-| **H2** | ## Section titles (two ##) | 10pt |
-| **H3** | ### Subsection titles (three ###) | 10pt |
-| **H4** | #### Minor sections (four or more ####) | 10pt |
-| **Paragraph** | Regular text, body content | 8pt |
-| **List** | • Bullet points and 1. numbered lists | 8pt |
-| **Blockquote** | > Quoted text and notes | 8pt |
-| **Code** | ```code blocks``` and `inline code` | 8pt |
-| **Table** | All text inside tables | 8pt |
+### Issue: Headings not prominent enough
+**Fix**: Increase multipliers (e.g., H2 from 1.5x to 1.75x)
 
----
+### Issue: Text feels cramped
+**Fix**: Increase `lineHeight` from 1.6 to 1.8
 
-## How to Adjust Settings
+### Issue: Too much whitespace
+**Fix**: Reduce bottom margins on paragraphs and lists
 
-1. Click the **"PDF Settings"** button in the toolbar
-2. A popup will appear with all font size controls
-3. Change any number (6-24pt range)
-4. Click "Close"
-5. Export this file to PDF to see the changes
-6. Repeat until you're happy with the sizes
+### Issue: Font looks different from HTML
+**Fix**: Ensure HTML uses Roboto or similar system font
 
----
+## Browser vs PDF Rendering
 
-## Recommended Settings
+| Aspect | Browser (HTML) | PDF (pdfmake) |
+|--------|----------------|---------------|
+| Font rendering | Anti-aliased, subpixel | Vector-based |
+| Font source | System fonts, web fonts | Embedded Roboto |
+| Sizing unit | px (pixels) | pt (points) |
+| Line breaking | Dynamic, responsive | Fixed width |
+| Zoom behavior | Reflows content | Scales proportionally |
 
-### Option 1: Current Default (Compact)
-- Headings: 10pt
-- Body text: 8pt
-- Good for: Fitting lots of content on fewer pages
+## Recommendations
 
-### Option 2: Larger & More Readable
-- H1: 14pt
-- H2: 12pt
-- H3: 11pt
-- H4: 10pt
-- Paragraph: 10pt
-- List: 10pt
-- Blockquote: 9pt
-- Code: 9pt
-- Table: 9pt
-- Good for: Better readability, presentations
+1. **Always test with actual content** - Lorem ipsum doesn't reveal real-world issues
+2. **Test on multiple PDF viewers** - Adobe, Chrome, Edge render slightly differently
+3. **Print test pages** - Physical output may differ from screen
+4. **Keep base size at 10.5pt** - This is the sweet spot for readability
+5. **Use consistent line heights** - 1.6 for body, 1.25 for headings
+6. **Don't go below 9pt** - Anything smaller is hard to read
+7. **Maintain heading hierarchy** - Each level should be noticeably different
 
-### Option 3: Professional Report
-- H1: 16pt
-- H2: 14pt
-- H3: 12pt
-- H4: 11pt
-- Paragraph: 11pt
-- List: 11pt
-- Blockquote: 10pt
-- Code: 9pt
-- Table: 10pt
-- Good for: Client-facing documents
+## Advanced: Custom Font Sizes
 
----
+If you need to override for specific elements:
 
-## Testing Your Settings
+```javascript
+const customConfig = {
+    ...PDFMAKE_CONFIG,
+    defaultStyles: {
+        ...PDFMAKE_CONFIG.defaultStyles,
+        h2: {
+            ...PDFMAKE_CONFIG.defaultStyles.h2,
+            fontSize: 18  // Custom size
+        }
+    }
+};
+```
 
-Export this cheat sheet to PDF after adjusting settings to see exactly how each change affects the output. The examples above show you what each setting controls.
+## Integration Example
 
-**Pro Tip:** Start by adjusting one setting at a time, export, and check the result. This way you'll learn exactly what each control does!
+```javascript
+// In your export function
+const computedStyle = window.getComputedStyle(element);
+const htmlFontSize = parseFloat(computedStyle.fontSize);
+
+console.log(`HTML base font: ${htmlFontSize}px`);
+console.log(`PDF base font: ${PDFMAKE_CONFIG.baseFontSize}pt`);
+
+// Use the config
+await exportWithPDFMake(element, 'document.pdf', PDFMAKE_CONFIG);
+```

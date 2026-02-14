@@ -1,15 +1,17 @@
-02:42:41.695 index-Cb2viZuM.js:734 No changes detected, skipping version save
-02:42:48.085 :5001/codicon.ttf:1  GET http://127.0.0.1:5001/codicon.ttf net::ERR_ABORTED 404 (Not Found)
-02:42:55.070 index-Cb2viZuM.js:734 Saving version: {id: 1771026175070, contentLength: 3714, preview: '# MUHAMMAD SHKEIR\r\n\r\n## INTERIOR AND ARCHITECTURAL…IGNER\r\n\r\n**Phone:** +966 56 165 6429 | **Email...', totalVersions: 4}
-02:43:04.598 index-Cb2viZuM.js:734 Saving version: {id: 1771026184598, contentLength: 3474, preview: '# MUHAMMAD SHKEIR\r\n\r\n## INTERIOR AND ARCHITECTURAL…IGNER\r\n\r\n**Phone:** +966 56 165 6429 | **Email...', totalVersions: 5}
-02:43:16.022 index-Cb2viZuM.js:768 Comparing versions: {versionId: 1771026175070, currentLength: 3474, versionLength: 3714, areSame: false, currentPreview: '# MUHAMMAD SHKEIR\r\n\r\n## INTERIOR AND ARCHITECTURAL', …}
-02:43:26.510 index-Cb2viZuM.js:768 Comparing versions: {versionId: 1771026184598, currentLength: 3474, versionLength: 3474, areSame: true, currentPreview: '# MUHAMMAD SHKEIR\r\n\r\n## INTERIOR AND ARCHITECTURAL', …}
-02:43:39.151 index-Cb2viZuM.js:768 Comparing versions: {versionId: 1771025890915, currentLength: 3474, versionLength: 4109, areSame: false, currentPreview: '# MUHAMMAD SHKEIR\r\n\r\n## INTERIOR AND ARCHITECTURAL', …}
-02:43:45.302 index-Cb2viZuM.js:768 Comparing versions: {versionId: 1771025852425, currentLength: 3474, versionLength: 5107, areSame: false, currentPreview: '# MUHAMMAD SHKEIR\r\n\r\n## INTERIOR AND ARCHITECTURAL', …}
-02:43:51.294 index-Cb2viZuM.js:768 Comparing versions: {versionId: 1771025818698, currentLength: 3474, versionLength: 5504, areSame: false, currentPreview: '# MUHAMMAD SHKEIR\r\n\r\n## INTERIOR AND ARCHITECTURAL', …}
-02:44:22.631 index-Cb2viZuM.js:734 Saving version: {id: 1771026262631, contentLength: 3469, preview: '# SAM ALTMAN\r\n\r\n## INTERIOR AND ARCHITECTURAL DESI…\r\n\r\n**Phone:** +966 56 165 6429 | **Email:** m...', totalVersions: 6}
-02:45:12.174 index-Cb2viZuM.js:768 Comparing versions: {versionId: 1771026262631, currentLength: 3474, versionLength: 3469, areSame: false, currentPreview: '# MUHAMMAD SHKEIR\r\n\r\n## INTERIOR AND ARCHITECTURAL', …}
-02:45:23.982 index-Cb2viZuM.js:768 Comparing versions: {versionId: 1771026262631, currentLength: 3474, versionLength: 3469, areSame: false, currentPreview: '# MUHAMMAD SHKEIR\r\n\r\n## INTERIOR AND ARCHITECTURAL', …}
-02:45:29.750 index-Cb2viZuM.js:768 Comparing versions: {versionId: 1771026184598, currentLength: 3474, versionLength: 3474, areSame: true, currentPreview: '# MUHAMMAD SHKEIR\r\n\r\n## INTERIOR AND ARCHITECTURAL', …}
-02:45:34.238 index-Cb2viZuM.js:768 Comparing versions: {versionId: 1771026175070, currentLength: 3474, versionLength: 3714, areSame: false, currentPreview: '# MUHAMMAD SHKEIR\r\n\r\n## INTERIOR AND ARCHITECTURAL', …}
-02:45:41.431 index-Cb2viZuM.js:768 Comparing versions: {versionId: 1771025890915, currentLength: 3474, versionLength: 4109, areSame: false, currentPreview: '# MUHAMMAD SHKEIR\r\n\r\n## INTERIOR AND ARCHITECTURAL', …}
+14:46:35.343 test-pdf-enhanced.html:260 ✅ jsPDF loaded
+14:46:46.453 test-pdf-enhanced.html:334 
+========================================
+14:46:46.453 test-pdf-enhanced.html:335 🚀 ENHANCED PDF EXPORT
+14:46:46.453 test-pdf-enhanced.html:336 ========================================
+14:46:46.458 test-pdf-enhanced.html:352 [Enhanced] Processing 4 preview pages
+14:46:46.459 test-pdf-enhanced.html:355 [Enhanced] Processing preview page 1
+14:46:46.472 test-pdf-enhanced.html:493 [Enhanced] Page 1 processed, Y: 14.64cm
+14:46:46.472 test-pdf-enhanced.html:355 [Enhanced] Processing preview page 2
+14:46:46.476 test-pdf-enhanced.html:493 [Enhanced] Page 2 processed, Y: 26.04cm
+14:46:46.476 test-pdf-enhanced.html:355 [Enhanced] Processing preview page 3
+14:46:46.477 test-pdf-enhanced.html:379 [Enhanced] 📄 Page break at Y=26.04cm
+14:46:46.479 test-pdf-enhanced.html:493 [Enhanced] Page 3 processed, Y: 13.94cm
+14:46:46.479 test-pdf-enhanced.html:355 [Enhanced] Processing preview page 4
+14:46:46.482 test-pdf-enhanced.html:379 [Enhanced] 📄 Page break at Y=25.84cm
+14:46:46.484 test-pdf-enhanced.html:493 [Enhanced] Page 4 processed, Y: 8.44cm
+14:46:46.484 test-pdf-enhanced.html:505 [Enhanced] ✅ Export complete! Total PDF pages: 3

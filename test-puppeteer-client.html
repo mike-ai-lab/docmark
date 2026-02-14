@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Puppeteer PDF Export - Client</title>
+    
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .header {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .header h1 {
+            margin: 0 0 10px 0;
+            color: #333;
+        }
+        .success-box {
+            background: #d4edda;
+            border: 2px solid #28a745;
+            padding: 20px;
+            border-radius: 6px;
+            margin-top: 15px;
+        }
+        .controls {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        button {
+            padding: 15px 30px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            color: white;
+            background: #007bff;
+            margin-right: 10px;
+        }
+        button:hover { background: #0056b3; }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        
+        #status {
+            margin-top: 15px;
+            padding: 15px;
+            border-radius: 6px;
+            display: none;
+        }
+        #status.show {
+            display: block;
+        }
+        #status.loading {
+            background: #cce5ff;
+            border: 1px solid #007bff;
+        }
+        #status.success {
+            background: #d4edda;
+            border: 1px solid #28a745;
+        }
+        #status.error {
+            background: #f8d7da;
+            border: 1px solid #dc3545;
+        }
+        
+        /* Paper layout */
+        .paper-container {
+            max-width: 900px;
+            margin: 0 auto 20px auto;
+            background-color: #ffffff;
+            padding: 40px 50px;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+            border: 1px solid #e1e4e8;
+        }
+        .markdown-body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            font-size: 14px;
+            line-height: 1.6;
+            padding: 0;
+            background-color: transparent;
+            color: #24292f;
+        }
+        .markdown-body h2 {
+            font-size: 1.5em;
+            font-weight: 600;
+            border-bottom: 1px solid #e5e5e5;
+            padding-bottom: 0.3em;
+            margin: 24px 0 12px 0;
+        }
+        .markdown-body h3 {
+            font-size: 1.25em;
+            font-weight: 600;
+            margin: 20px 0 10px 0;
+        }
+        .markdown-body p {
+            margin: 0 0 16px 0;
+            line-height: 1.6;
+        }
+        .markdown-body ul {
+            margin: 0 0 16px 0;
+            padding-left: 2em;
+        }
+        .markdown-body li {
+            margin: 4px 0;
+        }
+        .markdown-body hr {
+            height: 0.25em;
+            background-color: #e1e4e8;
+            border: 0;
+            margin: 24px 0;
+        }
+        .markdown-body strong {
+            font-weight: 600;
+        }
+        .markdown-body em {
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🎯 Puppeteer PDF Export - The Perfect Solution</h1>
+        <p><strong>Uses Chrome's rendering engine for perfect layout + selectable text</strong></p>
+        
+        <div class="success-box">
+            <h3>✅ Why Puppeteer is Perfect:</h3>
+            <ul style="margin: 10px 0; padding-left: 20px; color: #155724;">
+                <li>Uses real Chrome browser engine</li>
+                <li>Perfect CSS rendering (flexbox, grid, shadows, fonts)</li>
+                <li>Text is fully selectable and searchable</li>
+                <li>Exact visual match with HTML</li>
+                <li>Professional quality output</li>
+                <li>Same technology as online tools</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="controls">
+        <button onclick="exportWithPuppeteer()" id="exportBtn">🚀 Export with Puppeteer (Perfect!)</button>
+        <div id="status">
+            <strong id="statusTitle">Status</strong>
+            <div id="statusText">Ready</div>
+        </div>
+    </div>
+
+    <div class="paper-container" id="content">
+        <div class="markdown-body">
+            <h2>MUHAMMAD SHKEIR</h2>
+            <h3>INTERIOR AND ARCHITECTURAL DESIGNER</h3>
+            <p><strong>Phone:</strong> +966 56 165 6429 | <strong>Email:</strong> muhamad.shkeir@gmail.com | <strong>LinkedIn:</strong> www.linkedin.com/in/muhammad-s-shkeir <strong>Address:</strong> Riyadh, KSA | <strong>Nationality:</strong> Lebanese</p>
+            <hr>
+            <p>Creative and technically skilled Interior Architect with 5+ years of experience in diverse design projects across residential, commercial, and governmental sectors. Saudi Ministry of Sports Certified, adept at leveraging technology to enhance design workflows.</p>
+            <hr>
+            <h2>EXPERIENCE</h2>
+            <h3>MASARAT AL NODTHOM COMPANY – Riyadh | Interior Designer</h3>
+            <p><em>December 2024 – Present</em></p>
+            <ul>
+                <li>Designing and managing renovation projects for commercial and residential spaces (showrooms, cinemas, villas).</li>
+                <li>Creating interior layouts and 3D visualizations for client presentations and project execution.</li>
+                <li>Coordinating with contractors and suppliers for project workflow and material procurement.</li>
+            </ul>
+            
+            <h3>ANMA SAUDI TRADING COMPANY – Riyadh | Freelance Landscape 3D Visualizer</h3>
+            <p><em>2024 – Present</em></p>
+            <ul>
+                <li>Delivering 3D landscape visualizations for residential and commercial projects (pools, outdoor spaces).</li>
+                <li>Developing CAD drawings for landscape designs and integrating BIO Design pool solutions.</li>
+            </ul>
+            
+            <h2>HARD SKILLS</h2>
+            <p>AutoCAD Architecture, 3ds Max, Revit, ArchiCAD, SketchUp, V-ray, Corona, Vantage, Enscape, D5 Render, Lumion, Twinmotion, Adobe Lightroom, Photoshop, Illustrator, Premiere Pro, PlanSwift, Microsoft Office.</p>
+            
+            <h2>EDUCATION</h2>
+            <p><strong>Bachelor of Arts in Interior Architecture</strong> - Al Matn University - GPA: 3.9 | Beirut, 2019</p>
+            
+            <h2>LANGUAGES</h2>
+            <p>Arabic, English, French, Turkish</p>
+        </div>
+    </div>
+
+    <script>
+        const SERVER_URL = 'http://localhost:3000';
+
+        async function exportWithPuppeteer() {
+            const btn = document.getElementById('exportBtn');
+            const status = document.getElementById('status');
+            const statusTitle = document.getElementById('statusTitle');
+            const statusText = document.getElementById('statusText');
+            
+            btn.disabled = true;
+            status.className = 'show loading';
+            statusTitle.textContent = '⏳ Exporting...';
+            statusText.textContent = 'Sending HTML to server...';
+
+            console.log('\n========================================');
+            console.log('🎯 PUPPETEER PDF EXPORT');
+            console.log('========================================');
+
+            try {
+                // Get the full HTML document
+                const container = document.querySelector('.paper-container');
+                
+                // Create a complete HTML document with styles
+                const fullHtml = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            background-color: #f3f3f3;
+            padding: 40px 20px;
+        }
+        .paper-container {
+            max-width: 900px;
+            margin: 0 auto;
+            background-color: #ffffff;
+            padding: 40px 50px;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+            border: 1px solid #e1e4e8;
+        }
+        .markdown-body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            font-size: 14px;
+            line-height: 1.6;
+            color: #24292f;
+        }
+        .markdown-body h2 {
+            font-size: 1.5em;
+            font-weight: 600;
+            border-bottom: 1px solid #e5e5e5;
+            padding-bottom: 0.3em;
+            margin: 24px 0 12px 0;
+        }
+        .markdown-body h3 {
+            font-size: 1.25em;
+            font-weight: 600;
+            margin: 20px 0 10px 0;
+        }
+        .markdown-body p {
+            margin: 0 0 16px 0;
+            line-height: 1.6;
+        }
+        .markdown-body ul {
+            margin: 0 0 16px 0;
+            padding-left: 2em;
+        }
+        .markdown-body li {
+            margin: 4px 0;
+        }
+        .markdown-body hr {
+            height: 0.25em;
+            background-color: #e1e4e8;
+            border: 0;
+            margin: 24px 0;
+        }
+        .markdown-body strong {
+            font-weight: 600;
+        }
+        .markdown-body em {
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    ${container.outerHTML}
+</body>
+</html>`;
+                
+                console.log('[Puppeteer] HTML prepared, length:', fullHtml.length);
+                statusText.textContent = 'Generating PDF on server...';
+                
+                // Send to server
+                const response = await fetch(`${SERVER_URL}/generate-pdf`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        html: fullHtml,
+                        filename: 'CV_Puppeteer_Perfect.pdf'
+                    })
+                });
+                
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.message || 'Server error');
+                }
+                
+                console.log('[Puppeteer] PDF received from server');
+                statusText.textContent = 'Downloading PDF...';
+                
+                // Download the PDF
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'CV_Puppeteer_Perfect.pdf';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
+                
+                console.log('✅ Export complete!');
+                console.log('✅ Perfect layout + selectable text!');
+                
+                status.className = 'show success';
+                statusTitle.textContent = '✅ Success!';
+                statusText.textContent = 'PDF exported with perfect layout and selectable text!';
+                
+                setTimeout(() => {
+                    status.classList.remove('show');
+                    btn.disabled = false;
+                }, 3000);
+                
+            } catch (error) {
+                console.error('❌ Export failed:', error);
+                
+                status.className = 'show error';
+                statusTitle.textContent = '❌ Error';
+                
+                if (error.message.includes('Failed to fetch')) {
+                    statusText.textContent = 'Server not running! Start it with: node pdf-server.js';
+                } else {
+                    statusText.textContent = error.message;
+                }
+                
+                btn.disabled = false;
+            }
+        }
+    </script>
+</body>
+</html>

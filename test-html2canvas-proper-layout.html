@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HTML2Canvas - Perfect Layout Preservation</title>
+    
+    <!-- html2canvas - Captures exact visual layout -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <!-- jsPDF - Creates PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .header {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .header h1 {
+            margin: 0 0 10px 0;
+            color: #333;
+        }
+        .info-box {
+            background: #e3f2fd;
+            border: 2px solid #2196f3;
+            padding: 20px;
+            border-radius: 6px;
+            margin-top: 15px;
+        }
+        .info-box h3 {
+            margin: 0 0 10px 0;
+            color: #1565c0;
+        }
+        .warning-box {
+            background: #fff3cd;
+            border: 2px solid #ffc107;
+            padding: 15px;
+            border-radius: 6px;
+            margin-top: 15px;
+        }
+        .controls {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        button {
+            padding: 15px 30px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            color: white;
+            background: #2196f3;
+            margin-right: 10px;
+        }
+        button:hover { background: #1976d2; }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        
+        /* Paper layout styling */
+        body.export-mode {
+            background-color: #f3f3f3;
+            padding: 40px 20px;
+        }
+        .paper-container {
+            max-width: 900px;
+            margin: 0 auto 20px auto;
+            background-color: #ffffff;
+            padding: 40px 50px;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+            min-height: 100vh;
+            border: 1px solid #e1e4e8;
+        }
+        .markdown-body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            font-size: 14px;
+            line-height: 1.6;
+            padding: 0;
+            background-color: transparent;
+            color: #24292f;
+        }
+        .markdown-body h2 {
+            font-size: 1.5em;
+            font-weight: 600;
+            border-bottom: 1px solid #e5e5e5;
+            padding-bottom: 0.3em;
+            margin: 24px 0 12px 0;
+        }
+        .markdown-body h3 {
+            font-size: 1.25em;
+            font-weight: 600;
+            margin: 20px 0 10px 0;
+        }
+        .markdown-body p {
+            margin: 0 0 16px 0;
+            line-height: 1.6;
+        }
+        .markdown-body ul {
+            margin: 0 0 16px 0;
+            padding-left: 2em;
+        }
+        .markdown-body li {
+            margin: 4px 0;
+        }
+        .markdown-body hr {
+            height: 0.25em;
+            background-color: #e1e4e8;
+            border: 0;
+            margin: 24px 0;
+        }
+        .markdown-body a {
+            color: #0969da;
+            text-decoration: none;
+        }
+        .markdown-body strong {
+            font-weight: 600;
+        }
+        .markdown-body em {
+            font-style: italic;
+        }
+        
+        #progress {
+            display: none;
+            margin-top: 15px;
+            padding: 15px;
+            background: #e8f5e9;
+            border-radius: 6px;
+            border: 1px solid #4caf50;
+        }
+        #progress.show {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>📸 HTML2Canvas - Perfect Layout Preservation</h1>
+        <p><strong>This approach captures the EXACT visual layout</strong> - what you see is what you get!</p>
+        
+        <div class="info-box">
+            <h3>✅ Advantages:</h3>
+            <ul style="margin: 10px 0; padding-left: 20px; color: #1565c0;">
+                <li>Perfect visual match with HTML</li>
+                <li>Preserves all spacing, margins, layout</li>
+                <li>Handles complex CSS (flexbox, grid, etc.)</li>
+                <li>Works client-side</li>
+                <li>Reliable and fast</li>
+            </ul>
+        </div>
+        
+        <div class="warning-box">
+            <h3>⚠️ Trade-off:</h3>
+            <p style="margin: 5px 0; color: #856404;">
+                Text is rasterized (converted to image), so it's not selectable or searchable in the PDF.
+                This is the same approach used by Figma, Canva, and many web apps.
+            </p>
+        </div>
+    </div>
+
+    <div class="controls">
+        <button onclick="exportWithHtml2Canvas()" id="exportBtn">📸 Export with HTML2Canvas (Perfect Layout)</button>
+        <div id="progress">
+            <strong>Exporting...</strong>
+            <div id="progressText">Preparing...</div>
+        </div>
+    </div>
+
+    <div class="paper-container">
+        <div class="markdown-body">
+            <h2>MUHAMMAD SHKEIR</h2>
+            <h3>INTERIOR AND ARCHITECTURAL DESIGNER</h3>
+            <p><strong>Phone:</strong> +966 56 165 6429 | <strong>Email:</strong> muhamad.shkeir@gmail.com | <strong>LinkedIn:</strong> www.linkedin.com/in/muhammad-s-shkeir <strong>Address:</strong> Riyadh, KSA | <strong>Nationality:</strong> Lebanese</p>
+            <hr>
+            <p>Creative and technically skilled Interior Architect with 5+ years of experience in diverse design projects across residential, commercial, and governmental sectors. Saudi Ministry of Sports Certified, adept at leveraging technology to enhance design workflows.</p>
+            <hr>
+            <h2>EXPERIENCE</h2>
+            <h3>MASARAT AL NODTHOM COMPANY – Riyadh | Interior Designer</h3>
+            <p><em>December 2024 – Present</em></p>
+            <ul>
+                <li>Designing and managing renovation projects for commercial and residential spaces (showrooms, cinemas, villas).</li>
+                <li>Creating interior layouts and 3D visualizations for client presentations and project execution.</li>
+                <li>Coordinating with contractors and suppliers for project workflow and material procurement.</li>
+            </ul>
+            
+            <h3>ANMA SAUDI TRADING COMPANY – Riyadh | Freelance Landscape 3D Visualizer</h3>
+            <p><em>2024 – Present</em></p>
+            <ul>
+                <li>Delivering 3D landscape visualizations for residential and commercial projects (pools, outdoor spaces).</li>
+                <li>Developing CAD drawings for landscape designs and integrating BIO Design pool solutions.</li>
+            </ul>
+            
+            <h3>MADAREK Engineering and Consultants - Riyadh | Interior Designer</h3>
+            <p><em>March 2024 - July 2024</em></p>
+            <ul>
+                <li>Certified by the Saudi Ministry of Sports for expertise in key governmental projects.</li>
+                <li>Lead designer for Ministry of Sports projects, including stadiums across Saudi Arabia for the World Cup.</li>
+            </ul>
+            
+            <h2>HARD SKILLS</h2>
+            <p>AutoCAD Architecture, 3ds Max, Revit, ArchiCAD, SketchUp, V-ray, Corona, Vantage, Enscape, D5 Render, Lumion, Twinmotion, Adobe Lightroom, Photoshop, Illustrator, Premiere Pro, PlanSwift, Microsoft Office.</p>
+            
+            <h2>SOFT SKILLS</h2>
+            <p>Creativity, Attention to Detail, Diplomacy, Adaptability, Brainstorming, Analytical Thinking, Prompt Engineering.</p>
+            
+            <h2>EDUCATION</h2>
+            <p><strong>Bachelor of Arts in Interior Architecture</strong> - Al Matn University - GPA: 3.9 | Beirut, 2019</p>
+            
+            <h2>LANGUAGES</h2>
+            <p>Arabic, English, French, Turkish</p>
+        </div>
+    </div>
+
+    <script>
+        window.addEventListener('load', () => {
+            if (!window.html2canvas) {
+                console.error('❌ html2canvas not loaded');
+                document.getElementById('exportBtn').disabled = true;
+            } else {
+                console.log('✅ html2canvas loaded');
+            }
+            
+            if (!window.jspdf) {
+                console.error('❌ jsPDF not loaded');
+                document.getElementById('exportBtn').disabled = true;
+            } else {
+                console.log('✅ jsPDF loaded');
+            }
+        });
+
+        async function exportWithHtml2Canvas() {
+            if (!window.html2canvas || !window.jspdf) {
+                alert('Required libraries not loaded. Please refresh the page.');
+                return;
+            }
+
+            const btn = document.getElementById('exportBtn');
+            const progress = document.getElementById('progress');
+            const progressText = document.getElementById('progressText');
+            
+            btn.disabled = true;
+            progress.classList.add('show');
+
+            console.log('\n========================================');
+            console.log('📸 HTML2CANVAS EXPORT (Perfect Layout)');
+            console.log('========================================');
+
+            try {
+                const container = document.querySelector('.paper-container');
+                
+                // Get dimensions
+                const containerWidth = container.offsetWidth;
+                const containerHeight = container.offsetHeight;
+                
+                console.log(`[html2canvas] Container size: ${containerWidth}x${containerHeight}px`);
+                progressText.textContent = 'Capturing layout...';
+                
+                // Capture with high quality
+                const canvas = await html2canvas(container, {
+                    scale: 2,  // High DPI for quality
+                    useCORS: true,
+                    logging: false,
+                    backgroundColor: '#ffffff',
+                    windowWidth: containerWidth,
+                    windowHeight: containerHeight
+                });
+                
+                console.log(`[html2canvas] Canvas created: ${canvas.width}x${canvas.height}px`);
+                progressText.textContent = 'Creating PDF...';
+                
+                // Create PDF
+                const { jsPDF } = window.jspdf;
+                
+                // A4 dimensions in mm
+                const pdfWidth = 210;
+                const pdfHeight = 297;
+                
+                // Calculate how many pages we need
+                const imgWidth = pdfWidth;
+                const imgHeight = (canvas.height * pdfWidth) / canvas.width;
+                const pageHeight = pdfHeight;
+                
+                let heightLeft = imgHeight;
+                let position = 0;
+                let pageCount = 0;
+                
+                const pdf = new jsPDF('p', 'mm', 'a4');
+                
+                // Add image data
+                const imgData = canvas.toDataURL('image/jpeg', 0.95);
+                
+                console.log('[html2canvas] Adding pages to PDF...');
+                
+                // Add first page
+                pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
+                heightLeft -= pageHeight;
+                pageCount++;
+                
+                // Add additional pages if needed
+                while (heightLeft > 0) {
+                    position = heightLeft - imgHeight;
+                    pdf.addPage();
+                    pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
+                    heightLeft -= pageHeight;
+                    pageCount++;
+                }
+                
+                console.log(`[html2canvas] Created ${pageCount} page(s)`);
+                progressText.textContent = 'Saving PDF...';
+                
+                // Save
+                pdf.save('CV_Html2Canvas_Perfect_Layout.pdf');
+                
+                console.log('✅ Export complete!');
+                console.log('✅ Layout is EXACTLY as shown in HTML');
+                console.log('⚠️  Note: Text is rasterized (not selectable)');
+                
+                progressText.textContent = '✅ Export complete!';
+                setTimeout(() => {
+                    progress.classList.remove('show');
+                    btn.disabled = false;
+                }, 2000);
+                
+            } catch (error) {
+                console.error('❌ Export failed:', error);
+                alert('Export failed: ' + error.message);
+                progress.classList.remove('show');
+                btn.disabled = false;
+            }
+        }
+    </script>
+</body>
+</html>

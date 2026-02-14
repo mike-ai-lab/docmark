@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF Export - All Approaches Comparison</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .header {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .header h1 {
+            margin: 0 0 10px 0;
+            color: #333;
+        }
+        .header p {
+            margin: 5px 0;
+            color: #666;
+        }
+        .controls {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 15px;
+        }
+        .approach-card {
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            padding: 15px;
+            background: #fafafa;
+        }
+        .approach-card h3 {
+            margin: 0 0 10px 0;
+            font-size: 16px;
+        }
+        .approach-card.approach1 { border-color: #4CAF50; }
+        .approach-card.approach2 { border-color: #2196F3; }
+        .approach-card.approach3 { border-color: #FF9800; }
+        .approach-card button {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            color: white;
+            margin-top: 10px;
+        }
+        .approach1 button { background: #4CAF50; }
+        .approach2 button { background: #2196F3; }
+        .approach3 button { background: #FF9800; }
+        .approach-card button:hover { opacity: 0.9; }
+        .approach-card ul {
+            margin: 10px 0;
+            padding-left: 20px;
+            font-size: 13px;
+        }
+        .approach-card li {
+            margin: 5px 0;
+            color: #666;
+        }
+        .preview-container {
+            background: #525659;
+            padding: 40px;
+            border-radius: 8px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .paper-container {
+            background: white;
+            width: 21cm;
+            min-height: 29.7cm;
+            margin: 0 auto 20px;
+            padding: 2.54cm;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+        }
+        .markdown-body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            font-size: 14px;
+            line-height: 1.6;
+            color: #24292f;
+        }
+        .markdown-body h2 {
+            font-size: 1.5em;
+            font-weight: 600;
+            border-bottom: 1px solid #e5e5e5;
+            padding-bottom: 0.3em;
+            margin: 24px 0 12px 0;
+        }
+        .markdown-body h3 {
+            font-size: 1.25em;
+            font-weight: 600;
+            margin: 20px 0 10px 0;
+        }
+        .markdown-body p {
+            margin: 0 0 16px 0;
+        }
+        .markdown-body ul {
+            margin: 0 0 16px 0;
+            padding-left: 2em;
+        }
+        .markdown-body li {
+            margin: 4px 0;
+        }
+        .markdown-body hr {
+            height: 0.25em;
+            background-color: #e1e4e8;
+            border: 0;
+            margin: 24px 0;
+        }
+        .markdown-body a {
+            color: #0969da;
+            text-decoration: none;
+        }
+        .markdown-body strong {
+            font-weight: 600;
+        }
+        .markdown-body em {
+            font-style: italic;
+        }
+        [data-pdf-footer="true"] {
+            margin-top: 40px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>📄 PDF Export Test - All Approaches</h1>
+        <p><strong>Document:</strong> Muhammad Shkeir CV</p>
+        <p><strong>Purpose:</strong> Compare 3 different PDF export approaches with the same content</p>
+        <p><strong>Instructions:</strong> Click each button below, check console logs, and compare the generated PDFs</p>
+    </div>
+
+    <div class="controls">
+        <div class="approach-card approach1">
+            <h3>🟢 Approach 1: Page-by-Page</h3>
+            <ul>
+                <li>1:1 mapping (preview page = PDF page)</li>
+                <li>Visual consistency guaranteed</li>
+                <li>May have wasted space</li>
+            </ul>
+            <button onclick="exportApproach1()">Export Approach 1</button>
+        </div>
+
+        <div class="approach-card approach2">
+            <h3>🔵 Approach 2: Continuous Flow</h3>
+            <ul>
+                <li>Auto-pagination based on content</li>
+                <li>Smart page breaks</li>
+                <li>May differ from preview</li>
+            </ul>
+            <button onclick="exportApproach2()">Export Approach 2</button>
+        </div>
+
+        <div class="approach-card approach3">
+            <h3>🟠 Approach 3: Hybrid Smart</h3>
+            <ul>
+                <li>Page-by-page with optimization</li>
+                <li>Better spacing control</li>
+                <li>Best of both worlds</li>
+            </ul>
+            <button onclick="exportApproach3()">Export Approach 3</button>
+        </div>
+    </div>
+
+    <div class="preview-container">
+        <div class="paper-container" id="page1">
+            <div class="markdown-body">
+                <h2>MUHAMMAD SHKEIR</h2>
+                <h3>INTERIOR AND ARCHITECTURAL DESIGNER</h3>
+                <p><strong>Phone:</strong> +966 56 165 6429 | <strong>Email:</strong> muhamad.shkeir@gmail.com | <strong>LinkedIn:</strong> www.linkedin.com/in/muhammad-s-shkeir <strong>Address:</strong> Riyadh, KSA | <strong>Nationality:</strong> Lebanese</p>
+                <hr>
+                <p>Creative and technically skilled Interior Architect with 5+ years of experience in diverse design projects across residential, commercial, and governmental sectors. Saudi Ministry of Sports Certified, adept at leveraging technology and technology to enhance design workflows. Proven ability to manage projects, exceed client expectations, and deliver innovative, functional designs.</p>
+                <hr>
+                <h2>E X P E R I E N C E</h2>
+                <h3>MASARAT AL NODTHOM COMPANY – Riyadh | Interior Designer</h3>
+                <p><em>December 2024 – Present</em></p>
+                <ul>
+                    <li>Designing and managing renovation projects for commercial and residential spaces (showrooms, cinemas, villas).</li>
+                    <li>Creating interior layouts and 3D visualizations for client presentations and project execution.</li>
+                    <li>Coordinating with contractors and suppliers for project workflow and material procurement.</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="paper-container" id="page2">
+            <div class="markdown-body">
+                <h3>ANMA SAUDI TRADING COMPANY – Riyadh | Freelance Landscape 3D Visualizer</h3>
+                <p><em>2024 – Present</em></p>
+                <ul>
+                    <li>Delivering 3D landscape visualizations for residential and commercial projects (pools, outdoor spaces).</li>
+                    <li>Developing CAD drawings for landscape designs and integrating BIO Design pool solutions.</li>
+                </ul>
+                <h3>SIHAM AL MODON – Riyadh | Freelance Facade Designer</h3>
+                <p><em>2022 – Present</em></p>
+                <ul>
+                    <li>Managing facade cladding design for residential, governmental, and commercial buildings (natural stone, marble).</li>
+                    <li>Coordinating with engineers and site teams for facade installation processes.</li>
+                </ul>
+                <h3>MADAREK Engineering and Consultants - Riyadh | Interior Designer</h3>
+                <p><em>March 2024 - July 2024</em></p>
+                <ul>
+                    <li>Certified by the Saudi Ministry of Sports for expertise in key governmental projects.</li>
+                    <li>Lead designer for Ministry of Sports projects, including stadiums across Saudi Arabia for the World Cup. Key areas: conference rooms, media rooms, VIP lounges, team changing rooms, parking, jacuzzis, etc.</li>
+                    <li>Designed and consulted on-site for an addiction treatment center in Al-Mahidiya, Riyadh, assisting in finishing phases, quality control, material selection, and client coordination.</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="paper-container" id="page3">
+            <div class="markdown-body">
+                <h3>Banat Alaemar & Arab Venus Diamond – Riyadh | Design and Documentation Lead</h3>
+                <p><em>October 2022 – March 2024</em></p>
+                <ul>
+                    <li>Managed design and documentation for two sister companies, developing strategies to enhance competitiveness.</li>
+                    <li>Led technical drawings, quotation analysis, BOQ assessments, and precise on-site measurements for accuracy and compliance.</li>
+                    <li>Created high-quality 3D renderings to strengthen project proposals and meet diverse company needs.</li>
+                </ul>
+                <h3>Matta Gallery, Lebanon | Furniture Sales & Design Specialist</h3>
+                <p><em>2020 - 2022</em></p>
+                <ul>
+                    <li>Assisted customers in selecting furniture and materials, providing design recommendations based on their needs and preferences.</li>
+                    <li>Created basic 2D and 3D layouts using SketchUp and AutoCAD to help customers visualize furniture placement.</li>
+                    <li>Supported senior designers and sales teams by preparing mood boards and product suggestions.</li>
+                </ul>
+                <h3>ARCHI4DESIGN, Beirut, Lebanon | Owner</h3>
+                <p><em>2018 – Present</em></p>
+                <ul>
+                    <li>Spearheaded over 20 interior design projects, spanning from residential to commercial spaces.</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="paper-container" id="page4">
+            <div class="markdown-body">
+                <h3>ANG CONSTRUCTION, South of Lebanon | Kitchen Design Associate</h3>
+                <p><em>2018 - 2022</em></p>
+                <ul>
+                    <li>Managed the design phase of residential kitchen projects, focusing on woodwork detailing and functionality.</li>
+                    <li>Coordinated closely with manufacturing teams to ensure precision in the execution of wood-based designs.</li>
+                </ul>
+                <h2>HARD SKILLS</h2>
+                <p>AutoCAD Architecture, 3ds Max, Revit, ArchiCAD, SketchUp, V-ray, Corona, Vantage, Enscape, D5 Render, Lumion, Twinmotion, Adobe Lightroom, Photoshop, Illustrator, Premiere Pro, PlanSwift, Microsoft Office.</p>
+                <h2>SOFT SKILLS</h2>
+                <p>Creativity, Attention to Detail, Diplomacy, Adaptability, Brainstorming, Analytical Thinking, Prompt Engineering.</p>
+                <h2>EDUCATION</h2>
+                <p><strong>Bachelor of Arts in Interior Architecture</strong> Al Matn University - GPA: 3.9 | Beirut, 2019</p>
+                <h2>LANGUAGES</h2>
+                <p>Arabic, English, French, Turkish</p>
+                <h2>VOLUNTARY EXPERIENCE</h2>
+                <p><strong>Featured Interviewee in Agence France-Presse (AFP) Article:</strong> Selected as a spokesperson to represent the impactful aid and assistance efforts during Lebanon's economic crisis in 2019.</p>
+                <div data-pdf-footer="true">
+                    <hr>
+                    <div style="display: flex; justify-content: space-between; margin-top: 20px;">
+                        <div>
+                            <strong>SIGNATURE</strong><br>
+                            <span style="color: #666;">Document Name</span>
+                        </div>
+                        <div style="text-align: right;">
+                            <strong>CLIENT</strong><br>
+                            <span style="color: #666;">14 Feb 2026</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Wait for jsPDF to load
+        window.addEventListener('load', () => {
+            if (!window.jspdf) {
+                console.error('jsPDF failed to load from CDN');
+            } else {
+                console.log('✅ jsPDF loaded successfully');
+            }
+        });
+
+        // Common PDF setup
+        const PDF_CONFIG = {
+            width: 21.0,
+            height: 29.7,
+            marginTop: 2.54,
+            marginBottom: 2.54,
+            marginLeft: 2.54,
+            marginRight: 2.54
+        };
+
+        function getContentDimensions() {
+            return {
+                width: PDF_CONFIG.width - PDF_CONFIG.marginLeft - PDF_CONFIG.marginRight,
+                height: PDF_CONFIG.height - PDF_CONFIG.marginTop - PDF_CONFIG.marginBottom
+            };
+        }
+
+        // Helper function to process elements
+        function processElement(doc, element, yPosition, pageSetup, contentWidth) {
+            const tagName = element.tagName.toLowerCase();
+            
+            switch (tagName) {
+                case 'h2':
+                    doc.setFont('helvetica', 'bold');
+                    doc.setFontSize(16);
+                    doc.text(element.textContent, pageSetup.marginLeft, yPosition);
+                    return yPosition + 1.0;
+                
+                case 'h3':
+                    doc.setFont('helvetica', 'bold');
+                    doc.setFontSize(14);
+                    doc.text(element.textContent, pageSetup.marginLeft, yPosition);
+                    return yPosition + 0.8;
+                
+                case 'p':
+                    doc.setFont('helvetica', 'normal');
+                    doc.setFontSize(10);
+                    const lines = doc.splitTextToSize(element.textContent, contentWidth);
+                    lines.forEach(line => {
+                        doc.text(line, pageSetup.marginLeft, yPosition);
+                        yPosition += 0.5;
+                    });
+                    return yPosition + 0.3;
+                
+                case 'ul':
+                case 'ol':
+                    const items = element.querySelectorAll('li');
+                    doc.setFont('helvetica', 'normal');
+                    doc.setFontSize(10);
+                    items.forEach((item, idx) => {
+                        const bullet = tagName === 'ul' ? '• ' : `${idx + 1}. `;
+                        const itemLines = doc.splitTextToSize(bullet + item.textContent, contentWidth - 0.5);
+                        itemLines.forEach(line => {
+                            doc.text(line, pageSetup.marginLeft + 0.5, yPosition);
+                            yPosition += 0.5;
+                        });
+                    });
+                    return yPosition + 0.3;
+                
+                case 'hr':
+                    doc.setDrawColor(200, 200, 200);
+                    doc.setLineWidth(0.03);
+                    doc.line(pageSetup.marginLeft, yPosition, pageSetup.width - pageSetup.marginRight, yPosition);
+                    return yPosition + 0.5;
+                
+                case 'div':
+                    if (element.getAttribute('data-pdf-footer') === 'true') {
+                        // Process footer
+                        const hr = element.querySelector('hr');
+                        if (hr) {
+                            doc.setDrawColor(200, 200, 200);
+                            doc.setLineWidth(0.03);
+                            doc.line(pageSetup.marginLeft, yPosition, pageSetup.width - pageSetup.marginRight, yPosition);
+                            yPosition += 0.5;
+                        }
+                        
+                        const flexDiv = element.querySelector('div[style*="flex"]');
+                        if (flexDiv) {
+                            const leftDiv = flexDiv.children[0];
+                            const rightDiv = flexDiv.children[1];
+                            
+                            doc.setFont('helvetica', 'bold');
+                            doc.setFontSize(9);
+                            doc.text(leftDiv.querySelector('strong')?.textContent || '', pageSetup.marginLeft, yPosition);
+                            
+                            const rightText = rightDiv.querySelector('strong')?.textContent || '';
+                            const rightWidth = doc.getTextWidth(rightText);
+                            doc.text(rightText, pageSetup.width - pageSetup.marginRight - rightWidth, yPosition);
+                            yPosition += 0.5;
+                            
+                            doc.setFont('helvetica', 'normal');
+                            doc.setTextColor(100, 100, 100);
+                            doc.text(leftDiv.querySelector('span')?.textContent || '', pageSetup.marginLeft, yPosition);
+                            
+                            const rightSpan = rightDiv.querySelector('span')?.textContent || '';
+                            const rightSpanWidth = doc.getTextWidth(rightSpan);
+                            doc.text(rightSpan, pageSetup.width - pageSetup.marginRight - rightSpanWidth, yPosition);
+                            doc.setTextColor(0, 0, 0);
+                            yPosition += 0.5;
+                        }
+                    }
+                    return yPosition;
+                
+                default:
+                    return yPosition;
+            }
+        }
+
+        // APPROACH 1: Page-by-Page (1:1 mapping)
+        function exportApproach1() {
+            if (!window.jspdf) {
+                alert('jsPDF is still loading, please wait...');
+                return;
+            }
+
+            console.log('\n========================================');
+            console.log('🟢 APPROACH 1: Page-by-Page Export');
+            console.log('========================================');
+
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF({
+                orientation: 'portrait',
+                unit: 'cm',
+                format: 'a4'
+            });
+
+            const pages = document.querySelectorAll('.paper-container');
+            console.log(`[Approach 1] Found ${pages.length} pages to process`);
+
+            const contentWidth = getContentDimensions().width;
+
+            pages.forEach((page, pageIdx) => {
+                if (pageIdx > 0) {
+                    doc.addPage();
+                }
+                
+                console.log(`[Approach 1] Processing page ${pageIdx + 1}`);
+                let yPosition = PDF_CONFIG.marginTop;
+                
+                const elements = page.querySelectorAll('.markdown-body > *');
+                elements.forEach(element => {
+                    yPosition = processElement(doc, element, yPosition, PDF_CONFIG, contentWidth);
+                });
+                
+                console.log(`[Approach 1] Page ${pageIdx + 1} complete, final Y: ${yPosition.toFixed(2)}cm`);
+            });
+
+            console.log('[Approach 1] ✅ PDF export complete!');
+            doc.save('CV_Approach1_PageByPage.pdf');
+        }
+
+        // APPROACH 2: Continuous Flow with Auto-Pagination
+        function exportApproach2() {
+            if (!window.jspdf) {
+                alert('jsPDF is still loading, please wait...');
+                return;
+            }
+
+            console.log('\n========================================');
+            console.log('🔵 APPROACH 2: Continuous Flow Export');
+            console.log('========================================');
+
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF({
+                orientation: 'portrait',
+                unit: 'cm',
+                format: 'a4'
+            });
+
+            const contentWidth = getContentDimensions().width;
+            const contentHeight = getContentDimensions().height;
+            let yPosition = PDF_CONFIG.marginTop;
+            let pageCount = 1;
+
+            // Collect all elements from all pages
+            const allPages = document.querySelectorAll('.paper-container');
+            const allElements = [];
+            
+            allPages.forEach((page, pageIdx) => {
+                const elements = page.querySelectorAll('.markdown-body > *');
+                elements.forEach(el => allElements.push(el));
+                console.log(`[Approach 2] Collected ${elements.length} elements from page ${pageIdx + 1}`);
+            });
+
+            console.log(`[Approach 2] Total elements: ${allElements.length}`);
+
+            // Check if we need a new page
+            const checkPageBreak = (requiredSpace) => {
+                if (yPosition + requiredSpace > PDF_CONFIG.height - PDF_CONFIG.marginBottom) {
+                    console.log(`[Approach 2] 📄 Auto page break at Y=${yPosition.toFixed(2)}cm`);
+                    doc.addPage();
+                    yPosition = PDF_CONFIG.marginTop;
+                    pageCount++;
+                }
+            };
+
+            allElements.forEach((element, idx) => {
+                const tagName = element.tagName.toLowerCase();
+                
+                // Estimate space needed
+                let estimatedSpace = 0.5;
+                if (tagName === 'h2') estimatedSpace = 1.5;
+                if (tagName === 'h3') estimatedSpace = 1.2;
+                if (tagName === 'ul' || tagName === 'ol') {
+                    estimatedSpace = element.querySelectorAll('li').length * 0.5;
+                }
+                
+                checkPageBreak(estimatedSpace);
+                yPosition = processElement(doc, element, yPosition, PDF_CONFIG, contentWidth);
+            });
+
+            console.log(`[Approach 2] ✅ Export complete! Pages: ${pageCount}, Final Y: ${yPosition.toFixed(2)}cm`);
+            doc.save('CV_Approach2_ContinuousFlow.pdf');
+        }
+
+        // APPROACH 3: Hybrid Smart (Page-by-Page with Optimization)
+        function exportApproach3() {
+            if (!window.jspdf) {
+                alert('jsPDF is still loading, please wait...');
+                return;
+            }
+
+            console.log('\n========================================');
+            console.log('🟠 APPROACH 3: Hybrid Smart Export');
+            console.log('========================================');
+
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF({
+                orientation: 'portrait',
+                unit: 'cm',
+                format: 'a4'
+            });
+
+            const pages = document.querySelectorAll('.paper-container');
+            console.log(`[Approach 3] Found ${pages.length} pages to process`);
+
+            const contentWidth = getContentDimensions().width;
+            const contentHeight = getContentDimensions().height;
+            let currentPDFPage = 1;
+            let yPosition = PDF_CONFIG.marginTop;
+
+            pages.forEach((page, pageIdx) => {
+                console.log(`[Approach 3] Processing preview page ${pageIdx + 1}`);
+                
+                const elements = page.querySelectorAll('.markdown-body > *');
+                
+                elements.forEach((element, elemIdx) => {
+                    const tagName = element.tagName.toLowerCase();
+                    
+                    // Smart spacing: estimate element height
+                    let estimatedHeight = 0.5;
+                    if (tagName === 'h2') estimatedHeight = 1.5;
+                    if (tagName === 'h3') estimatedHeight = 1.2;
+                    if (tagName === 'ul' || tagName === 'ol') {
+                        estimatedHeight = element.querySelectorAll('li').length * 0.5 + 0.3;
+                    }
+                    if (tagName === 'p') {
+                        const textLength = element.textContent.length;
+                        estimatedHeight = Math.ceil(textLength / 100) * 0.5 + 0.3;
+                    }
+                    
+                    // Check if we need a new page (smart break)
+                    if (yPosition + estimatedHeight > PDF_CONFIG.height - PDF_CONFIG.marginBottom) {
+                        console.log(`[Approach 3] 📄 Smart page break at Y=${yPosition.toFixed(2)}cm (estimated need: ${estimatedHeight.toFixed(2)}cm)`);
+                        doc.addPage();
+                        yPosition = PDF_CONFIG.marginTop;
+                        currentPDFPage++;
+                    }
+                    
+                    yPosition = processElement(doc, element, yPosition, PDF_CONFIG, contentWidth);
+                });
+                
+                console.log(`[Approach 3] Preview page ${pageIdx + 1} processed, Y: ${yPosition.toFixed(2)}cm`);
+            });
+
+            console.log(`[Approach 3] ✅ Export complete! PDF Pages: ${currentPDFPage}, Final Y: ${yPosition.toFixed(2)}cm`);
+            doc.save('CV_Approach3_HybridSmart.pdf');
+        }
+    </script>
+</body>
+</html>
