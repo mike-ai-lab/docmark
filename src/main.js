@@ -284,7 +284,7 @@ This web site is using ${"`"}markedjs/marked${"`"}.
             wordBasedSuggestions: 'off',
             folding: true,
             showFoldingControls: 'always',
-            foldingStrategy: 'indentation',
+            foldingStrategy: 'auto',
             foldingHighlight: true
         });
 
@@ -385,56 +385,19 @@ This web site is using ${"`"}markedjs/marked${"`"}.
                 
                 for (let i = 1; i <= lineCount; i++) {
                     const line = model.getLineContent(i);
+                    const trimmedLine = line.trim();
                     
-                    // Detect base64 image/video (data:image or data:video)
-                    if ((line.includes('data:image/') || line.includes('data:video/')) && line.includes('base64,')) {
-                        const base64Match = line.match(/base64,([A-Za-z0-9+/=]+)/);
-                        if (base64Match && base64Match[1].length > 100) {
-                            ranges.push({
-                                start: i,
-                                end: i,
-                                kind: monacoInstance.languages.FoldingRangeKind.Region
-                            });
-                        }
-                    }
-                    // Detect very long lines (>500 characters)
-                    else if (line.length > 500) {
-                        ranges.push({
-                            start: i,
-                            end: i,
-                            kind: monacoInstance.languages.FoldingRangeKind.Region
-                        });
-                    }
-                    // Detect inline SVG (single line, very long)
-                    else if (line.includes('<svg') && line.includes('</svg>') && line.length > 300) {
-                        ranges.push({
-                            start: i,
-                            end: i,
-                            kind: monacoInstance.languages.FoldingRangeKind.Region
-                        });
-                    }
-                    // Detect HTML video tags with base64
-                    else if (line.includes('<video') && line.includes('base64,') && line.length > 200) {
-                        ranges.push({
-                            start: i,
-                            end: i,
-                            kind: monacoInstance.languages.FoldingRangeKind.Region
-                        });
-                    }
-                    // Detect list items (for default markdown folding)
-                    else if (line.match(/^(\s*)([-*+]|\d+\.)\s/)) {
-                        const indent = line.match(/^(\s*)/)[1].length;
+                    // Detect <div> wrapped content (for foldable regions)
+                    // Support both formats:
+                    // 1. <div> on its own line
+                    // 2. <div> with content ending in " >" (folding marker)
+                    if (trimmedLine === '<div>' || (trimmedLine.startsWith('<div>') && trimmedLine.endsWith(' >'))) {
+                        // Find matching </div>
                         let endLine = i;
-                        
-                        // Find the end of this list block
                         for (let j = i + 1; j <= lineCount; j++) {
                             const nextLine = model.getLineContent(j);
-                            const nextIndent = nextLine.match(/^(\s*)/)[1].length;
-                            
-                            if (nextLine.trim() === '') continue;
-                            if (nextIndent > indent || nextLine.match(/^(\s*)([-*+]|\d+\.)\s/)) {
+                            if (nextLine.trim() === '</div>') {
                                 endLine = j;
-                            } else {
                                 break;
                             }
                         }
@@ -453,39 +416,46 @@ This web site is using ${"`"}markedjs/marked${"`"}.
             }
         });
         
-        // Auto-fold base64 and long content after initial load
-        setTimeout(() => {
+        // Auto-fold only base64 content after load and content changes
+        let autoFoldBase64 = () => {
             const model = editorInstance.getModel();
             if (!model) return;
             
             const lineCount = model.getLineCount();
+            const linesToFold = [];
             
             for (let i = 1; i <= lineCount; i++) {
                 const line = model.getLineContent(i);
                 
-                // Auto-fold base64 content
-                if ((line.includes('data:image/') || line.includes('data:video/')) && line.includes('base64,')) {
-                    const base64Match = line.match(/base64,([A-Za-z0-9+/=]+)/);
-                    if (base64Match && base64Match[1].length > 100) {
-                        editorInstance.setHiddenAreas([{
-                            startLineNumber: i,
-                            startColumn: 1,
-                            endLineNumber: i,
-                            endColumn: model.getLineMaxColumn(i)
-                        }]);
+                // Check if this is a <div> line
+                if (line.trim() === '<div>') {
+                    // Check next line for base64 content
+                    if (i + 1 <= lineCount) {
+                        const nextLine = model.getLineContent(i + 1);
+                        if (nextLine.includes('data:image/') || nextLine.includes('data:video/')) {
+                            if (nextLine.includes('base64,')) {
+                                linesToFold.push(i);
+                            }
+                        }
                     }
                 }
-                // Auto-fold very long lines
-                else if (line.length > 500) {
-                    editorInstance.setHiddenAreas([{
-                        startLineNumber: i,
-                        startColumn: 1,
-                        endLineNumber: i,
-                        endColumn: model.getLineMaxColumn(i)
-                    }]);
-                }
             }
-        }, 500);
+            
+            // Fold all detected base64 regions
+            linesToFold.forEach(lineNumber => {
+                editorInstance.trigger('fold', 'editor.fold', { lineNumber: lineNumber });
+            });
+        };
+        
+        // Auto-fold on load
+        setTimeout(autoFoldBase64, 500);
+        
+        // Auto-fold when content changes (debounced)
+        let foldTimeout;
+        editorInstance.onDidChangeModelContent(() => {
+            clearTimeout(foldTimeout);
+            foldTimeout = setTimeout(autoFoldBase64, 1000);
+        });
     };
 
     // Parse YAML front matter (metadata)
@@ -3472,6 +3442,51 @@ let performBeautify = (content) => {
             showMofuHelper('I\'ve inserted a <strong>page break</strong>! This will create a new page in your PDF export.');
         });
     };
+    
+    let setupInsertImageButton = () => {
+        const button = document.querySelector('#insert-image-button');
+        if (!button) return;
+        
+        button.addEventListener('click', (event) => {
+            event.preventDefault();
+            insertImageTemplate();
+        });
+    };
+
+    let insertImageTemplate = () => {
+        const width = prompt('Enter image width (in pixels, e.g., 300):', '300');
+        if (!width) return;
+        
+        const height = prompt('Enter image height (in pixels, leave empty for auto):', '');
+        const heightAttr = height ? ` height="${height}"` : '';
+        const template = `\n<div>\n<img src="https://via.placeholder.com/${width}x${height || '200'}?text=Your+Image" width="${width}"${heightAttr} /> >\n</div>\n\n`;
+        
+        const position = editor.getPosition();
+        const insertLineNumber = position.lineNumber;
+        
+        editor.executeEdits('insert-image', [{
+            range: new monaco.Range(position.lineNumber, position.column, position.lineNumber, position.column),
+            text: template
+        }]);
+        
+        // Force Monaco to update folding ranges
+        setTimeout(() => {
+            // Trigger folding range update by calling the internal update
+            const model = editor.getModel();
+            if (model) {
+                // Force a model change event to refresh folding
+                model.deltaDecorations([], []);
+            }
+            
+            // Then try to fold the inserted region
+            setTimeout(() => {
+                editor.trigger('fold', 'editor.fold', { lineNumber: insertLineNumber + 1 });
+            }, 100);
+        }, 100);
+        
+        editor.focus();
+        showMofuHelper(`Image placeholder added! Replace the URL with your image link.`);
+    };
 
     let setupInsertMediaButton = () => {
         const button = document.querySelector('#insert-media-button');
@@ -3525,15 +3540,20 @@ let performBeautify = (content) => {
                     
                     let mediaCode;
                     if (isImage) {
-                        mediaCode = `![${cleanFileName}](${base64Data})`;
+                        mediaCode = `\n<div>\n<img src="${base64Data}" alt="${cleanFileName}" style="max-width: 100%; height: auto;" />\n</div>\n`;
                     } else {
-                        mediaCode = `<video controls style="max-width: 100%; height: auto;"><source src="${base64Data}" type="${file.type}">Your browser does not support the video tag.</video>`;
+                        mediaCode = `\n<div>\n<video controls style="max-width: 100%; height: auto;"><source src="${base64Data}" type="${file.type}">Your browser does not support the video tag.</video>\n</div>\n`;
                     }
                     
                     insertMediaAtCursor(mediaCode);
                     const mediaType = isImage ? 'Image' : 'Video';
                     showToast(`${mediaType} embedded: ${file.name}`, 'success');
                     showMofuHelper(`${mediaType} converted to <strong>base64</strong> and embedded!`);
+                    
+                    // Auto-fold base64 content after insertion
+                    setTimeout(() => {
+                        editor.trigger('fold', 'editor.foldAll');
+                    }, 300);
                 };
                 reader.readAsDataURL(file);
             } else {
@@ -4899,6 +4919,7 @@ let performBeautify = (content) => {
     setupPdfSettingsButton();
     setupInsertHeaderButton();
     setupInsertFooterButton();
+    setupInsertImageButton();
     setupInsertMediaButton();
     setupInsertBreakButton();
     setupDropdowns();
