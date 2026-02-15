@@ -282,7 +282,10 @@ This web site is using ${"`"}markedjs/marked${"`"}.
             acceptSuggestionOnEnter: 'on',
             tabCompletion: 'on',
             wordBasedSuggestions: 'off',
-            folding: false
+            folding: true,
+            showFoldingControls: 'always',
+            foldingStrategy: 'indentation',
+            foldingHighlight: true
         });
 
         // Register completion provider
@@ -365,7 +368,124 @@ This web site is using ${"`"}markedjs/marked${"`"}.
 
         // Setup markdown validation (extracted to module)
         setupValidationWizard(editor, monaco, showMofuHelper);
+        
+        // Setup custom folding provider for base64 and long content
+        setupCustomFoldingProvider(editor, monaco);
+        
         return editor;
+    };
+    
+    // Custom folding provider for base64 and long content
+    let setupCustomFoldingProvider = (editorInstance, monacoInstance) => {
+        // Register custom folding range provider
+        monacoInstance.languages.registerFoldingRangeProvider('markdown', {
+            provideFoldingRanges: function(model, context, token) {
+                const ranges = [];
+                const lineCount = model.getLineCount();
+                
+                for (let i = 1; i <= lineCount; i++) {
+                    const line = model.getLineContent(i);
+                    
+                    // Detect base64 image/video (data:image or data:video)
+                    if ((line.includes('data:image/') || line.includes('data:video/')) && line.includes('base64,')) {
+                        const base64Match = line.match(/base64,([A-Za-z0-9+/=]+)/);
+                        if (base64Match && base64Match[1].length > 100) {
+                            ranges.push({
+                                start: i,
+                                end: i,
+                                kind: monacoInstance.languages.FoldingRangeKind.Region
+                            });
+                        }
+                    }
+                    // Detect very long lines (>500 characters)
+                    else if (line.length > 500) {
+                        ranges.push({
+                            start: i,
+                            end: i,
+                            kind: monacoInstance.languages.FoldingRangeKind.Region
+                        });
+                    }
+                    // Detect inline SVG (single line, very long)
+                    else if (line.includes('<svg') && line.includes('</svg>') && line.length > 300) {
+                        ranges.push({
+                            start: i,
+                            end: i,
+                            kind: monacoInstance.languages.FoldingRangeKind.Region
+                        });
+                    }
+                    // Detect HTML video tags with base64
+                    else if (line.includes('<video') && line.includes('base64,') && line.length > 200) {
+                        ranges.push({
+                            start: i,
+                            end: i,
+                            kind: monacoInstance.languages.FoldingRangeKind.Region
+                        });
+                    }
+                    // Detect list items (for default markdown folding)
+                    else if (line.match(/^(\s*)([-*+]|\d+\.)\s/)) {
+                        const indent = line.match(/^(\s*)/)[1].length;
+                        let endLine = i;
+                        
+                        // Find the end of this list block
+                        for (let j = i + 1; j <= lineCount; j++) {
+                            const nextLine = model.getLineContent(j);
+                            const nextIndent = nextLine.match(/^(\s*)/)[1].length;
+                            
+                            if (nextLine.trim() === '') continue;
+                            if (nextIndent > indent || nextLine.match(/^(\s*)([-*+]|\d+\.)\s/)) {
+                                endLine = j;
+                            } else {
+                                break;
+                            }
+                        }
+                        
+                        if (endLine > i) {
+                            ranges.push({
+                                start: i,
+                                end: endLine,
+                                kind: monacoInstance.languages.FoldingRangeKind.Region
+                            });
+                        }
+                    }
+                }
+                
+                return ranges;
+            }
+        });
+        
+        // Auto-fold base64 and long content after initial load
+        setTimeout(() => {
+            const model = editorInstance.getModel();
+            if (!model) return;
+            
+            const lineCount = model.getLineCount();
+            
+            for (let i = 1; i <= lineCount; i++) {
+                const line = model.getLineContent(i);
+                
+                // Auto-fold base64 content
+                if ((line.includes('data:image/') || line.includes('data:video/')) && line.includes('base64,')) {
+                    const base64Match = line.match(/base64,([A-Za-z0-9+/=]+)/);
+                    if (base64Match && base64Match[1].length > 100) {
+                        editorInstance.setHiddenAreas([{
+                            startLineNumber: i,
+                            startColumn: 1,
+                            endLineNumber: i,
+                            endColumn: model.getLineMaxColumn(i)
+                        }]);
+                    }
+                }
+                // Auto-fold very long lines
+                else if (line.length > 500) {
+                    editorInstance.setHiddenAreas([{
+                        startLineNumber: i,
+                        startColumn: 1,
+                        endLineNumber: i,
+                        endColumn: model.getLineMaxColumn(i)
+                    }]);
+                }
+            }
+        }, 500);
     };
 
     // Parse YAML front matter (metadata)
@@ -523,6 +643,7 @@ This web site is using ${"`"}markedjs/marked${"`"}.
             pedantic: false,     // Don't be overly strict
             smartLists: true,    // Better list handling
             smartypants: false,  // Don't convert quotes/dashes
+            sanitize: false,     // Allow HTML passthrough (we sanitize with DOMPurify later)
             highlight: function(code, lang) {
                 // Check if highlight.js is available
                 if (typeof window.hljs === 'undefined') {
@@ -549,13 +670,42 @@ This web site is using ${"`"}markedjs/marked${"`"}.
             }
         });
         
-        // First, render the HTML
-        let html = marked.parse(markdown);
+        // Preprocess GitBook hint blocks - convert to HTML with markdown content parsed
+        const processedContent = content.replace(
+            /\{%\s*hint\s+style="([^"]+)"\s*%\}([\s\S]*?)\{%\s*endhint\s*%\}/g,
+            (match, style, hintContent) => {
+                // Map GitBook styles to appropriate icons and colors
+                const styleMap = {
+                    'info': { icon: 'ℹ️', class: 'hint-info', color: '#3b82f6' },
+                    'warning': { icon: '⚠️', class: 'hint-warning', color: '#f59e0b' },
+                    'danger': { icon: '🚫', class: 'hint-danger', color: '#ef4444' },
+                    'success': { icon: '✅', class: 'hint-success', color: '#10b981' },
+                    'tip': { icon: '💡', class: 'hint-tip', color: '#8b5cf6' }
+                };
+                
+                const styleInfo = styleMap[style] || styleMap['info'];
+                
+                // Parse the hint content as markdown inline (this renders bold, italic, links, etc.)
+                const parsedContent = marked.parseInline(hintContent.trim());
+                
+                // Return as a custom HTML block that marked will preserve
+                return `\n\n<div class="gitbook-hint ${styleInfo.class}" data-hint-style="${style}"><span class="hint-icon">${styleInfo.icon}</span><div class="hint-content">${parsedContent}</div></div>\n\n`;
+            }
+        );
         
-        // Configure DOMPurify to allow highlight.js classes
+        // First, render the HTML
+        let html = marked.parse(processedContent);
+        
+        // Configure DOMPurify to allow HTML elements while maintaining security
         let sanitized = DOMPurify.sanitize(html, {
-            ADD_ATTR: ['class'], // Allow class attributes for syntax highlighting
-            ADD_TAGS: ['span']   // Allow span tags for syntax highlighting
+            ADD_ATTR: ['class', 'style', 'data-hint-style', 'id', 'target', 'rel', 'href', 'src', 'alt', 'title'],
+            ADD_TAGS: ['span', 'div', 'strong', 'em', 'code', 'a', 'img', 'table', 'thead', 'tbody', 'tr', 'th', 'td', 
+                       'ul', 'ol', 'li', 'p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'blockquote', 'pre', 'br', 'hr',
+                       'section', 'article', 'aside', 'nav', 'header', 'footer', 'main', 'figure', 'figcaption',
+                       'b', 'i', 'u', 's', 'sub', 'sup', 'mark', 'small', 'del', 'ins', 'abbr', 'cite', 'q', 'dfn',
+                       'time', 'var', 'samp', 'kbd', 'data', 'address', 'details', 'summary', 'dl', 'dt', 'dd'],
+            ALLOW_DATA_ATTR: true,  // Allow data-* attributes for line mapping
+            KEEP_CONTENT: true      // Keep content even if tags are removed
         });
         
         // Create a temporary container
@@ -1513,21 +1663,156 @@ let performBeautify = (content) => {
  * - Only normalizes formatting, not structure
  */
 
-    // Paste from clipboard
+    // Paste from clipboard with HTML support
     let pasteFromClipboard = async () => {
         try {
-            const text = await navigator.clipboard.readText();
-            if (text) {
-                const position = editor.getPosition();
-                editor.executeEdits('', [{
-                    range: new monaco.Range(position.lineNumber, position.column, position.lineNumber, position.column),
-                    text: text
-                }]);
-                editor.focus();
+            // Try to get HTML content first
+            const clipboardItems = await navigator.clipboard.read();
+            let htmlContent = null;
+            let textContent = null;
+            
+            for (const item of clipboardItems) {
+                // Check for HTML content
+                if (item.types.includes('text/html')) {
+                    const blob = await item.getType('text/html');
+                    htmlContent = await blob.text();
+                }
+                // Fallback to plain text
+                if (item.types.includes('text/plain')) {
+                    const blob = await item.getType('text/plain');
+                    textContent = await blob.text();
+                }
             }
+            
+            // If we have HTML content, ask user what to do
+            if (htmlContent && turndownService) {
+                const choice = await showPasteDialog(htmlContent, textContent);
+                
+                if (choice === 'cancel') {
+                    return;
+                } else if (choice === 'markdown') {
+                    // Convert HTML to Markdown
+                    const markdown = turndownService.turndown(htmlContent);
+                    insertTextAtCursor(markdown);
+                    showMofuHelper('HTML converted to <strong>Markdown</strong>!');
+                } else if (choice === 'html') {
+                    // Insert raw HTML
+                    insertTextAtCursor(htmlContent);
+                    showMofuHelper('Raw <strong>HTML</strong> inserted!');
+                } else if (choice === 'text') {
+                    // Insert plain text
+                    insertTextAtCursor(textContent || htmlContent);
+                    showMofuHelper('Plain <strong>text</strong> inserted!');
+                }
+            } else {
+                // No HTML, just paste text
+                const text = textContent || await navigator.clipboard.readText();
+                if (text) {
+                    insertTextAtCursor(text);
+                }
+            }
+            
+            editor.focus();
         } catch (err) {
-            window.alert('Failed to read clipboard. Please make sure you have granted clipboard permissions.');
+            // Fallback to simple text paste
+            try {
+                const text = await navigator.clipboard.readText();
+                if (text) {
+                    insertTextAtCursor(text);
+                    editor.focus();
+                }
+            } catch (fallbackErr) {
+                window.alert('Failed to read clipboard. Please make sure you have granted clipboard permissions.');
+            }
         }
+    };
+    
+    // Helper to insert text at cursor position
+    const insertTextAtCursor = (text) => {
+        const position = editor.getPosition();
+        editor.executeEdits('', [{
+            range: new monaco.Range(position.lineNumber, position.column, position.lineNumber, position.column),
+            text: text
+        }]);
+    };
+    
+    // Convert SVG to DocMark-compatible format (single line)
+    const convertSvgToDocMarkFormat = (svgContent, filename) => {
+        // Remove file extension from filename
+        const cleanFilename = filename.replace(/\.svg$/i, '');
+        
+        // Remove all line breaks and extra spaces between tags
+        let singleLineSvg = svgContent
+            .replace(/\r\n/g, '')
+            .replace(/\n/g, '')
+            .replace(/\r/g, '')
+            .replace(/>\s+</g, '><')
+            .trim();
+        
+        // Create markdown with title and single-line SVG
+        return `# ${cleanFilename}\n\n${singleLineSvg}`;
+    };
+    
+    // Show paste dialog for HTML content
+    const showPasteDialog = (htmlContent, textContent) => {
+        return new Promise((resolve) => {
+            const dialog = document.createElement('div');
+            dialog.className = 'paste-dialog-overlay';
+            dialog.innerHTML = `
+                <div class="paste-dialog">
+                    <div class="paste-dialog-header">
+                        <h3>Paste HTML Content</h3>
+                        <button class="paste-dialog-close" id="paste-dialog-close">×</button>
+                    </div>
+                    <div class="paste-dialog-body">
+                        <p>HTML content detected in clipboard. How would you like to paste it?</p>
+                        <div class="paste-preview">
+                            <div class="paste-preview-label">Preview:</div>
+                            <div class="paste-preview-content">${DOMPurify.sanitize(htmlContent.substring(0, 500))}</div>
+                        </div>
+                    </div>
+                    <div class="paste-dialog-footer">
+                        <button class="paste-btn paste-btn-secondary" id="paste-as-text">As Plain Text</button>
+                        <button class="paste-btn paste-btn-primary" id="paste-as-markdown">Convert to Markdown</button>
+                        <button class="paste-btn paste-btn-primary" id="paste-as-html">Keep as HTML</button>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(dialog);
+            
+            const cleanup = () => {
+                document.body.removeChild(dialog);
+            };
+            
+            dialog.querySelector('#paste-dialog-close').addEventListener('click', () => {
+                cleanup();
+                resolve('cancel');
+            });
+            
+            dialog.querySelector('#paste-as-text').addEventListener('click', () => {
+                cleanup();
+                resolve('text');
+            });
+            
+            dialog.querySelector('#paste-as-markdown').addEventListener('click', () => {
+                cleanup();
+                resolve('markdown');
+            });
+            
+            dialog.querySelector('#paste-as-html').addEventListener('click', () => {
+                cleanup();
+                resolve('html');
+            });
+            
+            // Close on overlay click
+            dialog.addEventListener('click', (e) => {
+                if (e.target === dialog) {
+                    cleanup();
+                    resolve('cancel');
+                }
+            });
+        });
     };
 
     let presetValue = (value) => {
@@ -2809,29 +3094,85 @@ let performBeautify = (content) => {
             importMdInput.addEventListener('change', (event) => {
                 const file = event.target.files[0];
                 if (file) {
-                    const reader = new FileReader();
-                    reader.onload = (e) => {
-                        const content = e.target.result;
-                        if (editorInstance) {
-                            // Save current state before importing
-                            saveToUndoHistory(editorInstance.getValue());
+                    // Define supported media formats
+                    const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp'];
+                    const videoExtensions = ['.mp4', '.webm', '.ogg', '.mov', '.avi', '.mkv'];
+                    const fileName = file.name.toLowerCase();
+                    
+                    const isImage = imageExtensions.some(ext => fileName.endsWith(ext));
+                    const isVideo = videoExtensions.some(ext => fileName.endsWith(ext));
+                    
+                    if (isImage || isVideo) {
+                        // Handle media files - convert to base64
+                        const reader = new FileReader();
+                        reader.onload = (e) => {
+                            const base64Data = e.target.result;
+                            const cleanFileName = file.name.replace(/\.[^/.]+$/, ''); // Remove extension
                             
-                            // Use executeEdits to preserve undo
-                            const model = editorInstance.getModel();
-                            const fullRange = model.getFullModelRange();
-                            editorInstance.executeEdits('import-markdown', [{
-                                range: fullRange,
-                                text: content
-                            }]);
+                            let markdownCode;
+                            if (isImage) {
+                                // Image: Standard markdown syntax
+                                markdownCode = `![${cleanFileName}](${base64Data})`;
+                            } else {
+                                // Video: HTML5 video tag with controls
+                                markdownCode = `<video controls style="max-width: 100%; height: auto;"><source src="${base64Data}" type="${file.type}">Your browser does not support the video tag.</video>`;
+                            }
                             
-                            showToast(`Imported: ${file.name}`, 'success');
-                            showMofuHelper(`File imported! Use <strong>Undo</strong> to restore previous content.`);
-                        }
-                    };
-                    reader.onerror = () => {
-                        showToast('Failed to read file', 'error');
-                    };
-                    reader.readAsText(file);
+                            if (editorInstance) {
+                                // Save current state before importing
+                                saveToUndoHistory(editorInstance.getValue());
+                                
+                                // Insert at cursor position
+                                const position = editorInstance.getPosition();
+                                editorInstance.executeEdits('import-media', [{
+                                    range: new monaco.Range(position.lineNumber, position.column, position.lineNumber, position.column),
+                                    text: markdownCode
+                                }]);
+                                
+                                const mediaType = isImage ? 'Image' : 'Video';
+                                showToast(`${mediaType} embedded: ${file.name}`, 'success');
+                                showMofuHelper(`${mediaType} converted to <strong>base64</strong> and embedded!`);
+                            }
+                        };
+                        reader.onerror = () => {
+                            showToast('Failed to read file', 'error');
+                        };
+                        reader.readAsDataURL(file); // Read as base64
+                    } else {
+                        // Handle text files (markdown, SVG)
+                        const reader = new FileReader();
+                        reader.onload = (e) => {
+                            let content = e.target.result;
+                            
+                            // Check if it's an SVG file
+                            if (file.name.toLowerCase().endsWith('.svg')) {
+                                // Convert SVG to DocMark-compatible format (single line)
+                                content = convertSvgToDocMarkFormat(content, file.name);
+                                showToast(`SVG converted: ${file.name}`, 'success');
+                                showMofuHelper(`SVG file converted to <strong>single-line format</strong> for proper rendering!`);
+                            } else {
+                                showToast(`Imported: ${file.name}`, 'success');
+                                showMofuHelper(`File imported! Use <strong>Undo</strong> to restore previous content.`);
+                            }
+                            
+                            if (editorInstance) {
+                                // Save current state before importing
+                                saveToUndoHistory(editorInstance.getValue());
+                                
+                                // Use executeEdits to preserve undo
+                                const model = editorInstance.getModel();
+                                const fullRange = model.getFullModelRange();
+                                editorInstance.executeEdits('import-markdown', [{
+                                    range: fullRange,
+                                    text: content
+                                }]);
+                            }
+                        };
+                        reader.onerror = () => {
+                            showToast('Failed to read file', 'error');
+                        };
+                        reader.readAsText(file);
+                    }
                 }
                 // Reset input so same file can be imported again
                 event.target.value = '';
@@ -3132,60 +3473,91 @@ let performBeautify = (content) => {
         });
     };
 
-    let setupInsertImageButton = () => {
-        const button = document.querySelector('#insert-image-button');
-        if (!button) return;
+    let setupInsertMediaButton = () => {
+        const button = document.querySelector('#insert-media-button');
+        const fileInput = document.querySelector('#insert-media-input');
         
+        if (!button || !fileInput) return;
+        
+        // Click button opens file dialog
         button.addEventListener('click', (event) => {
             event.preventDefault();
-            insertImageTemplate();
+            fileInput.click();
+        });
+        
+        // Handle file selection
+        fileInput.addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            // Define supported formats
+            const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp'];
+            const videoExtensions = ['.mp4', '.webm', '.ogg', '.mov', '.avi', '.mkv'];
+            const fileName = file.name.toLowerCase();
+            
+            const isImage = imageExtensions.some(ext => fileName.endsWith(ext));
+            const isVideo = videoExtensions.some(ext => fileName.endsWith(ext));
+            const isSVG = fileName.endsWith('.svg');
+            
+            if (isSVG) {
+                // Handle SVG - read as text and convert to single line
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const svgContent = e.target.result;
+                    const singleLineSvg = svgContent
+                        .replace(/\r\n/g, '')
+                        .replace(/\n/g, '')
+                        .replace(/\r/g, '')
+                        .replace(/>\s+</g, '><')
+                        .trim();
+                    
+                    insertMediaAtCursor(singleLineSvg);
+                    showToast(`SVG embedded: ${file.name}`, 'success');
+                    showMofuHelper(`SVG converted to <strong>single-line format</strong>!`);
+                };
+                reader.readAsText(file);
+            } else if (isImage || isVideo) {
+                // Handle images and videos - convert to base64
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const base64Data = e.target.result;
+                    const cleanFileName = file.name.replace(/\.[^/.]+$/, '');
+                    
+                    let mediaCode;
+                    if (isImage) {
+                        mediaCode = `![${cleanFileName}](${base64Data})`;
+                    } else {
+                        mediaCode = `<video controls style="max-width: 100%; height: auto;"><source src="${base64Data}" type="${file.type}">Your browser does not support the video tag.</video>`;
+                    }
+                    
+                    insertMediaAtCursor(mediaCode);
+                    const mediaType = isImage ? 'Image' : 'Video';
+                    showToast(`${mediaType} embedded: ${file.name}`, 'success');
+                    showMofuHelper(`${mediaType} converted to <strong>base64</strong> and embedded!`);
+                };
+                reader.readAsDataURL(file);
+            } else {
+                showToast('Unsupported file format', 'error');
+                showMofuHelper('Please select an image, video, or SVG file.');
+            }
+            
+            // Reset input
+            event.target.value = '';
         });
     };
-
-    let insertImageTemplate = () => {
-        // Prompt for image dimensions
-        const width = prompt('Enter image width (in pixels, e.g., 300):', '300');
-        if (!width) return; // User cancelled
-        
-        const height = prompt('Enter image height (in pixels, leave empty for auto):', '');
-        
-        // Build the HTML img tag
-        const heightAttr = height ? ` height="${height}"` : '';
-        const template = `
-<img src="https://via.placeholder.com/${width}x${height || '200'}?text=Your+Image" width="${width}"${heightAttr}>
-
-`;
-        
-        const model = editor.getModel();
+    
+    let insertMediaAtCursor = (content) => {
         const position = editor.getPosition();
-        
-        // Insert at current cursor position
-        editor.executeEdits('insert-image', [{
+        editor.executeEdits('insert-media', [{
             range: new monaco.Range(
-                position.lineNumber, 
-                position.column, 
-                position.lineNumber, 
+                position.lineNumber,
+                position.column,
+                position.lineNumber,
                 position.column
             ),
-            text: template
+            text: content
         }]);
-        
-        // Select the URL for easy replacement
-        setTimeout(() => {
-            const newLine = position.lineNumber + 1;
-            const srcStart = template.indexOf('src="') + 5;
-            const srcEnd = template.indexOf('"', srcStart);
-            
-            editor.setSelection(new monaco.Selection(
-                newLine, srcStart,
-                newLine, srcEnd
-            ));
-            
-            editor.revealLineInCenter(newLine);
-            editor.focus();
-        }, 50);
-        
-        showMofuHelper(`I've added an <strong>image placeholder</strong> (${width}x${height || 'auto'})! Replace the URL with your image link.`);
+        editor.focus();
     };
 
     let insertHeaderTemplate = () => {
@@ -4527,7 +4899,7 @@ let performBeautify = (content) => {
     setupPdfSettingsButton();
     setupInsertHeaderButton();
     setupInsertFooterButton();
-    setupInsertImageButton();
+    setupInsertMediaButton();
     setupInsertBreakButton();
     setupDropdowns();
     setupCheatSheetButton();
@@ -6279,6 +6651,19 @@ let performBeautify = (content) => {
             });
         });
     });
+    
+    // ============================================================================
+    // HELP DOCUMENTATION
+    // ============================================================================
+    
+    const helpButton = document.getElementById('help-button');
+    
+    if (helpButton) {
+        helpButton.addEventListener('click', () => {
+            // Open documentation in new tab
+            window.open('/docs/index.html', '_blank');
+        });
+    }
 };
 
 window.addEventListener("load", () => {

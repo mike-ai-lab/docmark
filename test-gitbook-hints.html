@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GitBook Hints Test</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+            max-width: 800px;
+            margin: 40px auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .gitbook-hint {
+            border-radius: 4px;
+            margin: 16px 0;
+            padding: 12px 16px;
+            font-size: 0.95em;
+            line-height: 1.6;
+        }
+        .hint-info {
+            border-left: 4px solid #3b82f6;
+            background-color: rgba(59, 130, 246, 0.08);
+        }
+        .hint-warning {
+            border-left: 4px solid #f59e0b;
+            background-color: rgba(245, 158, 11, 0.08);
+        }
+        .hint-danger {
+            border-left: 4px solid #ef4444;
+            background-color: rgba(239, 68, 68, 0.08);
+        }
+        .hint-success {
+            border-left: 4px solid #10b981;
+            background-color: rgba(16, 185, 129, 0.08);
+        }
+        .hint-tip {
+            border-left: 4px solid #8b5cf6;
+            background-color: rgba(139, 92, 246, 0.08);
+        }
+        h1 {
+            color: #1e293b;
+            margin-bottom: 30px;
+        }
+        h2 {
+            color: #334155;
+            margin-top: 30px;
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body>
+    <h1>GitBook Hint Blocks - Visual Test</h1>
+    
+    <h2>Info Hint</h2>
+    <div class="gitbook-hint hint-info">
+        <div style="display: flex; align-items: flex-start; gap: 8px;">
+            <span style="font-size: 1.2em; flex-shrink: 0;">ℹ️</span>
+            <div style="flex: 1;"><strong>OpenCutList</strong> will save the material in a subfolder of your profile, so that it can be reused in another project or shared with other users.</div>
+        </div>
+    </div>
+
+    <h2>Warning Hint</h2>
+    <div class="gitbook-hint hint-warning">
+        <div style="display: flex; align-items: flex-start; gap: 8px;">
+            <span style="font-size: 1.2em; flex-shrink: 0;">⚠️</span>
+            <div style="flex: 1;">If you import a material with the same name as a material already present in the folder, the import will be silently ignored (which is SketchUp's behavior).</div>
+        </div>
+    </div>
+
+    <h2>Danger Hint</h2>
+    <div class="gitbook-hint hint-danger">
+        <div style="display: flex; align-items: flex-start; gap: 8px;">
+            <span style="font-size: 1.2em; flex-shrink: 0;">🚫</span>
+            <div style="flex: 1;">This is a dangerous operation that cannot be undone. Make sure you have a backup before proceeding.</div>
+        </div>
+    </div>
+
+    <h2>Success Hint</h2>
+    <div class="gitbook-hint hint-success">
+        <div style="display: flex; align-items: flex-start; gap: 8px;">
+            <span style="font-size: 1.2em; flex-shrink: 0;">✅</span>
+            <div style="flex: 1;">Your changes have been saved successfully! You can now continue working on your project.</div>
+        </div>
+    </div>
+
+    <h2>Tip Hint</h2>
+    <div class="gitbook-hint hint-tip">
+        <div style="display: flex; align-items: flex-start; gap: 8px;">
+            <span style="font-size: 1.2em; flex-shrink: 0;">💡</span>
+            <div style="flex: 1;">Pro tip: Use keyboard shortcuts to speed up your workflow. Press Ctrl+S to save your work.</div>
+        </div>
+    </div>
+
+    <h2>Combined Example (Your Original Text)</h2>
+    <p><strong>Removing Material</strong></p>
+    
+    <div class="gitbook-hint hint-info">
+        <div style="display: flex; align-items: flex-start; gap: 8px;">
+            <span style="font-size: 1.2em; flex-shrink: 0;">ℹ️</span>
+            <div style="flex: 1;"><strong>OpenCutList</strong> will save the material in a subfolder of your profile, so that it can be reused in another project or shared with other users.</div>
+        </div>
+    </div>
+
+    <div class="gitbook-hint hint-warning">
+        <div style="display: flex; align-items: flex-start; gap: 8px;">
+            <span style="font-size: 1.2em; flex-shrink: 0;">⚠️</span>
+            <div style="flex: 1;">If you import a material with the same name as a material already present in the folder, the import will be silently ignored (which is SketchUp's behavior).</div>
+        </div>
+    </div>
+</body>
+</html>

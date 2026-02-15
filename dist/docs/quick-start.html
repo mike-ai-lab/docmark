@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quick Start - DocMark Documentation</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="docs-layout">
+        <!-- Left Sidebar - TOC Tree -->
+        <aside class="docs-sidebar">
+            <div class="docs-header">
+                <h1>DocMark</h1>
+                <p class="docs-subtitle">Documentation</p>
+            </div>
+            
+            <nav class="docs-toc">
+                <div class="toc-section">
+                    <button class="toc-parent" data-section="getting-started">
+                        <span class="toc-icon">+</span>
+                        <span class="toc-label">Getting Started</span>
+                    </button>
+                    <div class="toc-children">
+                        <a href="index.html" class="toc-item">Introduction</a>
+                        <a href="quick-start.html" class="toc-item">Quick Start</a>
+                        <a href="index.html#getting-started" class="toc-item">Interface Overview</a>
+                    </div>
+                </div>
+                
+                <div class="toc-section">
+                    <button class="toc-parent" data-section="core-features">
+                        <span class="toc-icon">+</span>
+                        <span class="toc-label">Core Features</span>
+                    </button>
+                    <div class="toc-children">
+                        <a href="index.html#editor" class="toc-item">Editor</a>
+                        <a href="index.html#live-preview" class="toc-item">Live Preview</a>
+                        <a href="index.html#styling-options" class="toc-item">Synchronization</a>
+                        <a href="index.html#styling-options" class="toc-item">Themes & Styles</a>
+                    </div>
+                </div>
+                
+                <div class="toc-section">
+                    <button class="toc-parent" data-section="document-management">
+                        <span class="toc-icon">+</span>
+                        <span class="toc-label">Document Management</span>
+                    </button>
+                    <div class="toc-children">
+                        <a href="index.html#key-features" class="toc-item">Import & Export</a>
+                        <a href="index.html#pdf-export" class="toc-item">PDF Export</a>
+                        <a href="index.html#version-history" class="toc-item">Version History</a>
+                        <a href="index.html#key-features" class="toc-item">Autosave</a>
+                    </div>
+                </div>
+                
+                <div class="toc-section">
+                    <button class="toc-parent" data-section="advanced">
+                        <span class="toc-icon">+</span>
+                        <span class="toc-label">Advanced Features</span>
+                    </button>
+                    <div class="toc-children">
+                        <a href="index.html#key-features" class="toc-item">Document Metadata</a>
+                        <a href="index.html#key-features" class="toc-item">Table of Contents</a>
+                        <a href="index.html#perfect-for-ai-content" class="toc-item">Markdown Validation</a>
+                        <a href="index.html#key-features" class="toc-item">Paper Layout</a>
+                    </div>
+                </div>
+                
+                <div class="toc-section">
+                    <button class="toc-parent" data-section="reference">
+                        <span class="toc-icon">+</span>
+                        <span class="toc-label">Reference</span>
+                    </button>
+                    <div class="toc-children">
+                        <a href="quick-start.html" class="toc-item">Markdown Syntax</a>
+                        <a href="quick-start.html" class="toc-item">Keyboard Shortcuts</a>
+                        <a href="index.html#perfect-for-ai-content" class="toc-item">Tips & Best Practices</a>
+                    </div>
+                </div>
+            </nav>
+        </aside>
+        
+        <!-- Main Content -->
+        <main class="docs-content">
+            <!-- Ask More Button -->
+            <div class="ask-more-container">
+                <button class="ask-more-button" id="ask-more-btn">Ask More</button>
+                <div class="ask-more-dropdown">
+                    <button id="copy-markdown-btn">Copy as Markdown</button>
+                    <a href="#" id="ask-chatgpt-btn" target="_blank">Ask ChatGPT</a>
+                </div>
+            </div>
+            
+            <article class="docs-article">
+                <h1 id="quick-start">Quick Start</h1>
+                
+                <p class="lead">Get started with DocMark in three simple steps. No registration, no setup required.</p>
+                
+                <section class="content-section">
+                    <h2 id="step-1">Step 1: Write or Paste Markdown</h2>
+                    <p>Open DocMark and start typing in the editor pane on the left. You can also paste markdown content from any source:</p>
+                    <ul>
+                        <li>AI models (ChatGPT, Claude, Gemini)</li>
+                        <li>Existing markdown files</li>
+                        <li>Text documents</li>
+                        <li>Code documentation</li>
+                    </ul>
+                    
+                    <div class="note-box">
+                        <strong>Tip</strong>
+                        <p>When working with AI models, ask them to output in markdown format for best results.</p>
+                    </div>
+                </section>
+                
+                <section class="content-section">
+                    <h2 id="step-2">Step 2: Preview in Real-Time</h2>
+                    <p>As you type, the preview pane on the right updates instantly. You'll see your formatted document exactly as it will appear in the final PDF.</p>
+                    
+                    <h3 id="preview-features">Preview Features</h3>
+                    <ul>
+                        <li>Real-time rendering as you type</li>
+                        <li>Click any element to jump to its source</li>
+                        <li>Choose from multiple styling options</li>
+                        <li>Toggle between web and paper layout</li>
+                    </ul>
+                </section>
+                
+                <section class="content-section">
+                    <h2 id="step-3">Step 3: Export to PDF</h2>
+                    <p>When you're ready, export your document to PDF:</p>
+                    
+                    <ol class="step-list">
+                        <li>
+                            <strong>Click Export</strong>
+                            <p>Find the Export button in the toolbar</p>
+                        </li>
+                        <li>
+                            <strong>Select Export PDF</strong>
+                            <p>Choose "Export PDF" from the dropdown menu</p>
+                        </li>
+                        <li>
+                            <strong>Download</strong>
+                            <p>Your professionally formatted PDF downloads automatically</p>
+                        </li>
+                    </ol>
+                </section>
+                
+                <section class="content-section">
+                    <h2 id="next-steps">Next Steps</h2>
+                    <p>Now that you know the basics, explore more features:</p>
+                    
+                    <div class="quick-links">
+                        <a href="interface.html" class="quick-link-card">
+                            <h3>Interface Overview</h3>
+                            <p>Learn about all the tools available</p>
+                        </a>
+                        <a href="pdf-export.html" class="quick-link-card">
+                            <h3>PDF Export Options</h3>
+                            <p>Customize your PDF output</p>
+                        </a>
+                        <a href="markdown-syntax.html" class="quick-link-card">
+                            <h3>Markdown Syntax</h3>
+                            <p>Complete markdown reference</p>
+                        </a>
+                    </div>
+                </section>
+            </article>
+        </main>
+        
+        <!-- Right Sidebar - Page Index -->
+        <aside class="docs-index">
+            <div class="index-header">On This Page</div>
+            <nav class="page-index">
+                <!-- Auto-generated by JavaScript -->
+            </nav>
+        </aside>
+    </div>
+    
+    <script src="docs.js"></script>
+</body>
+</html>

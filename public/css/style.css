@@ -95,6 +95,206 @@ header a:hover {
   background-clip: text;
 }
 
+/* Paste Dialog Overlay */
+.paste-dialog-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  backdrop-filter: blur(4px);
+}
+
+.paste-dialog {
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  max-width: 600px;
+  width: 90%;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.paste-dialog-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.paste-dialog-header h3 {
+  font-size: 18px;
+  font-weight: 600;
+  color: #1e293b;
+  margin: 0;
+}
+
+.paste-dialog-close {
+  background: none;
+  border: none;
+  font-size: 28px;
+  color: #64748b;
+  cursor: pointer;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  transition: all 0.2s;
+}
+
+.paste-dialog-close:hover {
+  background: #f1f5f9;
+  color: #1e293b;
+}
+
+.paste-dialog-body {
+  padding: 24px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.paste-dialog-body p {
+  margin: 0 0 16px 0;
+  color: #475569;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.paste-preview {
+  margin-top: 16px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.paste-preview-label {
+  background: #f8fafc;
+  padding: 8px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.paste-preview-content {
+  padding: 16px;
+  max-height: 200px;
+  overflow-y: auto;
+  font-size: 13px;
+  line-height: 1.6;
+  color: #334155;
+  background: #ffffff;
+}
+
+.paste-dialog-footer {
+  display: flex;
+  gap: 12px;
+  padding: 20px 24px;
+  border-top: 1px solid #e2e8f0;
+  background: #f8fafc;
+}
+
+.paste-btn {
+  flex: 1;
+  padding: 10px 16px;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: inherit;
+}
+
+.paste-btn-primary {
+  background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);
+  color: #ffffff;
+}
+
+.paste-btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+}
+
+.paste-btn-secondary {
+  background: #ffffff;
+  color: #475569;
+  border: 1px solid #e2e8f0;
+}
+
+.paste-btn-secondary:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+}
+
+/* Dark theme support for paste dialog */
+[data-theme="dark"] .paste-dialog {
+  background: #1e293b;
+}
+
+[data-theme="dark"] .paste-dialog-header {
+  border-bottom-color: #334155;
+}
+
+[data-theme="dark"] .paste-dialog-header h3 {
+  color: #f1f5f9;
+}
+
+[data-theme="dark"] .paste-dialog-close {
+  color: #94a3b8;
+}
+
+[data-theme="dark"] .paste-dialog-close:hover {
+  background: #334155;
+  color: #f1f5f9;
+}
+
+[data-theme="dark"] .paste-dialog-body p {
+  color: #cbd5e1;
+}
+
+[data-theme="dark"] .paste-preview {
+  border-color: #334155;
+}
+
+[data-theme="dark"] .paste-preview-label {
+  background: #0f172a;
+  color: #94a3b8;
+}
+
+[data-theme="dark"] .paste-preview-content {
+  background: #0f172a;
+  color: #e2e8f0;
+}
+
+[data-theme="dark"] .paste-dialog-footer {
+  border-top-color: #334155;
+  background: #0f172a;
+}
+
+[data-theme="dark"] .paste-btn-secondary {
+  background: #334155;
+  color: #e2e8f0;
+  border-color: #475569;
+}
+
+[data-theme="dark"] .paste-btn-secondary:hover {
+  background: #475569;
+  border-color: #64748b;
+}
+
 /* Mofu Blob Widget */
 .mofu-header-widget {
   --m-size: 40px;
@@ -651,6 +851,78 @@ footer {
 [data-theme="dark"] #preview-wrapper .markdown-body img[src="IMAGE_URL_FIX!"] {
   border-color: #f87171 !important;
   background-color: rgba(248, 113, 113, 0.15);
+}
+
+/* GitBook-style hint blocks */
+#preview-wrapper .markdown-body .gitbook-hint {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  border-radius: 4px;
+  margin: 16px 0;
+  padding: 12px 16px;
+  font-size: 0.95em;
+  line-height: 1.6;
+}
+
+#preview-wrapper .markdown-body .gitbook-hint .hint-icon {
+  font-size: 1.2em;
+  flex-shrink: 0;
+}
+
+#preview-wrapper .markdown-body .gitbook-hint .hint-content {
+  flex: 1;
+}
+
+#preview-wrapper .markdown-body .gitbook-hint.hint-info {
+  border-left: 4px solid #3b82f6;
+  background-color: rgba(59, 130, 246, 0.08);
+}
+
+#preview-wrapper .markdown-body .gitbook-hint.hint-warning {
+  border-left: 4px solid #f59e0b;
+  background-color: rgba(245, 158, 11, 0.08);
+}
+
+#preview-wrapper .markdown-body .gitbook-hint.hint-danger {
+  border-left: 4px solid #ef4444;
+  background-color: rgba(239, 68, 68, 0.08);
+}
+
+#preview-wrapper .markdown-body .gitbook-hint.hint-success {
+  border-left: 4px solid #10b981;
+  background-color: rgba(16, 185, 129, 0.08);
+}
+
+#preview-wrapper .markdown-body .gitbook-hint.hint-tip {
+  border-left: 4px solid #8b5cf6;
+  background-color: rgba(139, 92, 246, 0.08);
+}
+
+/* Dark mode hint blocks - adjust opacity for better visibility */
+[data-theme="dark"] #preview-wrapper .markdown-body .gitbook-hint.hint-info {
+  background-color: rgba(59, 130, 246, 0.2) !important;
+  border-left-color: #3b82f6 !important;
+}
+
+[data-theme="dark"] #preview-wrapper .markdown-body .gitbook-hint.hint-warning {
+  background-color: rgba(245, 158, 11, 0.2) !important;
+  border-left-color: #f59e0b !important;
+}
+
+[data-theme="dark"] #preview-wrapper .markdown-body .gitbook-hint.hint-danger {
+  background-color: rgba(239, 68, 68, 0.2) !important;
+  border-left-color: #ef4444 !important;
+}
+
+[data-theme="dark"] #preview-wrapper .markdown-body .gitbook-hint.hint-success {
+  background-color: rgba(16, 185, 129, 0.2) !important;
+  border-left-color: #10b981 !important;
+}
+
+[data-theme="dark"] #preview-wrapper .markdown-body .gitbook-hint.hint-tip {
+  background-color: rgba(139, 92, 246, 0.2) !important;
+  border-left-color: #8b5cf6 !important;
 }
 
 .column {

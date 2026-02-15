@@ -1,0 +1,53 @@
+<style>
+.hint-box {
+  padding: 15px;
+  border-left: 5px solid;
+  border-radius: 8px;
+  color: #fff;
+  font-weight: 500;
+  margin: 12px 0;
+  transform: translateY(20px);
+  opacity: 0;
+  animation: slideFadePulse 0.8s forwards;
+  transition: box-shadow 0.3s;
+}
+
+/* Slide + Fade + subtle glow */
+@keyframes slideFadePulse {
+  0% { transform: translateY(20px); opacity: 0; box-shadow: 0 0 0 rgba(0,0,0,0); }
+  50% { transform: translateY(0); opacity: 1; box-shadow: 0 0 8px rgba(0,0,0,0.1); }
+  100% { transform: translateY(0); opacity: 1; box-shadow: 0 0 4px rgba(0,0,0,0.05); }
+}
+
+/* Optional subtle pulsing glow on hover */
+.hint-box:hover {
+  box-shadow: 0 0 12px rgba(0,0,0,0.2);
+}
+
+/* Styles */
+.hint-info { background-color: #1565C0; border-color: #0D47A1; }
+.hint-warning { background-color: #FF6F00; border-color: #E65100; }
+.hint-success { background-color: #2E7D32; border-color: #1B5E20; }
+.hint-error { background-color: #B71C1C; border-color: #7F0000; }
+.hint-tip { background-color: #283593; border-color: #1A237E; }
+.hint-slate { background-color: #37474F; border-color: #263238; }
+.hint-teal { background-color: #00695C; border-color: #004D40; }
+.hint-purple { background-color: #6A1B9A; border-color: #4A148C; }
+.hint-dark { background-color: #263238; border-color: #0288D1; color: #B0BEC5; }
+.hint-gradient { 
+  background: linear-gradient(135deg,#1E88E5,#00ACC1); 
+  border-color: #1E88E5;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+}
+</style>
+
+<div class="hint-box hint-info"><strong>Info:</strong> Animated info hint with pulse effect.</div>
+<div class="hint-box hint-warning"><strong>Warning:</strong> Animated warning hint with glow.</div>
+<div class="hint-box hint-success"><strong>Success:</strong> Animated success hint with pulse.</div>
+<div class="hint-box hint-error"><strong>Error:</strong> Animated error hint with glow.</div>
+<div class="hint-box hint-tip"><strong>Tip:</strong> Animated tip with subtle pulse.</div>
+<div class="hint-box hint-slate"><strong>Reminder:</strong> Slate hint with animation.</div>
+<div class="hint-box hint-teal"><strong>Highlight:</strong> Teal hint with hover glow.</div>
+<div class="hint-box hint-purple"><strong>Note:</strong> Purple animated hint.</div>
+<div class="hint-box hint-dark"><strong>Info:</strong> Dark mode animated hint.</div>
+<div class="hint-box hint-gradient"><strong>Modern:</strong> Gradient hint with animated entrance.</div>

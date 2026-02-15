@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Architectural Portfolio | Muhamad's Lab</title>
+    <style>
+        :root {
+            --primary-dark: #121212;
+            --accent-gold: #c5a059; /* Subtle Saudi-inspired gold */
+            --text-light: #f4f4f4;
+            --card-bg: rgba(255, 255, 255, 0.95);
+        }
+
+        body {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: var(--primary-dark);
+            color: var(--text-light);
+            overflow-x: hidden;
+        }
+
+        /* Fixed Navigation Header */
+        nav {
+            position: fixed;
+            top: 0;
+            width: 100%;
+            padding: 20px 50px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 1000;
+            background: linear-gradient(to bottom, rgba(0,0,0,0.8), transparent);
+        }
+
+        .logo {
+            font-weight: bold;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: var(--accent-gold);
+        }
+
+        /* Intro Section */
+        .intro {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            background: #1a1a1a;
+        }
+
+        .intro h1 {
+            font-size: 3.5rem;
+            margin-bottom: 10px;
+            font-weight: 300;
+        }
+
+        .intro p {
+            color: var(--accent-gold);
+            letter-spacing: 3px;
+            text-transform: uppercase;
+        }
+
+        /* Main Storytelling Wrapper */
+        .storytelling-container {
+            position: relative;
+            height: 400vh; /* Determines scroll length */
+        }
+
+        /* The Parallax Background */
+        .visual-backdrop {
+            position: sticky;
+            top: 0;
+            height: 100vh;
+            width: 100%;
+            z-index: 1;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: #222;
+        }
+
+        /* SVG Placeholder for Architectural Render/Diagram */
+        .visual-content {
+            width: 80%;
+            height: 60%;
+            border: 1px solid var(--accent-gold);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            opacity: 0.3;
+            transition: all 0.5s ease;
+        }
+
+        /* Narrative Steps */
+        .step {
+            position: relative;
+            height: 100vh; /* Each card takes a full viewport scroll */
+            display: flex;
+            align-items: center;
+            padding-left: 10%;
+            z-index: 2;
+        }
+
+        .step:nth-child(even) {
+            padding-left: 0;
+            padding-right: 10%;
+            justify-content: flex-end;
+        }
+
+        .card {
+            background: var(--card-bg);
+            color: #333;
+            padding: 40px;
+            max-width: 450px;
+            border-radius: 2px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+            border-left: 5px solid var(--accent-gold);
+        }
+
+        .card h2 {
+            margin-top: 0;
+            font-weight: 400;
+            color: var(--primary-dark);
+            text-transform: uppercase;
+            font-size: 1.2rem;
+            letter-spacing: 1px;
+        }
+
+        .card p {
+            font-size: 0.95rem;
+            line-height: 1.8;
+            color: #555;
+        }
+
+        .footer {
+            height: 60vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: #000;
+            color: var(--accent-gold);
+            text-align: center;
+        }
+
+        /* Action Button */
+        .contact-btn {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: var(--accent-gold);
+            color: white;
+            padding: 15px 30px;
+            text-decoration: none;
+            border-radius: 50px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            z-index: 1001;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+            transition: transform 0.3s;
+        }
+
+        .contact-btn:hover {
+            transform: translateY(-5px);
+        }
+    </style>
+</head>
+<body>
+
+    <nav>
+        <div class="logo">MUHAMAD DESIGN</div>
+        <div style="font-size: 0.8rem; letter-spacing: 1px;">RIYADH • EST 2025</div>
+    </nav>
+
+    <a href="#" class="contact-btn">INQUIRE PROJECT</a>
+
+    <!-- Initial Landing -->
+    <section class="intro">
+        <h1>Visionary Space</h1>
+        <p>Architectural Narrative Lab</p>
+    </section>
+
+    <!-- The Scrollytelling Section -->
+    <div class="storytelling-container">
+        
+        <!-- This stays fixed while you scroll through the steps -->
+        <div class="visual-backdrop">
+            <div class="visual-content">
+                <!-- In a real app, this would be your 3D canvas or high-res render -->
+                <svg width="200" height="200" viewBox="0 0 100 100" fill="none" stroke="#c5a059" stroke-width="0.5">
+                    <path d="M10 90 L50 10 L90 90 Z" />
+                    <path d="M10 90 L90 90 L50 60 Z" />
+                    <circle cx="50" cy="45" r="5" />
+                </svg>
+                <div style="position:absolute; bottom:20px; font-size: 10px; letter-spacing: 2px;">DYNAMIC VISUAL LAYER</div>
+            </div>
+        </div>
+        
+        <!-- Story Steps -->
+        <section class="step">
+            <div class="card">
+                <h2>01. Contextual Analysis</h2>
+                <p>We begin by studying the unique topography of the Saudi landscape. Understanding the movement of the sun and the direction of the wind is vital for sustainable luxury.</p>
+            </div>
+        </section>
+
+        <section class="step">
+            <div class="card">
+                <h2>02. Concept Evolution</h2>
+                <p>Drawing inspiration from Najdi patterns, we translate historical motifs into parametric geometries that serve both aesthetic and functional purposes in modern interior design.</p>
+            </div>
+        </section>
+
+        <section class="step">
+            <div class="card">
+                <h2>03. Material Sourcing</h2>
+                <p>Integrating local limestone with high-performance glass. The dialogue between solid and transparent creates a sanctuary that respects privacy while embracing light.</p>
+            </div>
+        </section>
+
+    </div>
+
+    <!-- Conclusion -->
+    <footer class="footer">
+        <div>
+            <h3>Let's build the future.</h3>
+            <p>Muhamad Architectural Studio</p>
+        </div>
+    </footer>
+
+</body>
+</html>
