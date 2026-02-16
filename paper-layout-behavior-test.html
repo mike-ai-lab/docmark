@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Paper Layout Behavior Test</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #2a2a2a;
+            padding: 20px;
+        }
+
+        .test-container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        h1 {
+            font-size: 24px;
+            margin-bottom: 10px;
+            color: #333;
+        }
+
+        h2 {
+            font-size: 18px;
+            margin: 20px 0 10px 0;
+            color: #555;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            padding: 8px 16px;
+            background: #3b82f6;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        button:hover {
+            background: #2563eb;
+        }
+
+        .info {
+            background: #f0f9ff;
+            border: 1px solid #bae6fd;
+            padding: 12px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
+        .info strong {
+            color: #0369a1;
+        }
+
+        /* Simulated preview panel container */
+        .preview-panel-simulator {
+            background: #f5f5f5;
+            border: 2px solid #333;
+            padding: 20px;
+            overflow-y: auto;
+            overflow-x: auto;
+            position: relative;
+            transition: width 0.3s ease;
+        }
+
+        .width-indicator {
+            position: sticky;
+            top: 0;
+            left: 0;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-family: monospace;
+            z-index: 100;
+            display: inline-block;
+            margin-bottom: 10px;
+        }
+
+        /* Paper layout styles - FIXED VERSION */
+        #output.paper-layout-active {
+            width: var(--paper-width, 21cm);
+            min-height: var(--paper-height, 29.7cm);
+            margin: 0 auto;
+            padding: var(--paper-margin-top, 2cm) var(--paper-margin-right, 2cm) var(--paper-margin-bottom, 2cm) var(--paper-margin-left, 2cm);
+            background: white;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            box-sizing: border-box;
+            transform: scale(var(--paper-zoom, 1));
+            transform-origin: top center;
+            transition: transform 0.2s ease;
+        }
+
+        .markdown-body {
+            background: white !important;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            font-size: 16px;
+            line-height: 1.6;
+            color: #24292f;
+        }
+
+        .markdown-body h1 {
+            font-size: 2em;
+            margin-bottom: 16px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #d0d7de;
+        }
+
+        .markdown-body h2 {
+            font-size: 1.5em;
+            margin-top: 24px;
+            margin-bottom: 12px;
+        }
+
+        .markdown-body p {
+            margin-bottom: 16px;
+        }
+
+        .markdown-body table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 16px 0;
+        }
+
+        .markdown-body table th,
+        .markdown-body table td {
+            border: 1px solid #d0d7de;
+            padding: 8px 12px;
+        }
+
+        .markdown-body table th {
+            background: #f6f8fa;
+            font-weight: 600;
+        }
+
+        .markdown-body img {
+            max-width: 100%;
+            height: auto;
+        }
+
+        .markdown-body code {
+            background: #f6f8fa;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: monospace;
+        }
+
+        .slider-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        input[type="range"] {
+            flex: 1;
+            max-width: 400px;
+        }
+
+        .zoom-controls {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .zoom-label {
+            font-weight: 600;
+            min-width: 50px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🧪 Paper Layout Behavior Test</h1>
+        <p style="margin-bottom: 20px; color: #666;">
+            This mockup replicates your app's paper layout CSS. Resize the panel width and observe the behavior.
+        </p>
+
+        <div class="info">
+            <strong>Instructions:</strong><br>
+            1. Use the slider to change the "preview panel" width<br>
+            2. Watch how the paper (white box) behaves<br>
+            3. Try different zoom levels<br>
+            4. Check if text wraps, if scrollbars appear, etc.
+        </div>
+
+        <h2>Panel Width Control</h2>
+        <div class="slider-container">
+            <label>Panel Width:</label>
+            <input type="range" id="width-slider" min="300" max="1400" value="800" step="10">
+            <span id="width-value">800px</span>
+        </div>
+
+        <div class="controls">
+            <button onclick="setWidth(400)">Narrow (400px)</button>
+            <button onclick="setWidth(600)">Medium (600px)</button>
+            <button onclick="setWidth(800)">Wide (800px)</button>
+            <button onclick="setWidth(1200)">Extra Wide (1200px)</button>
+        </div>
+
+        <h2>Zoom Control</h2>
+        <div class="zoom-controls">
+            <button onclick="zoomOut()">Zoom Out (-)</button>
+            <button onclick="zoomIn()">Zoom In (+)</button>
+            <span class="zoom-label" id="zoom-label">100%</span>
+            <button onclick="resetZoom()">Reset (100%)</button>
+            <button onclick="fitToWidth()">Fit to Width</button>
+        </div>
+    </div>
+
+    <!-- Simulated Preview Panel -->
+    <div class="preview-panel-simulator" id="preview-panel">
+        <div class="width-indicator" id="width-indicator">
+            Panel: 800px | Paper: 21cm (793px) | Zoom: 100%
+        </div>
+
+        <!-- Paper with content -->
+        <div id="output" class="paper-layout-active">
+            <div class="markdown-body">
+                <h1>Sample Document Title</h1>
+                <p>This is a test document to observe how the paper layout behaves when you resize the preview panel. The paper should have a fixed width of 21cm (A4 width) by default.</p>
+
+                <h2>Text Wrapping Behavior</h2>
+                <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.</p>
+
+                <p>This paragraph contains a very long word to test wrapping: supercalifragilisticexpialidociousandthisisaverylongwordthatshouldbreakorwrapinsomeway.</p>
+
+                <h2>Table Example</h2>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Column 1</th>
+                            <th>Column 2</th>
+                            <th>Column 3</th>
+                            <th>Column 4</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Data 1</td>
+                            <td>Data 2</td>
+                            <td>Data 3</td>
+                            <td>Data 4</td>
+                        </tr>
+                        <tr>
+                            <td>More data</td>
+                            <td>Even more data</td>
+                            <td>Still more data</td>
+                            <td>Last column</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h2>Code Block</h2>
+                <p>Inline code: <code>const example = "This is a code snippet that might be long";</code></p>
+
+                <h2>More Content</h2>
+                <p>Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.</p>
+
+                <p>Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium, totam rem aperiam, eaque ipsa quae ab illo inventore veritatis et quasi architecto beatae vitae dicta sunt explicabo.</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const panel = document.getElementById('preview-panel');
+        const output = document.getElementById('output');
+        const slider = document.getElementById('width-slider');
+        const widthValue = document.getElementById('width-value');
+        const widthIndicator = document.getElementById('width-indicator');
+        const zoomLabel = document.getElementById('zoom-label');
+
+        let currentZoom = 100;
+        const paperWidthCm = 21;
+        const cmToPixels = 37.795275591; // 96 DPI conversion
+
+        function setWidth(width) {
+            panel.style.width = width + 'px';
+            slider.value = width;
+            updateDisplay();
+        }
+
+        function updateDisplay() {
+            const panelWidth = panel.offsetWidth;
+            const paperWidthPx = Math.round(paperWidthCm * cmToPixels);
+            widthValue.textContent = panelWidth + 'px';
+            widthIndicator.textContent = `Panel: ${panelWidth}px | Paper: ${paperWidthCm}cm (${paperWidthPx}px) | Zoom: ${currentZoom}%`;
+        }
+
+        function zoomIn() {
+            if (currentZoom < 200) {
+                currentZoom += 10;
+                applyZoom();
+            }
+        }
+
+        function zoomOut() {
+            if (currentZoom > 50) {
+                currentZoom -= 10;
+                applyZoom();
+            }
+        }
+
+        function resetZoom() {
+            currentZoom = 100;
+            applyZoom();
+        }
+
+        function fitToWidth() {
+            const panelWidth = panel.offsetWidth;
+            const paperWidthPx = paperWidthCm * cmToPixels;
+            const padding = 40;
+            const scale = ((panelWidth - padding) / paperWidthPx) * 100;
+            currentZoom = Math.max(50, Math.min(200, Math.round(scale)));
+            applyZoom();
+        }
+
+        function applyZoom() {
+            const scale = currentZoom / 100;
+            output.style.setProperty('--paper-zoom', scale);
+            zoomLabel.textContent = currentZoom + '%';
+            updateDisplay();
+        }
+
+        slider.addEventListener('input', (e) => {
+            setWidth(parseInt(e.target.value));
+        });
+
+        // Initialize
+        updateDisplay();
+
+        // Log observations
+        console.log('Paper Layout Test Initialized');
+        console.log('Paper width (CSS):', getComputedStyle(output).maxWidth);
+        console.log('Paper actual width:', output.offsetWidth + 'px');
+    </script>
+</body>
+</html>

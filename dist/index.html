@@ -25,6 +25,11 @@
           var PREVIEW_CSS_DARK = 'css/github-markdown-dark_dimmed.css?v=1.12.0';
           var PREVIEW_CSS_GITBOOK = 'css/gitbook-style.css?v=1.12.0';
           var PREVIEW_CSS_VSCODE = 'css/vscode-style.css?v=1.12.0';
+          var PREVIEW_CSS_NOTION = 'css/notion-style.css?v=1.12.0';
+          var PREVIEW_CSS_MEDIUM = 'css/medium-style.css?v=1.12.0';
+          var PREVIEW_CSS_LATEX = 'css/latex-style.css?v=1.12.0';
+          var PREVIEW_CSS_MINIMAL = 'css/minimal-style.css?v=1.12.0';
+          var PREVIEW_CSS_TYPEWRITER = 'css/typewriter-style.css?v=1.12.0';
           
           var styleRaw = localStorage.getItem(BOOT_STYLE_KEY);
           var style = styleRaw || 'github';
@@ -34,6 +39,16 @@
             href = PREVIEW_CSS_GITBOOK;
           } else if (style === 'vscode') {
             href = PREVIEW_CSS_VSCODE;
+          } else if (style === 'notion') {
+            href = PREVIEW_CSS_NOTION;
+          } else if (style === 'medium') {
+            href = PREVIEW_CSS_MEDIUM;
+          } else if (style === 'latex') {
+            href = PREVIEW_CSS_LATEX;
+          } else if (style === 'minimal') {
+            href = PREVIEW_CSS_MINIMAL;
+          } else if (style === 'typewriter') {
+            href = PREVIEW_CSS_TYPEWRITER;
           } else {
             href = useDark ? PREVIEW_CSS_DARK : PREVIEW_CSS_LIGHT;
           }
@@ -60,7 +75,6 @@
       })();
     </script>
     <link rel="stylesheet" type="text/css" href="css/style.css?v=1.12.0">
-    <link rel="stylesheet" type="text/css" href="css/vscode-style.css?v=1.12.0">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css" id="hljs-light-theme">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css" id="hljs-dark-theme" disabled>
     <link rel="icon" type="image/png" href="favicon.png">
@@ -72,7 +86,7 @@
       window.TurndownService = TurndownService;
     </script>
     <title>Markdown Live Preview</title>
-    <script type="module" crossorigin src="/assets/index-DTWPNMoy.js"></script>
+    <script type="module" crossorigin src="/assets/index-DohAjfbr.js"></script>
   </head>
 
   <body>
@@ -230,7 +244,9 @@
 
         <div id="preview" class="column preview-pane">
             <div id="preview-wrapper">
-                <div id="output" class="content markdown-body"></div>
+                <div id="paper-scaler">
+                    <div id="output" class="content markdown-body"></div>
+                </div>
             </div>
         </div>
 
@@ -514,6 +530,11 @@
                                     <option value="github">GitHub</option>
                                     <option value="gitbook">GitBook</option>
                                     <option value="vscode">VSCode</option>
+                                    <option value="notion">Notion</option>
+                                    <option value="medium">Medium</option>
+                                    <option value="latex">LaTeX</option>
+                                    <option value="minimal">Minimal</option>
+                                    <option value="typewriter">Typewriter</option>
                                 </select>
                             </label>
                         </div>

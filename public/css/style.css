@@ -2658,7 +2658,10 @@ footer {
 
 .preview-panel.paper-layout #preview-wrapper {
     background: transparent;
-    padding: 0;
+    padding: 20px 0; /* Reduced from 40px to 20px */
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
 }
 
 .preview-panel.paper-layout #preview-wrapper .markdown-body {
@@ -2667,16 +2670,21 @@ footer {
 
 /* Paper layout active - applies to #output element directly */
 #output.paper-layout-active {
-    max-width: var(--paper-width, 21cm);
+    width: var(--paper-width, 21cm);
     min-height: var(--paper-height, 29.7cm);
     margin: 0 auto;
     padding: var(--paper-margin-top, 2cm) var(--paper-margin-right, 2cm) var(--paper-margin-bottom, 2cm) var(--paper-margin-left, 2cm);
     background: white;
     box-shadow: 0 4px 12px rgba(0,0,0,0.15);
     box-sizing: border-box;
+}
+
+/* Paper scaler wrapper - handles the zoom/scale */
+#paper-scaler {
     transform: scale(var(--paper-zoom, 1));
     transform-origin: top center;
     transition: transform 0.2s ease;
+    display: inline-block;
 }
 
 #output.paper-layout-active .markdown-body {

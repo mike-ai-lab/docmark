@@ -16,10 +16,10 @@ const init = () => {
     let pageSetup = {
         width: 21.0,  // cm
         height: 29.7, // cm
-        marginTop: 4.5,
-        marginBottom: 2.54,
-        marginLeft: 2.54,
-        marginRight: 1.47
+        marginTop: 2.0,    // Reduced from 4.5cm
+        marginBottom: 2.0, // Reduced from 2.54cm
+        marginLeft: 2.0,   // Reduced from 2.54cm
+        marginRight: 2.0   // Reduced from 1.47cm
     };
 
     // Global drag state - only one resizer can be active at a time
@@ -586,17 +586,70 @@ This web site is using ${"`"}markedjs/marked${"`"}.
     
     // Apply zoom to paper layout
     const applyPaperZoom = () => {
-        const outputDiv = document.querySelector('#output');
+        console.log('[APPLY-ZOOM] applyPaperZoom called with zoom level:', paperZoomLevel, '%');
+        
+        const paperScaler = document.querySelector('#paper-scaler');
         const zoomLabel = document.querySelector('.paper-zoom-label');
         
-        if (outputDiv && outputDiv.classList.contains('paper-layout-active')) {
+        if (paperScaler) {
             const scale = paperZoomLevel / 100;
-            outputDiv.style.setProperty('--paper-zoom', scale);
+            paperScaler.style.transform = `scale(${scale})`;
+            console.log('[APPLY-ZOOM] Applied transform scale:', scale);
+        } else {
+            console.log('[APPLY-ZOOM] No paper-scaler element found');
         }
         
         if (zoomLabel) {
             zoomLabel.textContent = `${paperZoomLevel}%`;
         }
+    };
+    
+    // Auto-scale paper to fit preview panel width with equal margins
+    const autoScalePaperToFit = () => {
+        console.log('[AUTO-SCALE] autoScalePaperToFit called');
+        
+        const outputDiv = document.querySelector('#output');
+        const previewPane = document.querySelector('.preview-pane');
+        
+        if (!outputDiv || !previewPane || !outputDiv.classList.contains('paper-layout-active')) {
+            console.log('[AUTO-SCALE] Skipping - conditions not met:', {
+                hasOutput: !!outputDiv,
+                hasPreviewPane: !!previewPane,
+                isPaperActive: outputDiv?.classList.contains('paper-layout-active')
+            });
+            return;
+        }
+        
+        // Get the actual available width (accounting for scrollbar and padding)
+        const previewWrapper = document.querySelector('#preview-wrapper');
+        const availableWidth = previewWrapper ? previewWrapper.clientWidth : previewPane.clientWidth;
+        
+        console.log('[AUTO-SCALE] Available width:', availableWidth);
+        
+        // Get the paper width in pixels (convert from cm)
+        const pageWidthCm = pageSetup.width;
+        const pageWidthPx = pageWidthCm * 37.795275591; // cm to pixels at 96 DPI
+        
+        console.log('[AUTO-SCALE] Page width:', pageWidthCm, 'cm =', pageWidthPx, 'px');
+        
+        // Calculate scale to fit with minimal margins (20px on each side)
+        const desiredMargin = 20; // Reduced from 40px
+        const targetWidth = availableWidth - (desiredMargin * 2);
+        
+        console.log('[AUTO-SCALE] Target width (with margins):', targetWidth);
+        
+        // Calculate the scale percentage
+        const scale = (targetWidth / pageWidthPx) * 100;
+        
+        console.log('[AUTO-SCALE] Calculated scale:', scale, '%');
+        
+        // Clamp between 50% and 200%
+        const oldZoom = paperZoomLevel;
+        paperZoomLevel = Math.max(50, Math.min(200, Math.round(scale)));
+        
+        console.log('[AUTO-SCALE] Zoom level changed from', oldZoom, '% to', paperZoomLevel, '%');
+        
+        applyPaperZoom();
     };
 
     // Render markdown text as html with accurate line mapping
@@ -1889,6 +1942,11 @@ let performBeautify = (content) => {
     const PREVIEW_CSS_DARK = 'css/github-markdown-dark_dimmed.css?v=1.12.0';
     const PREVIEW_CSS_GITBOOK = 'css/gitbook-style.css?v=1.12.0';
     const PREVIEW_CSS_VSCODE = 'css/vscode-style.css?v=1.12.0';
+    const PREVIEW_CSS_NOTION = 'css/notion-style.css?v=1.12.0';
+    const PREVIEW_CSS_MEDIUM = 'css/medium-style.css?v=1.12.0';
+    const PREVIEW_CSS_LATEX = 'css/latex-style.css?v=1.12.0';
+    const PREVIEW_CSS_MINIMAL = 'css/minimal-style.css?v=1.12.0';
+    const PREVIEW_CSS_TYPEWRITER = 'css/typewriter-style.css?v=1.12.0';
 
     let currentStyle = 'github'; // default style
 
@@ -1916,6 +1974,16 @@ let performBeautify = (content) => {
             return PREVIEW_CSS_GITBOOK;
         } else if (style === 'vscode') {
             return PREVIEW_CSS_VSCODE;
+        } else if (style === 'notion') {
+            return PREVIEW_CSS_NOTION;
+        } else if (style === 'medium') {
+            return PREVIEW_CSS_MEDIUM;
+        } else if (style === 'latex') {
+            return PREVIEW_CSS_LATEX;
+        } else if (style === 'minimal') {
+            return PREVIEW_CSS_MINIMAL;
+        } else if (style === 'typewriter') {
+            return PREVIEW_CSS_TYPEWRITER;
         } else {
             // github style
             return useDark ? PREVIEW_CSS_DARK : PREVIEW_CSS_LIGHT;
@@ -1972,26 +2040,66 @@ let performBeautify = (content) => {
             github: {
                 name: 'GitHub Style',
                 description: 'Traditional, balanced, professional',
-                fonts: 'Helvetica (Sans-serif)',
-                textSize: '11pt body, 20pt H1',
+                fonts: 'System Sans-serif',
+                textSize: '16px body, 2em H1',
                 features: 'Full table borders, gray header backgrounds',
                 bestFor: 'Documentation, README files, general content'
             },
             gitbook: {
                 name: 'GitBook Style',
                 description: 'Modern, clean, book-like',
-                fonts: 'Helvetica (Sans-serif)',
-                textSize: '10pt body, 18pt H1',
+                fonts: 'System Sans-serif',
+                textSize: '16px body, 2em H1',
                 features: 'Horizontal table borders, minimal styling',
                 bestFor: 'Books, guides, long-form documentation'
             },
             vscode: {
                 name: 'VS Code Style',
                 description: 'Compact, technical, code-focused',
-                fonts: 'Courier (Monospace)',
-                textSize: '8pt body, 12pt H1',
+                fonts: 'System Sans-serif',
+                textSize: '14px body, 2em H1',
                 features: 'Minimal borders, tight spacing',
                 bestFor: 'Technical docs, code-heavy content'
+            },
+            notion: {
+                name: 'Notion Style',
+                description: 'Clean, modern, workspace-inspired',
+                fonts: 'UI Sans-serif',
+                textSize: '16px body, 2.5em H1',
+                features: 'Minimal borders, spacious layout',
+                bestFor: 'Notes, wikis, knowledge bases'
+            },
+            medium: {
+                name: 'Medium Style',
+                description: 'Elegant, readable, article-focused',
+                fonts: 'Charter, Georgia (Serif)',
+                textSize: '21px body, 2.5em H1',
+                features: 'Large text, generous spacing',
+                bestFor: 'Blog posts, articles, long-form writing'
+            },
+            latex: {
+                name: 'LaTeX Style',
+                description: 'Academic, formal, paper-like',
+                fonts: 'Times New Roman (Serif)',
+                textSize: '12pt body, 2em H1',
+                features: 'Justified text, formal layout',
+                bestFor: 'Academic papers, research documents'
+            },
+            minimal: {
+                name: 'Minimal Style',
+                description: 'Simple, clean, distraction-free',
+                fonts: 'System Sans-serif',
+                textSize: '16px body, 2.25em H1',
+                features: 'Clean borders, balanced spacing',
+                bestFor: 'General writing, drafts, notes'
+            },
+            typewriter: {
+                name: 'Typewriter Style',
+                description: 'Retro, monospace, vintage',
+                fonts: 'Courier (Monospace)',
+                textSize: '14px body, 2em H1',
+                features: 'Monospace font, vintage aesthetic',
+                bestFor: 'Creative writing, scripts, retro documents'
             }
         };
         
@@ -2345,6 +2453,16 @@ let performBeautify = (content) => {
             cssUrl = PREVIEW_CSS_GITBOOK;
         } else if (style === 'vscode') {
             cssUrl = PREVIEW_CSS_VSCODE;
+        } else if (style === 'notion') {
+            cssUrl = PREVIEW_CSS_NOTION;
+        } else if (style === 'medium') {
+            cssUrl = PREVIEW_CSS_MEDIUM;
+        } else if (style === 'latex') {
+            cssUrl = PREVIEW_CSS_LATEX;
+        } else if (style === 'minimal') {
+            cssUrl = PREVIEW_CSS_MINIMAL;
+        } else if (style === 'typewriter') {
+            cssUrl = PREVIEW_CSS_TYPEWRITER;
         } else {
             cssUrl = isDark ? PREVIEW_CSS_DARK : PREVIEW_CSS_LIGHT;
         }
@@ -5518,25 +5636,80 @@ ${fontLinkTags}
     
     // Update preview layout
     const updatePreviewLayout = () => {
+        console.log('[PAPER LAYOUT] updatePreviewLayout called, previewLayout:', previewLayout);
+        
         const previewPanel = document.querySelector('.preview-pane');
         const paperControls = document.querySelector('.paper-controls');
         const layoutModeLabel = document.getElementById('status-layout-mode');
         const outputDiv = document.querySelector('#output');
+        const previewWrapper = document.querySelector('#preview-wrapper');
         
         if (previewLayout === 'paper') {
+            console.log('[PAPER LAYOUT] Applying paper layout...');
+            
             if (previewPanel) previewPanel.classList.add('paper-layout');
             if (paperControls) paperControls.classList.add('visible');
             if (layoutModeLabel) layoutModeLabel.textContent = 'Paper Layout';
+            
             if (outputDiv) {
                 outputDiv.classList.add('paper-layout-active');
                 applyPaperZoom();
+                
+                // APPLY OPTION 1 CSS DIRECTLY
+                if (previewWrapper) {
+                    console.log('[PAPER LAYOUT] Applying Option 1 CSS to preview-wrapper');
+                    previewWrapper.style.display = 'flex';
+                    previewWrapper.style.justifyContent = 'center';
+                    previewWrapper.style.alignItems = 'flex-start';
+                    previewWrapper.style.textAlign = '';
+                    previewWrapper.style.padding = '20px 0';
+                    
+                    console.log('[PAPER LAYOUT] Preview wrapper styles:', {
+                        display: previewWrapper.style.display,
+                        justifyContent: previewWrapper.style.justifyContent,
+                        alignItems: previewWrapper.style.alignItems,
+                        padding: previewWrapper.style.padding
+                    });
+                }
+                
+                if (outputDiv) {
+                    outputDiv.style.margin = '0 auto';
+                    outputDiv.style.display = '';
+                    outputDiv.style.position = '';
+                    outputDiv.style.left = '';
+                    outputDiv.style.transform = '';
+                    
+                    console.log('[PAPER LAYOUT] Output div styles:', {
+                        margin: outputDiv.style.margin,
+                        display: outputDiv.style.display
+                    });
+                }
+                
+                // Auto-scale to fit panel width after layout is applied
+                setTimeout(() => {
+                    console.log('[PAPER LAYOUT] Calling autoScalePaperToFit after 100ms delay');
+                    autoScalePaperToFit();
+                }, 100);
             }
         } else {
+            console.log('[PAPER LAYOUT] Removing paper layout...');
+            
             if (previewPanel) previewPanel.classList.remove('paper-layout');
             if (paperControls) paperControls.classList.remove('visible');
             if (layoutModeLabel) layoutModeLabel.textContent = 'Web Layout';
+            
             if (outputDiv) {
                 outputDiv.classList.remove('paper-layout-active');
+            }
+            
+            // Reset wrapper styles
+            if (previewWrapper) {
+                console.log('[PAPER LAYOUT] Resetting preview-wrapper styles');
+                previewWrapper.style.display = '';
+                previewWrapper.style.justifyContent = '';
+                previewWrapper.style.alignItems = '';
+                previewWrapper.style.textAlign = '';
+                previewWrapper.style.padding = '';
             }
         }
         
@@ -5640,7 +5813,7 @@ ${fontLinkTags}
             layoutModeItem.title = 'Click to toggle between Web and Paper layout';
         }
         
-        // Create paper controls overlay
+        // Create paper controls overlay with test buttons
         const controlsHtml = `
             <div class="paper-controls">
                 <button class="paper-control-btn" id="paper-zoom-out" title="Zoom Out (-)">
@@ -5686,6 +5859,15 @@ ${fontLinkTags}
                         <line x1="9" y1="15" x2="15" y2="15"></line>
                     </svg>
                 </button>
+                <div class="paper-control-separator"></div>
+                <div style="display: flex; gap: 4px; align-items: center;">
+                    <span style="font-size: 11px; color: #666; font-weight: 600;">TEST:</span>
+                    <button class="paper-control-btn" id="test-option-1" title="Option 1: Flex Center" style="font-size: 10px; padding: 4px 8px;">1</button>
+                    <button class="paper-control-btn" id="test-option-2" title="Option 2: Text Align" style="font-size: 10px; padding: 4px 8px;">2</button>
+                    <button class="paper-control-btn" id="test-option-3" title="Option 3: Grid Center" style="font-size: 10px; padding: 4px 8px;">3</button>
+                    <button class="paper-control-btn" id="test-option-4" title="Option 4: Absolute Center" style="font-size: 10px; padding: 4px 8px;">4</button>
+                    <button class="paper-control-btn" id="test-reset" title="Reset to Default" style="font-size: 10px; padding: 4px 8px; background: #ef4444;">X</button>
+                </div>
             </div>
         `;
         
@@ -5697,6 +5879,103 @@ ${fontLinkTags}
         document.getElementById('paper-fit-width').addEventListener('click', fitToWidth);
         document.getElementById('paper-reset-zoom').addEventListener('click', resetZoom);
         document.getElementById('paper-page-setup').addEventListener('click', openPageSetupModal);
+        
+        // Test option buttons
+        document.getElementById('test-option-1').addEventListener('click', () => {
+            const wrapper = document.querySelector('#preview-wrapper');
+            const output = document.querySelector('#output');
+            if (wrapper && output) {
+                // Option 1: Flex with justify-content center
+                wrapper.style.display = 'flex';
+                wrapper.style.justifyContent = 'center';
+                wrapper.style.alignItems = 'flex-start';
+                wrapper.style.textAlign = '';
+                output.style.margin = '0';
+                output.style.position = '';
+                output.style.left = '';
+                output.style.transform = '';
+                console.log('Applied Option 1: Flex Center');
+                alert('Option 1 Applied: Flex with justify-content center');
+            }
+        });
+        
+        document.getElementById('test-option-2').addEventListener('click', () => {
+            const wrapper = document.querySelector('#preview-wrapper');
+            const output = document.querySelector('#output');
+            if (wrapper && output) {
+                // Option 2: Text align center with inline-block
+                wrapper.style.display = 'block';
+                wrapper.style.textAlign = 'center';
+                wrapper.style.justifyContent = '';
+                wrapper.style.alignItems = '';
+                output.style.display = 'inline-block';
+                output.style.margin = '0';
+                output.style.position = '';
+                output.style.left = '';
+                output.style.transform = '';
+                console.log('Applied Option 2: Text Align Center');
+                alert('Option 2 Applied: Text align center with inline-block');
+            }
+        });
+        
+        document.getElementById('test-option-3').addEventListener('click', () => {
+            const wrapper = document.querySelector('#preview-wrapper');
+            const output = document.querySelector('#output');
+            if (wrapper && output) {
+                // Option 3: CSS Grid with place-items center
+                wrapper.style.display = 'grid';
+                wrapper.style.placeItems = 'start center';
+                wrapper.style.textAlign = '';
+                wrapper.style.justifyContent = '';
+                wrapper.style.alignItems = '';
+                output.style.margin = '0';
+                output.style.position = '';
+                output.style.left = '';
+                output.style.transform = '';
+                console.log('Applied Option 3: Grid Center');
+                alert('Option 3 Applied: CSS Grid with place-items');
+            }
+        });
+        
+        document.getElementById('test-option-4').addEventListener('click', () => {
+            const wrapper = document.querySelector('#preview-wrapper');
+            const output = document.querySelector('#output');
+            if (wrapper && output) {
+                // Option 4: Absolute positioning with transform
+                wrapper.style.display = 'block';
+                wrapper.style.position = 'relative';
+                wrapper.style.textAlign = '';
+                wrapper.style.justifyContent = '';
+                wrapper.style.alignItems = '';
+                output.style.position = 'absolute';
+                output.style.left = '50%';
+                output.style.transform = 'translateX(-50%)';
+                output.style.margin = '0';
+                console.log('Applied Option 4: Absolute Center');
+                alert('Option 4 Applied: Absolute positioning with transform');
+            }
+        });
+        
+        document.getElementById('test-reset').addEventListener('click', () => {
+            const wrapper = document.querySelector('#preview-wrapper');
+            const output = document.querySelector('#output');
+            if (wrapper && output) {
+                // Reset to default
+                wrapper.style.display = '';
+                wrapper.style.justifyContent = '';
+                wrapper.style.alignItems = '';
+                wrapper.style.textAlign = '';
+                wrapper.style.position = '';
+                wrapper.style.placeItems = '';
+                output.style.display = '';
+                output.style.margin = '';
+                output.style.position = '';
+                output.style.left = '';
+                output.style.transform = '';
+                console.log('Reset to default styles');
+                alert('Reset to Default CSS');
+            }
+        });
     };
     
     // Initialize paper layout after DOM is ready
@@ -6632,6 +6911,8 @@ ${fontLinkTags}
     document.addEventListener('mousemove', (e) => {
         if (!activeResizer) return;
         e.preventDefault();
+        
+        console.log('[DRAG] Mouse move during drag');
         
         const containerRect = activeResizer.container.getBoundingClientRect();
         const dividerWidth = activeResizer.divider.offsetWidth;
