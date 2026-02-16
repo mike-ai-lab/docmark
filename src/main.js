@@ -5655,22 +5655,7 @@ ${fontLinkTags}
                 outputDiv.classList.add('paper-layout-active');
                 applyPaperZoom();
                 
-                // APPLY OPTION 1 CSS DIRECTLY
-                if (previewWrapper) {
-                    console.log('[PAPER LAYOUT] Applying Option 1 CSS to preview-wrapper');
-                    previewWrapper.style.display = 'flex';
-                    previewWrapper.style.justifyContent = 'center';
-                    previewWrapper.style.alignItems = 'flex-start';
-                    previewWrapper.style.textAlign = '';
-                    previewWrapper.style.padding = '20px 0';
-                    
-                    console.log('[PAPER LAYOUT] Preview wrapper styles:', {
-                        display: previewWrapper.style.display,
-                        justifyContent: previewWrapper.style.justifyContent,
-                        alignItems: previewWrapper.style.alignItems,
-                        padding: previewWrapper.style.padding
-                    });
-                }
+                console.log('[PAPER LAYOUT] Paper layout activated');
                 
                 if (outputDiv) {
                     outputDiv.style.margin = '0 auto';
@@ -5684,12 +5669,6 @@ ${fontLinkTags}
                         display: outputDiv.style.display
                     });
                 }
-                
-                // Auto-scale to fit panel width after layout is applied
-                setTimeout(() => {
-                    console.log('[PAPER LAYOUT] Calling autoScalePaperToFit after 100ms delay');
-                    autoScalePaperToFit();
-                }, 100);
             }
         } else {
             console.log('[PAPER LAYOUT] Removing paper layout...');
@@ -5722,6 +5701,7 @@ ${fontLinkTags}
     
     // Zoom in
     const zoomIn = () => {
+        console.log('[ZOOM-IN] Button clicked, current zoom:', paperZoomLevel);
         if (paperZoomLevel < 200) {
             paperZoomLevel += 10;
             applyPaperZoom();
@@ -5731,6 +5711,7 @@ ${fontLinkTags}
     
     // Zoom out
     const zoomOut = () => {
+        console.log('[ZOOM-OUT] Button clicked, current zoom:', paperZoomLevel);
         if (paperZoomLevel > 50) {
             paperZoomLevel -= 10;
             applyPaperZoom();
@@ -5740,6 +5721,7 @@ ${fontLinkTags}
     
     // Fit to width
     const fitToWidth = () => {
+        console.log('[FIT-TO-WIDTH] Button clicked');
         const previewPanel = document.querySelector('.preview-pane');
         if (!previewPanel) return;
         
@@ -5749,6 +5731,7 @@ ${fontLinkTags}
         
         const scale = ((panelWidth - padding) / pageWidth) * 100;
         paperZoomLevel = Math.max(50, Math.min(200, Math.round(scale)));
+        console.log('[FIT-TO-WIDTH] Calculated zoom:', paperZoomLevel);
         applyPaperZoom();
         savePaperLayoutSettings();
     };
@@ -5859,15 +5842,6 @@ ${fontLinkTags}
                         <line x1="9" y1="15" x2="15" y2="15"></line>
                     </svg>
                 </button>
-                <div class="paper-control-separator"></div>
-                <div style="display: flex; gap: 4px; align-items: center;">
-                    <span style="font-size: 11px; color: #666; font-weight: 600;">TEST:</span>
-                    <button class="paper-control-btn" id="test-option-1" title="Option 1: Flex Center" style="font-size: 10px; padding: 4px 8px;">1</button>
-                    <button class="paper-control-btn" id="test-option-2" title="Option 2: Text Align" style="font-size: 10px; padding: 4px 8px;">2</button>
-                    <button class="paper-control-btn" id="test-option-3" title="Option 3: Grid Center" style="font-size: 10px; padding: 4px 8px;">3</button>
-                    <button class="paper-control-btn" id="test-option-4" title="Option 4: Absolute Center" style="font-size: 10px; padding: 4px 8px;">4</button>
-                    <button class="paper-control-btn" id="test-reset" title="Reset to Default" style="font-size: 10px; padding: 4px 8px; background: #ef4444;">X</button>
-                </div>
             </div>
         `;
         
@@ -5879,103 +5853,6 @@ ${fontLinkTags}
         document.getElementById('paper-fit-width').addEventListener('click', fitToWidth);
         document.getElementById('paper-reset-zoom').addEventListener('click', resetZoom);
         document.getElementById('paper-page-setup').addEventListener('click', openPageSetupModal);
-        
-        // Test option buttons
-        document.getElementById('test-option-1').addEventListener('click', () => {
-            const wrapper = document.querySelector('#preview-wrapper');
-            const output = document.querySelector('#output');
-            if (wrapper && output) {
-                // Option 1: Flex with justify-content center
-                wrapper.style.display = 'flex';
-                wrapper.style.justifyContent = 'center';
-                wrapper.style.alignItems = 'flex-start';
-                wrapper.style.textAlign = '';
-                output.style.margin = '0';
-                output.style.position = '';
-                output.style.left = '';
-                output.style.transform = '';
-                console.log('Applied Option 1: Flex Center');
-                alert('Option 1 Applied: Flex with justify-content center');
-            }
-        });
-        
-        document.getElementById('test-option-2').addEventListener('click', () => {
-            const wrapper = document.querySelector('#preview-wrapper');
-            const output = document.querySelector('#output');
-            if (wrapper && output) {
-                // Option 2: Text align center with inline-block
-                wrapper.style.display = 'block';
-                wrapper.style.textAlign = 'center';
-                wrapper.style.justifyContent = '';
-                wrapper.style.alignItems = '';
-                output.style.display = 'inline-block';
-                output.style.margin = '0';
-                output.style.position = '';
-                output.style.left = '';
-                output.style.transform = '';
-                console.log('Applied Option 2: Text Align Center');
-                alert('Option 2 Applied: Text align center with inline-block');
-            }
-        });
-        
-        document.getElementById('test-option-3').addEventListener('click', () => {
-            const wrapper = document.querySelector('#preview-wrapper');
-            const output = document.querySelector('#output');
-            if (wrapper && output) {
-                // Option 3: CSS Grid with place-items center
-                wrapper.style.display = 'grid';
-                wrapper.style.placeItems = 'start center';
-                wrapper.style.textAlign = '';
-                wrapper.style.justifyContent = '';
-                wrapper.style.alignItems = '';
-                output.style.margin = '0';
-                output.style.position = '';
-                output.style.left = '';
-                output.style.transform = '';
-                console.log('Applied Option 3: Grid Center');
-                alert('Option 3 Applied: CSS Grid with place-items');
-            }
-        });
-        
-        document.getElementById('test-option-4').addEventListener('click', () => {
-            const wrapper = document.querySelector('#preview-wrapper');
-            const output = document.querySelector('#output');
-            if (wrapper && output) {
-                // Option 4: Absolute positioning with transform
-                wrapper.style.display = 'block';
-                wrapper.style.position = 'relative';
-                wrapper.style.textAlign = '';
-                wrapper.style.justifyContent = '';
-                wrapper.style.alignItems = '';
-                output.style.position = 'absolute';
-                output.style.left = '50%';
-                output.style.transform = 'translateX(-50%)';
-                output.style.margin = '0';
-                console.log('Applied Option 4: Absolute Center');
-                alert('Option 4 Applied: Absolute positioning with transform');
-            }
-        });
-        
-        document.getElementById('test-reset').addEventListener('click', () => {
-            const wrapper = document.querySelector('#preview-wrapper');
-            const output = document.querySelector('#output');
-            if (wrapper && output) {
-                // Reset to default
-                wrapper.style.display = '';
-                wrapper.style.justifyContent = '';
-                wrapper.style.alignItems = '';
-                wrapper.style.textAlign = '';
-                wrapper.style.position = '';
-                wrapper.style.placeItems = '';
-                output.style.display = '';
-                output.style.margin = '';
-                output.style.position = '';
-                output.style.left = '';
-                output.style.transform = '';
-                console.log('Reset to default styles');
-                alert('Reset to Default CSS');
-            }
-        });
     };
     
     // Initialize paper layout after DOM is ready

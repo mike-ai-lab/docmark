@@ -2662,6 +2662,8 @@ footer {
     display: flex;
     justify-content: center;
     align-items: flex-start;
+    overflow-x: auto; /* Allow horizontal scroll when panel is too small */
+    min-width: 0; /* Allow flex item to shrink */
 }
 
 .preview-panel.paper-layout #preview-wrapper .markdown-body {
@@ -2685,6 +2687,7 @@ footer {
     transform-origin: top center;
     transition: transform 0.2s ease;
     display: inline-block;
+    margin: 0 20px; /* Minimum 20px margin on each side to prevent clipping */
 }
 
 #output.paper-layout-active .markdown-body {

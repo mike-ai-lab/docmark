@@ -1,0 +1,115 @@
+02:19:21.461 Navigated to http://localhost:5173/
+02:19:25.174 main.js:5639 [PAPER LAYOUT] updatePreviewLayout called, previewLayout: paper
+02:19:25.175 main.js:5648 [PAPER LAYOUT] Applying paper layout...
+02:19:25.175 main.js:589 [APPLY-ZOOM] applyPaperZoom called with zoom level: 51 %
+02:19:25.176 main.js:597 [APPLY-ZOOM] Applied transform scale: 0.51
+02:19:25.176 main.js:5658 [PAPER LAYOUT] Paper layout activated
+02:19:25.176 main.js:5667 [PAPER LAYOUT] Output div styles: {margin: '0px auto', display: ''}
+02:19:25.188 main.js:5639 [PAPER LAYOUT] updatePreviewLayout called, previewLayout: paper
+02:19:25.188 main.js:5648 [PAPER LAYOUT] Applying paper layout...
+02:19:25.188 main.js:589 [APPLY-ZOOM] applyPaperZoom called with zoom level: 51 %
+02:19:25.188 main.js:597 [APPLY-ZOOM] Applied transform scale: 0.51
+02:19:25.189 main.js:5658 [PAPER LAYOUT] Paper layout activated
+02:19:25.189 main.js:5667 [PAPER LAYOUT] Output div styles: {margin: '0px auto', display: ''}
+02:19:28.879 main.js:5724 [FIT-TO-WIDTH] Button clicked
+02:19:28.880 main.js:5734 [FIT-TO-WIDTH] Calculated zoom: 50
+02:19:28.880 main.js:589 [APPLY-ZOOM] applyPaperZoom called with zoom level: 50 %
+02:19:28.881 main.js:597 [APPLY-ZOOM] Applied transform scale: 0.5
+02:19:29.765 main.js:589 [APPLY-ZOOM] applyPaperZoom called with zoom level: 100 %
+02:19:29.765 main.js:597 [APPLY-ZOOM] Applied transform scale: 1
+02:19:31.100 main.js:6801 [DRAG] Mouse move during drag
+02:19:31.110 main.js:6801 [DRAG] Mouse move during drag
+02:19:31.125 main.js:6801 [DRAG] Mouse move during drag
+02:19:31.173 main.js:6801 [DRAG] Mouse move during drag
+02:19:31.196 main.js:6801 [DRAG] Mouse move during drag
+02:19:31.204 main.js:6801 [DRAG] Mouse move during drag
+02:19:31.208 main.js:6801 [DRAG] Mouse move during drag
+02:19:31.264 main.js:6801 [DRAG] Mouse move during drag
+02:19:31.319 main.js:6801 [DRAG] Mouse move during drag
+02:19:31.327 main.js:6801 [DRAG] Mouse move during drag
+02:19:31.526 main.js:6801 [DRAG] Mouse move during drag
+02:19:31.555 main.js:6801 [DRAG] Mouse move during drag
+02:19:31.558 main.js:6801 [DRAG] Mouse move during drag
+02:19:31.566 main.js:6801 [DRAG] Mouse move during drag
+02:19:31.593 main.js:6801 [DRAG] Mouse move during drag
+02:19:31.625 main.js:6801 [DRAG] Mouse move during drag
+02:19:31.659 main.js:6801 [DRAG] Mouse move during drag
+02:19:31.665 main.js:6801 [DRAG] Mouse move during drag
+02:19:31.670 main.js:6801 [DRAG] Mouse move during drag
+02:19:31.681 main.js:6801 [DRAG] Mouse move during drag
+02:19:31.720 main.js:6801 [DRAG] Mouse move during drag
+02:19:31.797 main.js:6801 [DRAG] Mouse move during drag
+02:19:31.806 main.js:6801 [DRAG] Mouse move during drag
+02:19:31.824 main.js:6801 [DRAG] Mouse move during drag
+02:19:31.830 main.js:6801 [DRAG] Mouse move during drag
+02:19:31.864 main.js:6801 [DRAG] Mouse move during drag
+02:19:31.925 main.js:6801 [DRAG] Mouse move during drag
+02:19:31.949 main.js:6801 [DRAG] Mouse move during drag
+02:19:32.033 main.js:6801 [DRAG] Mouse move during drag
+02:19:32.046 main.js:6801 [DRAG] Mouse move during drag
+02:19:32.141 main.js:6801 [DRAG] Mouse move during drag
+02:19:32.209 main.js:6801 [DRAG] Mouse move during drag
+02:19:33.248 main.js:589 [APPLY-ZOOM] applyPaperZoom called with zoom level: 100 %
+02:19:33.248 main.js:597 [APPLY-ZOOM] Applied transform scale: 1
+02:19:34.021 main.js:5724 [FIT-TO-WIDTH] Button clicked
+02:19:34.022 main.js:5734 [FIT-TO-WIDTH] Calculated zoom: 50
+02:19:34.022 main.js:589 [APPLY-ZOOM] applyPaperZoom called with zoom level: 50 %
+02:19:34.023 main.js:597 [APPLY-ZOOM] Applied transform scale: 0.5
+02:19:36.869 main.js:5714 [ZOOM-OUT] Button clicked, current zoom: 50
+02:19:37.405 main.js:5714 [ZOOM-OUT] Button clicked, current zoom: 50
+02:19:37.877 main.js:5704 [ZOOM-IN] Button clicked, current zoom: 50
+02:19:37.877 main.js:589 [APPLY-ZOOM] applyPaperZoom called with zoom level: 60 %
+02:19:37.878 main.js:597 [APPLY-ZOOM] Applied transform scale: 0.6
+02:19:38.077 main.js:5704 [ZOOM-IN] Button clicked, current zoom: 60
+02:19:38.077 main.js:589 [APPLY-ZOOM] applyPaperZoom called with zoom level: 70 %
+02:19:38.078 main.js:597 [APPLY-ZOOM] Applied transform scale: 0.7
+02:19:38.493 main.js:5704 [ZOOM-IN] Button clicked, current zoom: 70
+02:19:38.493 main.js:589 [APPLY-ZOOM] applyPaperZoom called with zoom level: 80 %
+02:19:38.493 main.js:597 [APPLY-ZOOM] Applied transform scale: 0.8
+02:19:38.677 main.js:5704 [ZOOM-IN] Button clicked, current zoom: 80
+02:19:38.677 main.js:589 [APPLY-ZOOM] applyPaperZoom called with zoom level: 90 %
+02:19:38.677 main.js:597 [APPLY-ZOOM] Applied transform scale: 0.9
+02:19:38.845 main.js:5704 [ZOOM-IN] Button clicked, current zoom: 90
+02:19:38.845 main.js:589 [APPLY-ZOOM] applyPaperZoom called with zoom level: 100 %
+02:19:38.845 main.js:597 [APPLY-ZOOM] Applied transform scale: 1
+02:19:39.015 main.js:5704 [ZOOM-IN] Button clicked, current zoom: 100
+02:19:39.015 main.js:589 [APPLY-ZOOM] applyPaperZoom called with zoom level: 110 %
+02:19:39.015 main.js:597 [APPLY-ZOOM] Applied transform scale: 1.1
+02:19:40.226 main.js:6801 [DRAG] Mouse move during drag
+02:19:40.230 main.js:6801 [DRAG] Mouse move during drag
+02:19:40.249 main.js:6801 [DRAG] Mouse move during drag
+02:19:40.263 main.js:6801 [DRAG] Mouse move during drag
+02:19:40.298 main.js:6801 [DRAG] Mouse move during drag
+02:19:40.302 main.js:6801 [DRAG] Mouse move during drag
+02:19:40.314 main.js:6801 [DRAG] Mouse move during drag
+02:19:40.332 main.js:6801 [DRAG] Mouse move during drag
+02:19:40.337 main.js:6801 [DRAG] Mouse move during drag
+02:19:40.351 main.js:6801 [DRAG] Mouse move during drag
+02:19:40.425 main.js:6801 [DRAG] Mouse move during drag
+02:19:40.431 main.js:6801 [DRAG] Mouse move during drag
+02:19:40.452 main.js:6801 [DRAG] Mouse move during drag
+02:19:40.455 main.js:6801 [DRAG] Mouse move during drag
+02:19:40.482 main.js:6801 [DRAG] Mouse move during drag
+02:19:40.548 main.js:6801 [DRAG] Mouse move during drag
+02:19:40.552 main.js:6801 [DRAG] Mouse move during drag
+02:19:40.563 main.js:6801 [DRAG] Mouse move during drag
+02:19:40.663 main.js:6801 [DRAG] Mouse move during drag
+02:19:40.677 main.js:6801 [DRAG] Mouse move during drag
+02:19:40.679 main.js:6801 [DRAG] Mouse move during drag
+02:19:40.686 main.js:6801 [DRAG] Mouse move during drag
+02:19:40.699 main.js:6801 [DRAG] Mouse move during drag
+02:19:40.702 main.js:6801 [DRAG] Mouse move during drag
+02:19:40.710 main.js:6801 [DRAG] Mouse move during drag
+02:19:40.745 main.js:6801 [DRAG] Mouse move during drag
+02:19:40.751 main.js:6801 [DRAG] Mouse move during drag
+02:19:40.753 main.js:6801 [DRAG] Mouse move during drag
+02:19:40.757 main.js:6801 [DRAG] Mouse move during drag
+02:19:40.785 main.js:6801 [DRAG] Mouse move during drag
+02:19:40.790 main.js:6801 [DRAG] Mouse move during drag
+02:19:40.838 main.js:6801 [DRAG] Mouse move during drag
+02:19:40.861 main.js:6801 [DRAG] Mouse move during drag
+02:19:40.906 main.js:6801 [DRAG] Mouse move during drag
+02:19:40.966 main.js:6801 [DRAG] Mouse move during drag
+02:19:41.006 main.js:6801 [DRAG] Mouse move during drag
+02:19:41.078 main.js:6801 [DRAG] Mouse move during drag
+02:19:41.214 main.js:6801 [DRAG] Mouse move during drag
