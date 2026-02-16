@@ -10,7 +10,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "serve-dist": "http-server dist -p 5001 -c-1",
-    "build-and-serve": "npm run build && npm run serve-dist"
+    "build-and-serve": "npm run build && npm run serve-dist",
+    "pdf-server": "node pdf-server.js"
   },
   "repository": {
     "type": "git",

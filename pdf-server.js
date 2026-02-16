@@ -111,11 +111,20 @@ app.post('/generate-pdf', async (req, res) => {
             }
         `;
         
-        // Load HTML
+        // Load HTML with increased timeout for large documents
+        // CRITICAL: Use 'networkidle0' to ensure fonts are loaded
+        // @import in CSS doesn't work with Puppeteer - fonts must be loaded via <link> tags
         await page.setContent(html, {
-            waitUntil: 'networkidle0',
-            timeout: 30000
+            waitUntil: 'networkidle0', // Wait for all network requests (including fonts)
+            timeout: 120000 // 2 minutes for large HTML
         });
+        
+        // Wait for fonts to be fully loaded
+        console.log('⏳ Waiting for fonts to load...');
+        await page.evaluate(() => document.fonts.ready);
+        
+        // Small delay to ensure rendering is complete
+        await new Promise(resolve => setTimeout(resolve, 100));
         
         // Add print CSS
         await page.addStyleTag({ content: printCSS });
@@ -156,17 +165,38 @@ app.post('/generate-pdf', async (req, res) => {
     }
 });
 
-// Start server
-app.listen(PORT, () => {
-    console.log('\n🚀 PDF Export Server Started');
-    console.log(`📍 Server running at http://localhost:${PORT}`);
-    console.log(`🏥 Health check: http://localhost:${PORT}/health`);
-    console.log(`📄 Generate PDF: POST http://localhost:${PORT}/generate-pdf`);
-    console.log('\n✨ Ready to generate PDFs with perfect layout!\n');
-});
+// Keep server alive and handle errors
+let server;
+
+function startServer() {
+    server = app.listen(PORT, () => {
+        console.log('\n🚀 PDF Export Server Started');
+        console.log(`📍 Server running at http://localhost:${PORT}`);
+        console.log(`🏥 Health check: http://localhost:${PORT}/health`);
+        console.log(`📄 Generate PDF: POST http://localhost:${PORT}/generate-pdf`);
+        console.log('\n✨ Ready to generate PDFs with perfect layout!\n');
+    }).on('error', (err) => {
+        if (err.code === 'EADDRINUSE') {
+            console.log(`⚠️  Port ${PORT} already in use - server already running`);
+            process.exit(0);
+        } else {
+            console.error('❌ Server error:', err);
+            process.exit(1);
+        }
+    });
+}
+
+startServer();
 
 // Graceful shutdown
 process.on('SIGTERM', () => {
     console.log('\n👋 Shutting down server...');
+    if (server) server.close();
+    process.exit(0);
+});
+
+process.on('SIGINT', () => {
+    console.log('\n👋 Shutting down server...');
+    if (server) server.close();
     process.exit(0);
 });

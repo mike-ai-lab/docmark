@@ -772,6 +772,17 @@ This web site is using ${"`"}markedjs/marked${"`"}.
                     lineNumber = i + 1;
                     currentSearchLine = i + 1;
                     break;
+                } else if (tag === 'div') {
+                    // Check if div contains media (image or video)
+                    const hasMedia = element.querySelector('img, video');
+                    if (hasMedia) {
+                        // Look for <div> line that starts a media block
+                        if (line.trim() === '<div>') {
+                            lineNumber = i + 1;
+                            currentSearchLine = i + 1;
+                            break;
+                        }
+                    }
                 } else if (tag === 'p') {
                     // Check if paragraph contains an image
                     const hasImage = element.querySelector('img');
@@ -2516,6 +2527,27 @@ let performBeautify = (content) => {
         try {
             console.log('[PDF Export] Using Puppeteer server at localhost:3000');
             
+            // Check if server is running, if not, provide helpful instructions
+            try {
+                const healthCheck = await fetch('http://localhost:3000/health', { 
+                    method: 'GET',
+                    signal: AbortSignal.timeout(2000) // 2 second timeout
+                });
+                if (!healthCheck.ok) throw new Error('Server not healthy');
+            } catch (healthError) {
+                const shouldContinue = confirm(
+                    '⚠️ PDF Server Not Running\n\n' +
+                    'The PDF export server needs to be started.\n\n' +
+                    'Run this command in a terminal:\n' +
+                    'node pdf-server.js\n\n' +
+                    'Or add to package.json scripts:\n' +
+                    '"pdf-server": "node pdf-server.js"\n\n' +
+                    'Then run: npm run pdf-server\n\n' +
+                    'Click OK to try anyway (will fail), or Cancel to abort.'
+                );
+                if (!shouldContinue) return;
+            }
+            
             // Show loading indicator
             showLoadingIndicator('Generating PDF...');
 
@@ -2594,12 +2626,51 @@ let performBeautify = (content) => {
             }
         }
         
-        // Get all CSS from style tags
+        // Get all CSS from style tags and extract @import statements
         let inlineCss = '';
+        let fontLinks = [];
         const styleTags = document.querySelectorAll('style');
         styleTags.forEach(tag => {
-            inlineCss += tag.textContent + '\n';
+            let cssText = tag.textContent;
+            
+            // Extract @import statements for Google Fonts
+            // These need to be converted to <link> tags for Puppeteer
+            const importRegex = /@import\s+url\(['"]?(https:\/\/fonts\.googleapis\.com\/[^'"]+)['"]?\);?/g;
+            let match;
+            while ((match = importRegex.exec(cssText)) !== null) {
+                fontLinks.push(match[1]);
+                console.log('[PDF Export] Found font import:', match[1]);
+            }
+            
+            // Remove @import statements from CSS (they don't work in Puppeteer)
+            cssText = cssText.replace(importRegex, '/* Font loaded via <link> tag */');
+            
+            inlineCss += cssText + '\n';
         });
+        
+        // CRITICAL FIX: Also check for fonts in <link> tags in the document
+        const linkTags = document.querySelectorAll('link[href*="fonts.googleapis.com"]');
+        linkTags.forEach(link => {
+            if (!fontLinks.includes(link.href)) {
+                fontLinks.push(link.href);
+                console.log('[PDF Export] Found font link:', link.href);
+            }
+        });
+
+        // Build font link tags for Google Fonts
+        // CRITICAL: Use <link> tags instead of @import for Puppeteer compatibility
+        const fontLinkTags = fontLinks.map(url => 
+            `    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="${url}" rel="stylesheet">`
+        ).join('\n');
+        
+        // CRITICAL FIX: Prepend Inter font to all font-family declarations in markdown CSS
+        // This ensures Inter is used instead of system fonts
+        markdownCss = markdownCss.replace(
+            /font-family:\s*-apple-system/g,
+            "font-family: 'Inter', -apple-system"
+        );
 
         // Build complete HTML document with all CSS inlined
         const htmlContent = `
@@ -2607,6 +2678,7 @@ let performBeautify = (content) => {
 <html>
 <head>
     <meta charset="UTF-8">
+${fontLinkTags}
     <style>
         /* Markdown body styles */
         ${markdownCss}
@@ -2665,6 +2737,16 @@ let performBeautify = (content) => {
 </body>
 </html>`;
 
+        // DEBUG: Log the generated HTML to console
+        console.log('[PDF Export] Generated HTML length:', htmlContent.length);
+        console.log('[PDF Export] Font links found:', fontLinks.length);
+        console.log('[PDF Export] Font URLs:', fontLinks);
+        
+        // Save HTML to console for inspection
+        if (fontLinks.length === 0) {
+            console.warn('[PDF Export] WARNING: No font links found! Fonts may not embed.');
+        }
+        
         return htmlContent;
     };
 

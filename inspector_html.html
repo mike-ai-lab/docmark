@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Muhamad's Element Inspector</title>
+    <style>
+        body { font-family: sans-serif; margin: 20px; background: #f4f4f4; }
+        #toolbar { margin-bottom: 15px; display: flex; align-items: center; gap: 15px; }
+        #viewer { 
+            width: 100%; height: 70vh; border: 2px solid #333; 
+            background: white; border-radius: 8px; 
+        }
+        .status { color: #2e7d32; font-weight: bold; display: none; }
+    </style>
+</head>
+<body>
+
+    <div id="toolbar">
+        <input type="file" id="fileInput" accept=".html">
+        <span id="copyStatus" class="status">Code Copied to Clipboard!</span>
+    </div>
+
+    <iframe id="viewer"></iframe>
+
+    <script>
+        const fileInput = document.getElementById('fileInput');
+        const viewer = document.getElementById('viewer');
+        const status = document.getElementById('copyStatus');
+
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const htmlContent = event.target.result;
+                const doc = viewer.contentWindow.document;
+                
+                // Load the uploaded HTML into the iframe
+                doc.open();
+                doc.write(htmlContent);
+                doc.close();
+
+                // Inject the selection logic after loading
+                injectInspector(doc);
+            };
+            reader.readAsText(file);
+        });
+
+        function injectInspector(doc) {
+            // Highlight elements on hover for better UX
+            const style = doc.createElement('style');
+            style.textContent = `
+                *:hover { outline: 2px dashed #007bff !important; cursor: pointer; }
+            `;
+            doc.head.appendChild(style);
+
+            // Double click listener
+            doc.addEventListener('dblclick', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+
+                const rawCode = e.target.outerHTML;
+                
+                // Copy to clipboard
+                navigator.clipboard.writeText(rawCode).then(() => {
+                    showStatus();
+                    console.log("Copied:", rawCode);
+                });
+            });
+        }
+
+        function showStatus() {
+            status.style.display = 'inline';
+            setTimeout(() => { status.style.display = 'none'; }, 2000);
+        }
+    </script>
+</body>
+</html>
