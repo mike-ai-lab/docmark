@@ -4496,3 +4496,81 @@ footer {
 [data-theme="dark"] .btn-primary:hover {
     background: #388bfd;
 }
+
+/* Media Context Menu */
+.media-context-menu {
+  position: fixed;
+  background: white;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  padding: 4px 0;
+  min-width: 180px;
+  z-index: 10000;
+  display: none;
+}
+
+.media-context-menu.active {
+  display: block;
+}
+
+.media-context-menu-item {
+  padding: 8px 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: #1e293b;
+  transition: background 0.15s ease;
+}
+
+.media-context-menu-item:hover {
+  background: #f1f5f9;
+}
+
+.media-context-menu-item.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.media-context-menu-item svg {
+  width: 16px;
+  height: 16px;
+  stroke: currentColor;
+  flex-shrink: 0;
+}
+
+.media-context-menu-separator {
+  height: 1px;
+  background: #e2e8f0;
+  margin: 4px 0;
+}
+
+/* Dark theme */
+[data-theme="dark"] .media-context-menu {
+  background: #2d2d2d;
+  border-color: #3d3d3d;
+}
+
+[data-theme="dark"] .media-context-menu-item {
+  color: #94a3b8;
+}
+
+[data-theme="dark"] .media-context-menu-item:hover {
+  background: #3d3d3d;
+  color: #e2e8f0;
+}
+
+[data-theme="dark"] .media-context-menu-separator {
+  background: #3d3d3d;
+}
+
+/* Media selection highlight */
+.preview-pane img.media-selected,
+.preview-pane video.media-selected {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+  border-radius: 4px;
+}

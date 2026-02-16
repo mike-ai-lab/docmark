@@ -1,0 +1,198 @@
+19:21:09.643 (index):1 Failed to decode downloaded font: http://localhost:5173/codicon.ttf
+19:21:09.643 (index):1 OTS parsing error: invalid sfntVersion: 1008813135
+19:21:09.643 (index):1 Failed to decode downloaded font: http://localhost:5173/codicon.ttf
+19:21:09.643 (index):1 OTS parsing error: invalid sfntVersion: 1008813135
+19:21:13.035  Right-clicked on media: 
+19:21:13.035  Media container: 
+19:21:13.035  Container tag: P
+19:21:13.035  Container data-source-line: 8
+19:21:13.036  All media containers: 3
+19:21:13.036  Current index: 2
+19:21:14.120  Moving media from line: 8
+19:21:14.120  First line: ![Image C](https://placehold.co/300x200/00ff00/black?text=C)
+19:21:14.120  Media block ends at line: 8
+19:21:14.121  Current index: 2 of 3
+19:21:14.121  Moving to top
+19:21:14.121  Executing move operation
+19:21:14.121  Content to move: ![Image C](https://placehold.co/300x200/00ff00/black?text=C)
+
+
+19:21:14.121  From line: 8 to 8
+19:21:14.121  Target line: 1
+19:21:16.064  Right-clicked on media: 
+19:21:16.064  Media container: 
+19:21:16.064  Container tag: P
+19:21:16.064  Container data-source-line: 7
+19:21:16.064  All media containers: 3
+19:21:16.064  Current index: 2
+19:21:16.792  Moving media from line: 7
+19:21:16.792  First line: ![Image B](https://placehold.co/300x200/0000ff/white?text=B)
+19:21:16.792  Media block ends at line: 7
+19:21:16.792  Current index: 2 of 3
+19:21:16.792  Moving up to line: 4
+19:21:16.792  Executing move operation
+19:21:16.792  Content to move: ![Image B](https://placehold.co/300x200/0000ff/white?text=B)
+
+
+19:21:16.792  From line: 7 to 7
+19:21:16.792  Target line: 4
+19:21:18.040  Right-clicked on media: 
+19:21:18.040  Media container: 
+19:21:18.040  Container tag: P
+19:21:18.040  Container data-source-line: 6
+19:21:18.041  All media containers: 3
+19:21:18.041  Current index: 2
+19:21:19.007  Moving media from line: 6
+19:21:19.008  First line: ![Image A](https://placehold.co/300x200/ff0000/white?text=A)
+19:21:19.008  Media block ends at line: 6
+19:21:19.008  Current index: 2 of 3
+19:21:19.008  Moving to top
+19:21:19.008  Executing move operation
+19:21:19.008  Content to move: ![Image A](https://placehold.co/300x200/ff0000/white?text=A)
+
+
+19:21:19.008  From line: 6 to 6
+19:21:19.008  Target line: 1
+19:21:22.680  Right-clicked on media: 
+19:21:22.680  Media container: 
+19:21:22.680  Container tag: P
+19:21:22.680  Container data-source-line: 6
+19:21:22.680  All media containers: 3
+19:21:22.681  Current index: 2
+19:21:23.551  Moving media from line: 6
+19:21:23.551  First line: ![Image B](https://placehold.co/300x200/0000ff/white?text=B)
+19:21:23.551  Media block ends at line: 6
+19:21:23.552  Current index: 2 of 3
+19:21:23.552  Moving to top
+19:21:23.552  Executing move operation
+19:21:23.552  Content to move: ![Image B](https://placehold.co/300x200/0000ff/white?text=B)
+
+
+19:21:23.552  From line: 6 to 6
+19:21:23.552  Target line: 1
+19:21:24.864  Right-clicked on media: 
+19:21:24.864  Media container: 
+19:21:24.864  Container tag: P
+19:21:24.864  Container data-source-line: 5
+19:21:24.865  All media containers: 3
+19:21:24.865  Current index: 2
+19:21:30.096  Moving media from line: 5
+19:21:30.096  First line: ![Image C](https://placehold.co/300x200/00ff00/black?text=C)
+19:21:30.096  Media block ends at line: 5
+19:21:30.096  Current index: 2 of 3
+19:21:30.096  Moving to top
+19:21:30.096  Executing move operation
+19:21:30.096  Content to move: ![Image C](https://placehold.co/300x200/00ff00/black?text=C)
+
+
+19:21:30.096  From line: 5 to 5
+19:21:30.096  Target line: 1
+19:21:46.424  Right-clicked on media: 
+19:21:46.424  Media container: 
+19:21:46.424  Container tag: P
+19:21:46.425  Container data-source-line: 19
+19:21:46.425  All media containers: 3
+19:21:46.425  Current index: 2
+19:21:47.287  Moving media from line: 19
+19:21:47.287  First line: ![Green Square](https://placehold.co/300x200/00ff00/black?text=GREEN+IMAGE+3)
+19:21:47.287  Media block ends at line: 19
+19:21:47.287  Current index: 2 of 3
+19:21:47.288  Moving up to line: 13
+19:21:47.288  Executing move operation
+19:21:47.288  Content to move: ![Green Square](https://placehold.co/300x200/00ff00/black?text=GREEN+IMAGE+3)
+
+
+19:21:47.288  From line: 19 to 19
+19:21:47.288  Target line: 13
+19:21:49.135  Right-clicked on media: 
+19:21:49.136  Media container: 
+19:21:49.136  Container tag: P
+19:21:49.136  Container data-source-line: 15
+19:21:49.136  All media containers: 3
+19:21:49.136  Current index: 2
+19:21:50.848  Right-clicked on media: 
+19:21:50.848  Media container: 
+19:21:50.848  Container tag: P
+19:21:50.848  Container data-source-line: 7
+19:21:50.848  All media containers: 3
+19:21:50.848  Current index: 0
+19:21:52.471  Moving media from line: 7
+19:21:52.471  First line: ![Red Square](https://placehold.co/300x200/ff0000/white?text=RED+IMAGE+1)
+19:21:52.471  Media block ends at line: 7
+19:21:52.471  Current index: 0 of 3
+19:21:52.471  Moving down to line: 14
+19:21:52.471  Executing move operation
+19:21:52.471  Content to move: ![Red Square](https://placehold.co/300x200/ff0000/white?text=RED+IMAGE+1)
+
+
+19:21:52.471  From line: 7 to 7
+19:21:52.471  Target line: 14
+19:22:17.247  Right-clicked on media: 
+19:22:17.247  Media container: 
+19:22:17.247  Container tag: P
+19:22:17.247  Container data-source-line: 11
+19:22:17.247  All media containers: 2
+19:22:17.247  Current index: 0
+19:22:18.471  Moving media from line: 11
+19:22:18.471  First line: ![Green Square](https://placehold.co/300x200/00ff00/black?text=GREEN+IMAGE+3)
+19:22:18.471  Media block ends at line: 11
+19:22:18.471  Current index: 0 of 3
+19:22:18.471  Moving down to line: 13
+19:22:18.471  Executing move operation
+19:22:18.471 main.js:3726 Content to move: ![Green Square](https://placehold.co/300x200/00ff00/black?text=GREEN+IMAGE+3)
+
+
+19:22:18.471 main.js:3727 From line: 11 to 11
+19:22:18.471 main.js:3728 Target line: 13
+19:22:49.383 main.js:3463 Right-clicked on media: <img src=​"https:​/​/​placehold.co/​300x200/​0000ff/​white?text=BLUE+IMAGE+2" alt=​"Blue Square" class=​"media-selected">​
+19:22:49.383 main.js:3493 Media container: <p data-source-line=​"15">​…​</p>​
+19:22:49.383 main.js:3494 Container tag: P
+19:22:49.383 main.js:3495 Container data-source-line: 15
+19:22:49.383 main.js:3507 All media containers: 2
+19:22:49.383 main.js:3509 Current index: 1
+19:22:50.543 main.js:3656 Moving media from line: 15
+19:22:50.543 main.js:3657 First line: ![Blue Square](https://placehold.co/300x200/0000ff/white?text=BLUE+IMAGE+2)
+19:22:50.543 main.js:3658 Media block ends at line: 15
+19:22:50.543 main.js:3669 Current index: 1 of 2
+19:22:50.543 main.js:3687 Moving up to line: 11
+19:22:50.543 main.js:3725 Executing move operation
+19:22:50.543 main.js:3726 Content to move: ![Blue Square](https://placehold.co/300x200/0000ff/white?text=BLUE+IMAGE+2)
+
+
+19:22:50.543 main.js:3727 From line: 15 to 15
+19:22:50.543 main.js:3728 Target line: 11
+19:22:53.383 main.js:3463 Right-clicked on media: <img src=​"https:​/​/​placehold.co/​300x200/​0000ff/​white?text=BLUE+IMAGE+2" alt=​"Blue Square" class=​"media-selected">​
+19:22:53.383 main.js:3493 Media container: <p data-source-line=​"11">​…​</p>​
+19:22:53.383 main.js:3494 Container tag: P
+19:22:53.383 main.js:3495 Container data-source-line: 11
+19:22:53.383 main.js:3507 All media containers: 2
+19:22:53.383 main.js:3509 Current index: 0
+19:22:54.078 main.js:3656 Moving media from line: 11
+19:22:54.078 main.js:3657 First line: ![Blue Square](https://placehold.co/300x200/0000ff/white?text=BLUE+IMAGE+2)
+19:22:54.078 main.js:3658 Media block ends at line: 11
+19:22:54.078 main.js:3669 Current index: 0 of 2
+19:22:54.079 main.js:3715 Moving down to line: 14
+19:22:54.079 main.js:3725 Executing move operation
+19:22:54.079 main.js:3726 Content to move: ![Blue Square](https://placehold.co/300x200/0000ff/white?text=BLUE+IMAGE+2)
+
+
+19:22:54.079 main.js:3727 From line: 11 to 11
+19:22:54.079 main.js:3728 Target line: 14
+19:22:55.135 main.js:3463 Right-clicked on media: <img src=​"https:​/​/​placehold.co/​300x200/​0000ff/​white?text=BLUE+IMAGE+2" alt=​"Blue Square" class>​
+19:22:55.135 main.js:3493 Media container: <p data-source-line=​"11">​…​</p>​
+19:22:55.135 main.js:3494 Container tag: P
+19:22:55.135 main.js:3495 Container data-source-line: 11
+19:22:55.135 main.js:3507 All media containers: 1
+19:22:55.135 main.js:3509 Current index: 0
+19:22:56.302 main.js:3463 Right-clicked on media: <img src=​"https:​/​/​placehold.co/​300x200/​0000ff/​white?text=BLUE+IMAGE+2" alt=​"Blue Square" class>​
+19:22:56.303 main.js:3493 Media container: <p data-source-line=​"11">​…​</p>​
+19:22:56.303 main.js:3494 Container tag: P
+19:22:56.303 main.js:3495 Container data-source-line: 11
+19:22:56.303 main.js:3507 All media containers: 1
+19:22:56.303 main.js:3509 Current index: 0
+19:22:56.895 main.js:3463 Right-clicked on media: <img src=​"https:​/​/​placehold.co/​300x200/​00ff00/​black?text=GREEN+IMAGE+3" alt=​"Green Square" class=​"media-selected">​
+19:22:56.895 main.js:3493 Media container: <p data-source-line=​"11">​…​</p>​
+19:22:56.895 main.js:3494 Container tag: P
+19:22:56.895 main.js:3495 Container data-source-line: 11
+19:22:56.895 main.js:3507 All media containers: 1
+19:22:56.895 main.js:3509 Current index: 0

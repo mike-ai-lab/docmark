@@ -668,8 +668,8 @@ This web site is using ${"`"}markedjs/marked${"`"}.
         
         // Configure DOMPurify to allow HTML elements while maintaining security
         let sanitized = DOMPurify.sanitize(html, {
-            ADD_ATTR: ['class', 'style', 'data-hint-style', 'id', 'target', 'rel', 'href', 'src', 'alt', 'title'],
-            ADD_TAGS: ['span', 'div', 'strong', 'em', 'code', 'a', 'img', 'table', 'thead', 'tbody', 'tr', 'th', 'td', 
+            ADD_ATTR: ['class', 'style', 'data-hint-style', 'id', 'target', 'rel', 'href', 'src', 'alt', 'title', 'controls', 'type'],
+            ADD_TAGS: ['span', 'div', 'strong', 'em', 'code', 'a', 'img', 'video', 'source', 'table', 'thead', 'tbody', 'tr', 'th', 'td', 
                        'ul', 'ol', 'li', 'p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'blockquote', 'pre', 'br', 'hr',
                        'section', 'article', 'aside', 'nav', 'header', 'footer', 'main', 'figure', 'figcaption',
                        'b', 'i', 'u', 's', 'sub', 'sup', 'mark', 'small', 'del', 'ins', 'abbr', 'cite', 'q', 'dfn',
@@ -3443,6 +3443,333 @@ let performBeautify = (content) => {
         });
     };
     
+    // Media Context Menu for moving images/videos
+    let setupMediaContextMenu = () => {
+        const contextMenu = document.getElementById('media-context-menu');
+        const previewPane = document.getElementById('preview');
+        let selectedMedia = null;
+        let selectedMediaContainer = null;
+        
+        if (!contextMenu || !previewPane) return;
+        
+        // Show context menu on right-click on images/videos
+        previewPane.addEventListener('contextmenu', (e) => {
+            const target = e.target;
+            
+            // Check if clicked on img or video
+            if (target.tagName === 'IMG' || target.tagName === 'VIDEO') {
+                e.preventDefault();
+                
+                console.log('Right-clicked on media:', target);
+                
+                // Remove previous selection
+                document.querySelectorAll('.media-selected').forEach(el => {
+                    el.classList.remove('media-selected');
+                });
+                
+                // Select current media
+                selectedMedia = target;
+                target.classList.add('media-selected');
+                
+                // Find the container - prefer closest p, div, or other block element, but not blockquote
+                let container = target.parentElement;
+                while (container && !container.hasAttribute('data-source-line')) {
+                    container = container.parentElement;
+                }
+                
+                // If we found a blockquote, try to find a more specific child element
+                if (container && container.tagName === 'BLOCKQUOTE') {
+                    // Look for the immediate parent of the image that has data-source-line
+                    let specificContainer = target.parentElement;
+                    while (specificContainer && specificContainer.parentElement !== container && !specificContainer.hasAttribute('data-source-line')) {
+                        specificContainer = specificContainer.parentElement;
+                    }
+                    if (specificContainer && specificContainer.hasAttribute('data-source-line')) {
+                        container = specificContainer;
+                    }
+                }
+                
+                selectedMediaContainer = container;
+                console.log('Media container:', selectedMediaContainer);
+                console.log('Container tag:', selectedMediaContainer?.tagName);
+                console.log('Container data-source-line:', selectedMediaContainer?.getAttribute('data-source-line'));
+                
+                // Position context menu
+                contextMenu.style.left = e.pageX + 'px';
+                contextMenu.style.top = e.pageY + 'px';
+                contextMenu.classList.add('active');
+                
+                // Check if can move up/down - find all media containers
+                const allMediaContainers = Array.from(previewPane.querySelectorAll('img, video'))
+                    .map(media => media.closest('[data-source-line]') || media.parentElement)
+                    .filter((container, index, self) => self.indexOf(container) === index); // Remove duplicates
+                
+                console.log('All media containers:', allMediaContainers.length);
+                const currentIndex = allMediaContainers.indexOf(selectedMediaContainer);
+                console.log('Current index:', currentIndex);
+                
+                document.getElementById('media-move-up').classList.toggle('disabled', currentIndex <= 0);
+                document.getElementById('media-move-down').classList.toggle('disabled', currentIndex >= allMediaContainers.length - 1);
+                document.getElementById('media-move-top').classList.toggle('disabled', currentIndex <= 0);
+                document.getElementById('media-move-bottom').classList.toggle('disabled', currentIndex >= allMediaContainers.length - 1);
+            }
+        });
+        
+        // Hide context menu on click outside
+        document.addEventListener('click', () => {
+            contextMenu.classList.remove('active');
+        });
+        
+        // Move Up
+        document.getElementById('media-move-up').addEventListener('click', () => {
+            if (selectedMediaContainer && selectedMedia) moveMedia(selectedMediaContainer, 'up', selectedMedia);
+        });
+        
+        // Move Down
+        document.getElementById('media-move-down').addEventListener('click', () => {
+            if (selectedMediaContainer && selectedMedia) moveMedia(selectedMediaContainer, 'down', selectedMedia);
+        });
+        
+        // Move to Top
+        document.getElementById('media-move-top').addEventListener('click', () => {
+            if (selectedMediaContainer && selectedMedia) moveMedia(selectedMediaContainer, 'top', selectedMedia);
+        });
+        
+        // Move to Bottom
+        document.getElementById('media-move-bottom').addEventListener('click', () => {
+            if (selectedMediaContainer && selectedMedia) moveMedia(selectedMediaContainer, 'bottom', selectedMedia);
+        });
+        
+        // Jump to Code
+        document.getElementById('media-jump-to-code').addEventListener('click', () => {
+            if (selectedMediaContainer) {
+                const lineNumber = parseInt(selectedMediaContainer.getAttribute('data-source-line'));
+                if (lineNumber && editor) {
+                    editor.revealLineInCenter(lineNumber);
+                    editor.setPosition({ lineNumber, column: 1 });
+                    editor.focus();
+                }
+            }
+        });
+        
+        // Delete Media
+        document.getElementById('media-delete').addEventListener('click', () => {
+            if (selectedMediaContainer && editor) {
+                const startLine = parseInt(selectedMediaContainer.getAttribute('data-source-line'));
+                if (startLine) {
+                    const model = editor.getModel();
+                    const firstLine = model.getLineContent(startLine);
+                    let endLine = startLine;
+                    
+                    console.log('Deleting media at line:', startLine);
+                    console.log('First line content:', firstLine);
+                    
+                    // Check if this is a <div> wrapped media or markdown image
+                    if (firstLine.trim().startsWith('<div>')) {
+                        // Find the closing </div>
+                        for (let i = startLine; i <= model.getLineCount(); i++) {
+                            const line = model.getLineContent(i);
+                            if (line.trim() === '</div>') {
+                                endLine = i;
+                                break;
+                            }
+                        }
+                    } else if (firstLine.includes('![') || firstLine.includes('<img')) {
+                        // Single line markdown image or HTML img tag
+                        endLine = startLine;
+                    }
+                    
+                    console.log('Deleting lines', startLine, 'to', endLine);
+                    
+                    // Delete the lines (including the line after if it's empty)
+                    const nextLine = endLine + 1 <= model.getLineCount() ? model.getLineContent(endLine + 1) : '';
+                    const deleteEndLine = nextLine.trim() === '' ? endLine + 1 : endLine;
+                    
+                    editor.executeEdits('delete-media', [{
+                        range: new monaco.Range(startLine, 1, deleteEndLine + 1, 1),
+                        text: ''
+                    }]);
+                    
+                    if (selectedMedia) selectedMedia.classList.remove('media-selected');
+                    selectedMedia = null;
+                    selectedMediaContainer = null;
+                    showMofuHelper('Media deleted!');
+                }
+            }
+        });
+    };
+    
+    // Move media in editor
+    let moveMedia = (mediaContainer, direction, mediaElement = null) => {
+        if (!editor || !mediaContainer) return;
+        
+        const model = editor.getModel();
+        if (!model) return;
+        
+        // Get the media element (img or video) - use passed element or find it
+        if (!mediaElement) {
+            mediaElement = mediaContainer.querySelector('img, video');
+        }
+        if (!mediaElement) return;
+        if (!mediaElement) return;
+        
+        // Extract the image source to search for it in the editor
+        const src = mediaElement.getAttribute('src');
+        const alt = mediaElement.getAttribute('alt') || '';
+        
+        // Search for the image in the editor content line by line
+        let startLine = null;
+        let endLine = null;
+        
+        for (let i = 1; i <= model.getLineCount(); i++) {
+            const lineContent = model.getLineContent(i);
+            
+            // Check if this line contains the image (markdown or HTML)
+            if (lineContent.includes(src) || 
+                (alt && lineContent.includes(`![${alt}]`)) ||
+                (lineContent.includes(`<img`) && lineContent.includes(src.substring(0, 50)))) {
+                startLine = i;
+                
+                // Check if it's a multi-line <div> wrapped media
+                if (lineContent.trim().startsWith('<div>')) {
+                    // Find the closing </div>
+                    for (let j = i; j <= model.getLineCount(); j++) {
+                        const line = model.getLineContent(j);
+                        if (line.trim() === '</div>') {
+                            endLine = j;
+                            break;
+                        }
+                    }
+                } else {
+                    // Single line media
+                    endLine = i;
+                }
+                break;
+            }
+        }
+        
+        if (startLine === null) {
+            console.error('Could not find media in editor');
+            return;
+        }
+        
+        console.log('Moving media from line:', startLine);
+        console.log('First line:', model.getLineContent(startLine));
+        console.log('Media block ends at line:', endLine);
+        
+        // Get the media block content and ALWAYS add a blank line after it
+        let mediaContent = model.getValueInRange(new monaco.Range(startLine, 1, endLine, model.getLineMaxColumn(endLine)));
+        mediaContent += '\n\n'; // Always add blank line to prevent grouping
+        
+        // Find all media in the preview to determine move targets
+        const previewPane = document.getElementById('preview');
+        const allMedia = Array.from(previewPane.querySelectorAll('img, video'));
+        const currentIndex = allMedia.indexOf(mediaElement);
+        
+        console.log('Current index:', currentIndex, 'of', allMedia.length);
+        
+        let targetLine = null;
+        
+        if (direction === 'up' && currentIndex > 0) {
+            // Move before previous media - find its line
+            const prevMedia = allMedia[currentIndex - 1];
+            const prevSrc = prevMedia.getAttribute('src');
+            const prevAlt = prevMedia.getAttribute('alt') || '';
+            
+            for (let i = 1; i <= model.getLineCount(); i++) {
+                const lineContent = model.getLineContent(i);
+                if (lineContent.includes(prevSrc) || 
+                    (prevAlt && lineContent.includes(`![${prevAlt}]`))) {
+                    targetLine = i;
+                    break;
+                }
+            }
+            console.log('Moving up to line:', targetLine);
+        } else if (direction === 'down' && currentIndex < allMedia.length - 1) {
+            // Move after next media - find its line and end
+            const nextMedia = allMedia[currentIndex + 1];
+            const nextSrc = nextMedia.getAttribute('src');
+            const nextAlt = nextMedia.getAttribute('alt') || '';
+            
+            for (let i = 1; i <= model.getLineCount(); i++) {
+                const lineContent = model.getLineContent(i);
+                if (lineContent.includes(nextSrc) || 
+                    (nextAlt && lineContent.includes(`![${nextAlt}]`))) {
+                    let nextEndLine = i;
+                    
+                    // Check if it's multi-line
+                    if (lineContent.trim().startsWith('<div>')) {
+                        for (let j = i; j <= model.getLineCount(); j++) {
+                            const line = model.getLineContent(j);
+                            if (line.trim() === '</div>') {
+                                nextEndLine = j;
+                                break;
+                            }
+                        }
+                    }
+                    
+                    targetLine = nextEndLine + 2; // +2 to skip the blank line after next image
+                    break;
+                }
+            }
+            console.log('Moving down to line:', targetLine);
+        } else if (direction === 'top') {
+            targetLine = 1;
+            console.log('Moving to top');
+        } else if (direction === 'bottom') {
+            targetLine = model.getLineCount() + 1;
+            console.log('Moving to bottom');
+        }
+        
+        if (targetLine !== null) {
+            console.log('Executing move operation');
+            console.log('Content to move:', mediaContent);
+            console.log('From line:', startLine, 'to', endLine);
+            console.log('Target line:', targetLine);
+            
+            // Perform the move operation
+            const numLines = endLine - startLine + 1;
+            
+            if (targetLine < startLine) {
+                // Moving UP: Insert at target first, then delete from original position
+                editor.executeEdits('move-media-insert', [{
+                    range: new monaco.Range(targetLine, 1, targetLine, 1),
+                    text: mediaContent
+                }]);
+                
+                // After insertion, original content shifted down
+                // mediaContent has \n\n, so it adds 2 lines (image + blank)
+                const linesAdded = 2;
+                const adjustedStartLine = startLine + linesAdded;
+                const adjustedEndLine = endLine + linesAdded;
+                
+                // Delete the media line + the blank line after it (2 lines total)
+                editor.executeEdits('move-media-delete', [{
+                    range: new monaco.Range(adjustedStartLine, 1, adjustedEndLine + 2, 1),
+                    text: ''
+                }]);
+            } else {
+                // Moving DOWN: Delete from original first, then insert at adjusted target
+                
+                // Delete the media line + the blank line after it (2 lines total)
+                editor.executeEdits('move-media-delete', [{
+                    range: new monaco.Range(startLine, 1, endLine + 2, 1),
+                    text: ''
+                }]);
+                
+                // After deletion, target line shifts up by 2 (image + blank line)
+                const adjustedTarget = targetLine - 2;
+                
+                editor.executeEdits('move-media-insert', [{
+                    range: new monaco.Range(adjustedTarget, 1, adjustedTarget, 1),
+                    text: mediaContent
+                }]);
+            }
+            
+            showMofuHelper(`Media moved ${direction}!`);
+        }
+    };
+    
     let setupInsertImageButton = () => {
         const button = document.querySelector('#insert-image-button');
         if (!button) return;
@@ -4922,6 +5249,7 @@ let performBeautify = (content) => {
     setupInsertImageButton();
     setupInsertMediaButton();
     setupInsertBreakButton();
+    setupMediaContextMenu();
     setupDropdowns();
     setupCheatSheetButton();
     setupTocCheckbox();
