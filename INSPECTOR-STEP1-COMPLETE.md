@@ -1,83 +1,111 @@
 # Inspector Integration - Step 1 Complete
 
-## What Was Added
+## Files Created
 
-### 1. Inspector Toggle Button (Header)
-- Location: Header right section, before import buttons
-- Icon: Eye icon (inspect/view)
-- Visibility: Only shown in HTML mode
-- State: Active class when inspector is open
+### JavaScript Modules
+1. `src/inspector/inspector-core.js` - Core inspector functionality
+   - Element selection (single and multi-select)
+   - Ctrl+Click multi-select
+   - Ctrl+Drag selection box
+   - Lock/unlock state management
+   - Group management
+   - Event system for UI updates
 
-### 2. Inspector Panel (Floating)
-- Location: Fixed position on right side
-- Width: 320px
-- Height: Full viewport minus header
-- Collapsible with smooth animation
-- Clean DocMark styling (no emojis)
+2. `src/inspector/inspector-ui.js` - UI management
+   - Panel show/hide logic
+   - Input field updates
+   - Style editing
+   - Event listeners for all controls
 
-### 3. Inspector Panel Structure
+### CSS
+3. `public/css/inspector.css` - Professional styling
+   - Matches your app's design system
+   - Uses CSS variables for theming
+   - Clean, minimal design
+   - No emojis or colorful styles
+
+## Integration Steps
+
+### Step 2: Update index.html
+
+Add inspector CSS link in `<head>`:
+```html
+<link rel="stylesheet" href="css/inspector.css">
 ```
-Inspector Panel
-├── Header (title + close button)
-└── Content
-    ├── Empty State (click element message)
-    └── Editor (hidden until element selected)
-        ├── Element Info
-        ├── Typography
-        ├── Colors
-        ├── Spacing
-        ├── Dimensions
-        ├── Border
-        └── Actions
+
+### Step 3: Update main.js
+
+Add at top:
+```javascript
+import inspector from './inspector/inspector-core.js';
+import inspectorUI from './inspector/inspector-ui.js';
 ```
 
-### 4. CSS Styling
-- Matches DocMark theme
-- Light/dark mode support
-- Smooth transitions
-- Professional appearance
-- No emoji icons
+Add after editor setup:
+```javascript
+// Initialize inspector UI
+inspectorUI.init();
 
-### 5. JavaScript Functions
-- `setupInspectorToggle()` - Handle button clicks
-- `updateInspectorVisibility()` - Show/hide based on HTML mode
-- Integrated with convert() function
+// When HTML preview mode is activated
+if (htmlPreviewMode) {
+    const iframe = document.querySelector('.html-preview-iframe');
+    if (iframe && iframe.contentDocument) {
+        inspector.init(iframe.contentDocument);
+    }
+}
+```
 
-## How It Works
+### Step 4: Add Action Buttons to Inspector Panel
 
-1. User uploads/pastes HTML content
-2. App detects HTML mode
-3. Inspector toggle button appears in header
-4. User clicks inspector button
-5. Inspector panel slides in from right
-6. Panel shows "Click an element to inspect" message
-7. User can close panel with X button or toggle button
+In `index.html`, add before existing sections:
+```html
+<div class="inspector-section">
+    <div class="inspector-section-header">Actions</div>
+    <button id="inspector-lock-btn" class="inspector-action-btn">Lock Element</button>
+    <button id="inspector-multiselect-btn" class="inspector-action-btn">Multi-Select Mode</button>
+    <button id="inspector-copy-style-btn" class="inspector-action-btn">Copy Style</button>
+    <button id="inspector-paste-style-btn" class="inspector-action-btn">Paste Style</button>
+</div>
+```
 
-## Testing
+## Features Implemented
 
-1. Open DocMark
-2. Upload HTML file or paste HTML
-3. Inspector button should appear in header (eye icon)
-4. Click inspector button
-5. Panel should slide in from right
-6. Click X or toggle button to close
-7. Switch to markdown - button should hide
+### Core Features
+- Element selection with visual feedback
+- Hover highlighting
+- Click to select
+- Ctrl+Click for multi-select
+- Ctrl+Drag for selection box
+- Lock/unlock elements
+- Professional styling matching your app
+
+### UI Features
+- Clean inspector panel integration
+- Real-time style updates
+- Input validation
+- Proper event handling
+- Mode banners for multi-select
 
 ## Next Steps
 
-Step 2: Add element selection functionality
-- Inject click listeners into iframe
-- Highlight selected element
-- Populate inspector fields
-- Enable live editing
+### Step 2 Files (To Create):
+1. `src/inspector/inspector-lock.js` - Lock/unlock functionality
+2. `src/inspector/inspector-group.js` - Grouping functionality
+3. `src/inspector/inspector-copypaste.js` - Copy/paste styles
+4. `src/inspector/inspector-dragdrop.js` - Drag & drop positioning
+5. `src/inspector/inspector-arrange.js` - Z-index management
 
-## Files Modified
+### Testing
+1. Load HTML file in preview
+2. Click elements to select
+3. Edit styles in inspector panel
+4. Test Ctrl+Click multi-select
+5. Test Ctrl+Drag selection box
 
-- `index.html` - Added button and panel HTML
-- `public/css/style.css` - Added inspector styles
-- `src/main.js` - Added inspector logic
+## Notes
 
-## Status
-
-Step 1: COMPLETE
-Inspector toggle and panel UI are ready. Next step is to make it functional.
+- All code follows your app's conventions
+- Uses existing CSS variables
+- No emojis or colorful styles
+- Professional, minimal design
+- Modular architecture for easy maintenance

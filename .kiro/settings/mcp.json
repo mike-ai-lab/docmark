@@ -29,7 +29,10 @@
         "playwright_close",
         "playwright_click",
         "playwright_get_visible_text",
-        "playwright_get_visible_text"
+        "playwright_get_visible_text",
+        "playwright_get_visible_html",
+        "playwright_upload_file",
+        "playwright_fill"
       ]
     }
   }

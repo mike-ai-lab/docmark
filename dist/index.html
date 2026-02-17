@@ -75,6 +75,7 @@
       })();
     </script>
     <link rel="stylesheet" type="text/css" href="css/style.css?v=1.12.0">
+    <link rel="stylesheet" type="text/css" href="css/inspector.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css" id="hljs-light-theme">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css" id="hljs-dark-theme" disabled>
     <link rel="icon" type="image/png" href="favicon.png">
@@ -86,7 +87,7 @@
       window.TurndownService = TurndownService;
     </script>
     <title>Markdown Live Preview</title>
-    <script type="module" crossorigin src="/assets/index-Cg4nuSBl.js"></script>
+    <script type="module" crossorigin src="/assets/index-D2CdXQFY.js"></script>
   </head>
 
   <body>
@@ -293,6 +294,22 @@
                     Click an element in the preview to inspect
                 </div>
                 <div id="inspector-editor" class="inspector-editor" style="display: none;">
+                    
+                    <!-- Advanced Actions -->
+                    <div class="inspector-section">
+                        <div class="inspector-section-header">Advanced Actions</div>
+                        <button class="inspector-action-btn" id="inspector-lock-btn">Lock Element</button>
+                        <button class="inspector-action-btn" id="inspector-group-btn" style="display: none;">Group Elements</button>
+                        <button class="inspector-action-btn" id="inspector-ungroup-btn" style="display: none;">Ungroup</button>
+                        <button class="inspector-action-btn" id="inspector-copy-style-btn">Copy Style</button>
+                        <button class="inspector-action-btn" id="inspector-paste-style-btn" style="display: none;">Paste Style</button>
+                        <button class="inspector-action-btn" id="inspector-bring-front-btn">Bring to Front</button>
+                        <button class="inspector-action-btn" id="inspector-send-back-btn">Send to Back</button>
+                        <button class="inspector-action-btn" id="inspector-bring-forward-btn">Bring Forward</button>
+                        <button class="inspector-action-btn" id="inspector-send-backward-btn">Send Backward</button>
+                        <button class="inspector-action-btn" id="inspector-distribute-h-btn" style="display: none;">Distribute Horizontally</button>
+                        <button class="inspector-action-btn" id="inspector-distribute-v-btn" style="display: none;">Distribute Vertically</button>
+                    </div>
                     
                     <!-- Element Info -->
                     <div class="inspector-section">

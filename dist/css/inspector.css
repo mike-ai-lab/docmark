@@ -1,0 +1,336 @@
+/* Inspector Panel Styles */
+
+.inspector-pane {
+    background: var(--editor-bg);
+    border-left: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.inspector-pane.hidden {
+    display: none;
+}
+
+.inspector-panel-header {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: var(--editor-bg);
+}
+
+.inspector-panel-header h3 {
+    margin: 0;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-color);
+}
+
+.inspector-close {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 20px;
+    cursor: pointer;
+    padding: 0;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 3px;
+}
+
+.inspector-close:hover {
+    background: var(--hover-bg);
+    color: var(--text-color);
+}
+
+.inspector-panel-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+}
+
+.inspector-empty {
+    color: var(--text-muted);
+    text-align: center;
+    padding: 40px 20px;
+    font-size: 13px;
+}
+
+.inspector-editor {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.inspector-section {
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 16px;
+}
+
+.inspector-section:last-child {
+    border-bottom: none;
+}
+
+.inspector-section-header {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-muted);
+    margin-bottom: 12px;
+}
+
+.inspector-field {
+    margin-bottom: 12px;
+}
+
+.inspector-field:last-child {
+    margin-bottom: 0;
+}
+
+.inspector-field label {
+    display: block;
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text-muted);
+    margin-bottom: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.inspector-field input,
+.inspector-field select {
+    width: 100%;
+    padding: 6px 8px;
+    font-size: 12px;
+    background: var(--input-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 3px;
+    color: var(--text-color);
+    font-family: inherit;
+}
+
+.inspector-field input:focus,
+.inspector-field select:focus {
+    outline: none;
+    border-color: var(--accent-color);
+}
+
+.inspector-field input[type="color"] {
+    height: 32px;
+    padding: 2px;
+    cursor: pointer;
+}
+
+.inspector-field input[readonly] {
+    background: var(--disabled-bg);
+    color: var(--text-muted);
+    cursor: not-allowed;
+}
+
+/* Action Buttons */
+.inspector-action-btn {
+    width: 100%;
+    padding: 8px 12px;
+    margin-bottom: 8px;
+    font-size: 12px;
+    font-weight: 500;
+    background: var(--button-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 3px;
+    color: var(--text-color);
+    cursor: pointer;
+    text-align: left;
+    transition: background 0.15s;
+}
+
+.inspector-action-btn:hover {
+    background: var(--hover-bg);
+}
+
+.inspector-action-btn:active {
+    background: var(--active-bg);
+}
+
+.inspector-action-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Inspector Divider */
+.inspector-divider {
+    width: 4px;
+    background: var(--border-color);
+    cursor: col-resize;
+    position: relative;
+}
+
+.inspector-divider:hover {
+    background: var(--accent-color);
+}
+
+.inspector-divider.hidden {
+    display: none;
+}
+
+/* Mode Banners */
+.inspector-mode-banner {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    background: var(--accent-color);
+    color: white;
+    padding: 12px 16px;
+    z-index: 1000;
+    display: none;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+
+.inspector-mode-banner.active {
+    display: flex;
+}
+
+.inspector-mode-banner-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.inspector-mode-banner-title {
+    font-weight: 600;
+}
+
+.inspector-mode-banner-counter {
+    background: rgba(255,255,255,0.2);
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 11px;
+}
+
+.inspector-mode-banner-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.inspector-mode-btn {
+    padding: 6px 12px;
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 11px;
+    font-weight: 500;
+    background: rgba(255,255,255,0.2);
+    color: white;
+    transition: background 0.15s;
+}
+
+.inspector-mode-btn:hover {
+    background: rgba(255,255,255,0.3);
+}
+
+.inspector-mode-btn.primary {
+    background: rgba(255,255,255,0.9);
+    color: var(--accent-color);
+}
+
+.inspector-mode-btn.primary:hover {
+    background: white;
+}
+
+/* Modals */
+.inspector-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 2000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+}
+
+.inspector-modal.active {
+    display: flex;
+}
+
+.inspector-modal-content {
+    background: var(--editor-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 24px;
+    max-width: 400px;
+    width: 90%;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+}
+
+.inspector-modal-header {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-color);
+    margin-bottom: 16px;
+}
+
+.inspector-modal-body {
+    margin-bottom: 20px;
+}
+
+.inspector-modal-actions {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+}
+
+.inspector-modal-btn {
+    padding: 8px 16px;
+    font-size: 12px;
+    font-weight: 500;
+    border: 1px solid var(--border-color);
+    border-radius: 3px;
+    cursor: pointer;
+    background: var(--button-bg);
+    color: var(--text-color);
+    transition: background 0.15s;
+}
+
+.inspector-modal-btn:hover {
+    background: var(--hover-bg);
+}
+
+.inspector-modal-btn.primary {
+    background: var(--accent-color);
+    border-color: var(--accent-color);
+    color: white;
+}
+
+.inspector-modal-btn.primary:hover {
+    opacity: 0.9;
+}
+
+/* Scrollbar styling for inspector panel */
+.inspector-panel-content::-webkit-scrollbar {
+    width: 8px;
+}
+
+.inspector-panel-content::-webkit-scrollbar-track {
+    background: var(--editor-bg);
+}
+
+.inspector-panel-content::-webkit-scrollbar-thumb {
+    background: var(--border-color);
+    border-radius: 4px;
+}
+
+.inspector-panel-content::-webkit-scrollbar-thumb:hover {
+    background: var(--text-muted);
+}

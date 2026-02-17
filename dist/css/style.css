@@ -4717,8 +4717,22 @@ footer {
   overflow: hidden;
 }
 
+.inspector-pane.hidden {
+  flex-basis: 0 !important;
+  width: 0 !important;
+  min-width: 0 !important;
+  border: none !important;
+  overflow: hidden !important;
+}
+
 .inspector-divider {
   cursor: col-resize;
+}
+
+.inspector-divider.hidden {
+  flex-basis: 0 !important;
+  width: 0 !important;
+  display: none !important;
 }
 
 .inspector-panel-header {

@@ -3,6 +3,7 @@ import * as monaco from 'https://cdn.jsdelivr.net/npm/monaco-editor@0.52.2/+esm'
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
 import { setupValidationWizard } from './validation-wizard.js';
+import { initializeInspector, getInspector, getCurrentDoc } from './inspector-integration.js';
 
 const init = () => {
     let hasEdited = false;
@@ -829,6 +830,15 @@ This web site is using ${"`"}markedjs/marked${"`"}.
         iframeDoc.open();
         iframeDoc.write(processedHtml);
         iframeDoc.close();
+        
+        // Initialize inspector with modular actions after iframe loads
+        iframe.onload = () => {
+            const iframeDocument = iframe.contentDocument || iframe.contentWindow.document;
+            if (iframeDocument) {
+                initializeInspector(iframeDocument);
+                console.log('✅ Inspector initialized with full modular actions');
+            }
+        };
     };
 
     // Render markdown text as html with accurate line mapping
@@ -840,13 +850,13 @@ This web site is using ${"`"}markedjs/marked${"`"}.
         if (htmlPreviewMode || isFullHtmlDocument) {
             // HTML Preview Mode: Render full HTML in iframe
             renderFullHtmlPreview(markdown);
-            updateInspectorVisibility(); // Show inspector button in HTML mode
+            // updateInspectorVisibility() REMOVED
             return;
         }
         
         // Restore normal markdown preview mode (in case we were in HTML mode)
         restoreMarkdownPreview();
-        updateInspectorVisibility(); // Hide inspector button in markdown mode
+        // updateInspectorVisibility() REMOVED
         
         // Parse metadata first
         const { metadata, content } = parseMetadata(markdown);
@@ -3742,75 +3752,7 @@ ${fontLinkTags}
         }
     };
     
-    // Setup HTML Inspector
-    let inspectorEnabled = false;
-    let selectedInspectorElement = null;
-    
-    let setupInspectorToggle = () => {
-        const inspectorToggleBtn = document.querySelector('#inspector-toggle-button');
-        const inspectorPanel = document.querySelector('#inspector-panel');
-        const inspectorDivider = document.querySelector('#inspector-divider');
-        const inspectorCloseBtn = document.querySelector('#inspector-close-btn');
-        
-        if (!inspectorToggleBtn || !inspectorPanel) return;
-        
-        // Toggle inspector panel
-        inspectorToggleBtn.addEventListener('click', () => {
-            inspectorEnabled = !inspectorEnabled;
-            
-            if (inspectorEnabled) {
-                // Show panel (NO divider, NO resizing)
-                inspectorPanel.classList.remove('hidden');
-                inspectorToggleBtn.classList.add('active');
-                
-                // Fixed width 300px
-                inspectorPanel.style.flexBasis = '300px';
-                inspectorPanel.style.width = '300px';
-                inspectorPanel.style.minWidth = '300px';
-                inspectorPanel.style.maxWidth = '300px';
-                
-                showToast('Inspector enabled', 'success');
-            } else {
-                // Hide panel
-                inspectorPanel.classList.add('hidden');
-                inspectorToggleBtn.classList.remove('active');
-                selectedInspectorElement = null;
-            }
-        });
-        
-        // Close button
-        if (inspectorCloseBtn) {
-            inspectorCloseBtn.addEventListener('click', () => {
-                inspectorEnabled = false;
-                inspectorPanel.classList.add('hidden');
-                inspectorToggleBtn.classList.remove('active');
-                selectedInspectorElement = null;
-            });
-        }
-    };
-    
-    // Show/hide inspector toggle button based on HTML mode
-    let updateInspectorVisibility = () => {
-        const inspectorToggleBtn = document.querySelector('#inspector-toggle-button');
-        if (!inspectorToggleBtn) return;
-        
-        const content = editor ? editor.getValue() : '';
-        const isFullHtmlDocument = content.trim().match(/^<!DOCTYPE\s+html>/i) || 
-                                   content.trim().match(/^<html[\s>]/i);
-        
-        if (htmlPreviewMode || isFullHtmlDocument) {
-            inspectorToggleBtn.style.display = 'flex';
-        } else {
-            inspectorToggleBtn.style.display = 'none';
-            // Hide inspector panel if switching out of HTML mode
-            const inspectorPanel = document.querySelector('#inspector-panel');
-            if (inspectorPanel && inspectorEnabled) {
-                inspectorPanel.classList.add('hidden');
-                inspectorToggleBtn.classList.remove('active');
-                inspectorEnabled = false;
-            }
-        }
-    };
+    // Inspector setup REMOVED - using modular InspectorActions class
     
     let setupPdfSettingsButton = () => {
         let pdfSettingsLink = document.querySelector('#pdf-settings-link');
@@ -5925,7 +5867,10 @@ ${fontLinkTags}
     setupImportMarkdownButton(editor);
     setupImportHtmlButton(editor);
     setupImportCssButton(editor);
-    setupInspectorToggle();
+    // setupInspectorToggle() REMOVED - using modular InspectorActions
+    
+    // Inspector will be initialized when HTML mode is activated
+    
     setupPdfSettingsButton();
     setupInsertHeaderButton();
     setupInsertFooterButton();
