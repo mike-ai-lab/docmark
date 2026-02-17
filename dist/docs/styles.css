@@ -12,6 +12,8 @@
     --color-accent: #2c2c2c;
     --color-hover: #f0f0f0;
     --color-active: #e8e8e8;
+    --color-orange: #ff6b35;
+    --color-orange-light: #ff8c5a;
     
     --sidebar-width: 280px;
     --index-width: 220px;
@@ -92,11 +94,13 @@ body {
     font-weight: 500;
     cursor: pointer;
     text-align: left;
-    transition: background 0.15s ease;
+    transition: all 0.2s ease;
 }
 
 .toc-parent:hover {
     background: var(--color-hover);
+    color: var(--color-orange);
+    transform: translateX(2px);
 }
 
 .toc-icon {
@@ -107,12 +111,12 @@ body {
     justify-content: center;
     font-size: 14px;
     color: var(--color-text-secondary);
-    transition: transform 0.2s ease;
+    transition: color 0.2s ease;
     flex-shrink: 0;
 }
 
-.toc-parent.expanded .toc-icon {
-    transform: rotate(45deg);
+.toc-parent:hover .toc-icon {
+    color: var(--color-orange);
 }
 
 .toc-label {
@@ -120,13 +124,12 @@ body {
 }
 
 .toc-children {
-    max-height: 0;
-    overflow: hidden;
-    transition: max-height 0.3s ease;
+    display: none;
+    flex-direction: column;
 }
 
-.toc-section.expanded .toc-children {
-    max-height: 500px;
+.toc-children.active {
+    display: flex;
 }
 
 .toc-item {
@@ -135,19 +138,16 @@ body {
     color: var(--color-text-secondary);
     text-decoration: none;
     font-size: 14px;
-    transition: all 0.15s ease;
-    border-left: 2px solid transparent;
+    transition: all 0.2s ease;
 }
 
 .toc-item:hover {
-    background: var(--color-hover);
-    color: var(--color-text);
+    color: var(--color-orange);
+    transform: translateX(4px);
 }
 
 .toc-item.active {
-    background: var(--color-active);
-    color: var(--color-accent);
-    border-left-color: var(--color-accent);
+    color: var(--color-orange);
     font-weight: 500;
 }
 
@@ -188,7 +188,8 @@ body {
 }
 
 .ask-more-button:hover {
-    background: var(--color-text);
+    background: var(--color-orange);
+    transform: scale(1.05);
 }
 
 .ask-more-button::after {
@@ -205,16 +206,12 @@ body {
     border-radius: 4px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
     min-width: 200px;
-    opacity: 0;
-    visibility: hidden;
-    transform: translateY(-8px);
-    transition: all 0.2s ease;
+    display: none;
+    z-index: 100;
 }
 
-.ask-more-container.open .ask-more-dropdown {
-    opacity: 1;
-    visibility: visible;
-    transform: translateY(0);
+.ask-more-dropdown.active {
+    display: block;
 }
 
 .ask-more-dropdown a,
@@ -229,7 +226,7 @@ body {
     border: none;
     font-size: 14px;
     cursor: pointer;
-    transition: background 0.15s ease;
+    transition: all 0.2s ease;
     border-bottom: 1px solid var(--color-border-light);
 }
 
@@ -241,6 +238,8 @@ body {
 .ask-more-dropdown a:hover,
 .ask-more-dropdown button:hover {
     background: var(--color-hover);
+    color: var(--color-orange);
+    transform: translateX(4px);
 }
 
 .docs-article h1 {
@@ -321,8 +320,13 @@ body {
 }
 
 .quick-link-card:hover {
-    background: var(--color-hover);
-    border-color: var(--color-accent);
+    background: var(--color-bg-secondary);
+    border-color: var(--color-orange);
+    transform: scale(1.02);
+}
+
+.quick-link-card:hover h3 {
+    color: var(--color-orange);
 }
 
 .quick-link-card h3 {
@@ -419,19 +423,23 @@ tbody tr:hover {
     gap: 4px;
 }
 
-.index-item {
+.page-index a {
     display: block;
     padding: 6px 12px;
     color: var(--color-text-secondary);
     text-decoration: none;
     font-size: 13px;
-    border-left: 2px solid transparent;
-    transition: all 0.15s ease;
+    transition: all 0.2s ease;
 }
 
-.index-item:hover {
-    color: var(--color-text);
-    background: var(--color-hover);
+.page-index a:hover {
+    color: var(--color-orange);
+    transform: scale(1.05);
+}
+
+.page-index a.active {
+    color: var(--color-orange);
+    font-weight: 500;
 }
 
 .index-item.active {

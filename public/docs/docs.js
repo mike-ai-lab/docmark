@@ -89,7 +89,7 @@
             let markdown = '';
             
             // Convert article content to markdown
-            const processNode = (node) => {
+            const processNode = (node, skipLinks = false) => {
                 if (node.nodeType === Node.TEXT_NODE) {
                     return node.textContent.trim();
                 }
@@ -98,14 +98,17 @@
                 
                 const tag = node.tagName.toLowerCase();
                 
-                // Skip UI elements
-                if (tag === 'button' || node.classList.contains('ask-more-container')) {
+                // Skip UI elements and navigation cards
+                if (tag === 'button' || 
+                    node.classList.contains('ask-more-container') ||
+                    node.classList.contains('quick-links') ||
+                    node.classList.contains('quick-link-card')) {
                     return '';
                 }
                 
                 let content = '';
                 for (let child of node.childNodes) {
-                    content += processNode(child);
+                    content += processNode(child, skipLinks);
                 }
                 
                 content = content.trim();
@@ -115,10 +118,12 @@
                     case 'h1': return `# ${content}\n\n`;
                     case 'h2': return `## ${content}\n\n`;
                     case 'h3': return `### ${content}\n\n`;
+                    case 'h4': return `#### ${content}\n\n`;
                     case 'p': return `${content}\n\n`;
                     case 'strong': return `**${content}**`;
                     case 'em': return `*${content}*`;
                     case 'code': return `\`${content}\``;
+                    case 'pre': return `\`\`\`\n${content}\n\`\`\`\n\n`;
                     case 'ul':
                         let ul = '';
                         Array.from(node.children).forEach(li => {
@@ -136,9 +141,28 @@
                         });
                         return ol + '\n';
                     case 'li': return content;
+                    case 'table':
+                        let table = '';
+                        const rows = Array.from(node.querySelectorAll('tr'));
+                        rows.forEach((row, i) => {
+                            const cells = Array.from(row.querySelectorAll('th, td'));
+                            table += '| ' + cells.map(cell => processNode(cell)).join(' | ') + ' |\n';
+                            if (i === 0) {
+                                table += '| ' + cells.map(() => '---').join(' | ') + ' |\n';
+                            }
+                        });
+                        return table + '\n';
                     case 'a':
                         const href = node.getAttribute('href') || '';
-                        return href && !href.startsWith('#') ? `[${content}](${href})` : content;
+                        // Only include links that are not navigation cards
+                        if (href && !href.startsWith('#') && !node.classList.contains('quick-link-card')) {
+                            return `[${content}](${href})`;
+                        }
+                        return content;
+                    case 'div':
+                        // Skip quick-links divs entirely
+                        if (node.classList.contains('quick-links')) return '';
+                        return content + '\n';
                     default: return content + (tag === 'section' ? '\n' : '');
                 }
             };

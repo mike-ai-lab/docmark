@@ -6,7 +6,8 @@
   "scripts": {
     "test": "node test-html-rendering-node.js",
     "test:browser": "echo 'Open test-html-rendering-runner.html in your browser'",
-    "dev": "vite",
+    "dev": "concurrently \"vite\" \"node pdf-server.js\"",
+    "dev:vite-only": "vite",
     "build": "vite build",
     "preview": "vite preview",
     "serve-dist": "http-server dist -p 5001 -c-1",
@@ -31,6 +32,7 @@
   "homepage": "https://github.com/mike-ai-lab/docmark#readme",
   "devDependencies": {
     "@playwright/test": "^1.58.2",
+    "concurrently": "^9.2.1",
     "http-server": "^14.1.1",
     "jsdom": "^25.0.1",
     "vite": "^6.4.1"

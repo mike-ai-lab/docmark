@@ -936,15 +936,6 @@ Note: Actual page count may vary based on:
                         <line x1="9" y1="15" x2="15" y2="15"></line>
                     </svg>
                 </button>
-                <div class="paper-control-separator"></div>
-                <div style="display: flex; gap: 4px; align-items: center;">
-                    <span style="font-size: 11px; color: #666; font-weight: 600;">TEST:</span>
-                    <button class="paper-control-btn" id="test-option-1" title="Option 1: Flex Center" style="font-size: 10px; padding: 4px 8px;">1</button>
-                    <button class="paper-control-btn" id="test-option-2" title="Option 2: Text Align" style="font-size: 10px; padding: 4px 8px;">2</button>
-                    <button class="paper-control-btn" id="test-option-3" title="Option 3: Grid Center" style="font-size: 10px; padding: 4px 8px;">3</button>
-                    <button class="paper-control-btn" id="test-option-4" title="Option 4: Absolute Center" style="font-size: 10px; padding: 4px 8px;">4</button>
-                    <button class="paper-control-btn" id="test-reset" title="Reset to Default" style="font-size: 10px; padding: 4px 8px; background: #ef4444;">X</button>
-                </div>
             </div>
         `),document.getElementById("paper-zoom-in").addEventListener("click",ms),document.getElementById("paper-zoom-out").addEventListener("click",fs),document.getElementById("paper-fit-width").addEventListener("click",hs),document.getElementById("paper-reset-zoom").addEventListener("click",bs),document.getElementById("paper-page-setup").addEventListener("click",vs)};setTimeout(()=>{ps(),No(),ws(),Cn(),document.body.insertAdjacentHTML("beforeend",`
             <div class="page-setup-modal" id="page-setup-modal">

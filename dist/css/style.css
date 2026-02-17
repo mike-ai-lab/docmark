@@ -1013,7 +1013,7 @@ footer {
 
 .editor-pane,
 .preview-pane {
-  height: 100%;
+  height: calc(100% - 28px); /* Account for 28px status bar at bottom */
 }
 
 /* Vertical layout adjustments */
@@ -2650,23 +2650,24 @@ footer {
 }
 
 /* Paper Layout - CSS-only visual effect (no DOM changes) */
-.preview-panel.paper-layout {
+.preview-pane.paper-layout {
     background: #f5f5f5;
     padding: 20px;
     overflow-y: auto;
 }
 
-.preview-panel.paper-layout #preview-wrapper {
+.preview-pane.paper-layout #preview-wrapper {
     background: transparent;
-    padding: 20px 0; /* Reduced from 40px to 20px */
+    padding: 20px 0 40px 0; /* Added 40px bottom padding to clear status bar */
     display: flex;
     justify-content: center;
     align-items: flex-start;
-    overflow-x: auto; /* Allow horizontal scroll when panel is too small */
+    overflow-x: auto; /* Show scrollbar only when content overflows */
+    overflow-y: auto;
     min-width: 0; /* Allow flex item to shrink */
 }
 
-.preview-panel.paper-layout #preview-wrapper .markdown-body {
+.preview-pane.paper-layout #preview-wrapper .markdown-body {
     background: transparent !important;
 }
 
@@ -2676,7 +2677,7 @@ footer {
     min-height: var(--paper-height, 29.7cm);
     margin: 0 auto;
     padding: var(--paper-margin-top, 2cm) var(--paper-margin-right, 2cm) var(--paper-margin-bottom, 2cm) var(--paper-margin-left, 2cm);
-    background: white;
+    background: #fefefe; /* Realistic paper white */
     box-shadow: 0 4px 12px rgba(0,0,0,0.15);
     box-sizing: border-box;
 }
@@ -2686,32 +2687,33 @@ footer {
     transform: scale(var(--paper-zoom, 1));
     transform-origin: top center;
     transition: transform 0.2s ease;
-    display: inline-block;
-    margin: 0 20px; /* Minimum 20px margin on each side to prevent clipping */
+    display: inline-block; /* Back to inline-block so it wraps content */
+    margin: 0 20px; /* Minimum 20px margin on each side */
+    flex-shrink: 0; /* Prevent shrinking - force scrollbar when needed */
 }
 
 #output.paper-layout-active .markdown-body {
-    background: white !important;
+    background: #fefefe !important; /* Realistic paper white */
 }
 
-[data-theme="dark"] .preview-panel.paper-layout {
+[data-theme="dark"] .preview-pane.paper-layout {
     background: #0d0d0d;
 }
 
 [data-theme="dark"] #output.paper-layout-active {
-    background: #1e1e1e;
+    background: #fefefe; /* Keep paper white even in dark mode */
     box-shadow: 0 4px 12px rgba(0,0,0,0.6);
 }
 
 [data-theme="dark"] #output.paper-layout-active .markdown-body {
-    background: #ffffff !important;
-    color: #24292f !important;
+    background: #fefefe !important; /* Keep paper white */
+    color: #24292f !important; /* Dark text on white paper */
 }
 
 /* Paper Layout Controls */
 .paper-controls {
     position: fixed;
-    bottom: 36px;
+    top: 70px; /* Below main header */
     right: 20px;
     display: flex;
     flex-direction: row;

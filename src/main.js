@@ -2777,11 +2777,23 @@ let performBeautify = (content) => {
 
         // Build font link tags for Google Fonts
         // CRITICAL: Use <link> tags instead of @import for Puppeteer compatibility
-        const fontLinkTags = fontLinks.map(url => 
-            `    <link rel="preconnect" href="https://fonts.googleapis.com">
+        const fontLinkTags = fontLinks.map(url => {
+            // Ensure the URL has display=swap for better loading
+            const fontUrl = url.includes('display=') ? url : `${url}${url.includes('?') ? '&' : '?'}display=swap`;
+            return `    <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="${url}" rel="stylesheet">`
-        ).join('\n');
+    <link href="${fontUrl}" rel="stylesheet">`
+        }).join('\n');
+        
+        // CRITICAL FIX: Add Inter font explicitly if not already included
+        let interFontTag = '';
+        const hasInter = fontLinks.some(url => url.includes('Inter'));
+        if (!hasInter) {
+            console.log('[PDF Export] Adding Inter font explicitly');
+            interFontTag = `    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">`;
+        }
         
         // CRITICAL FIX: Prepend Inter font to all font-family declarations in markdown CSS
         // This ensures Inter is used instead of system fonts
@@ -2796,6 +2808,7 @@ let performBeautify = (content) => {
 <html>
 <head>
     <meta charset="UTF-8">
+${interFontTag}
 ${fontLinkTags}
     <style>
         /* Markdown body styles */
