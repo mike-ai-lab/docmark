@@ -87,7 +87,7 @@
       window.TurndownService = TurndownService;
     </script>
     <title>Markdown Live Preview</title>
-    <script type="module" crossorigin src="/assets/index-D2CdXQFY.js"></script>
+    <script type="module" crossorigin src="/assets/index-BkxlmaEo.js"></script>
   </head>
 
   <body>
@@ -193,6 +193,12 @@
                         <a href="#" id="export-html-link">Export HTML</a>
                     </div>
                 </div>
+                <button class="icon-button" id="inspector-toggle-btn" title="Toggle HTML Inspector" style="display: none;">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"></path>
+                        <circle cx="12" cy="12" r="3"></circle>
+                    </svg>
+                </button>
                 <button class="icon-button" id="settings-button" title="Settings">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <circle cx="12" cy="12" r="3"></circle>
@@ -214,12 +220,6 @@
         </div>
         
         <div class="header-right">
-            <button class="icon-button" id="inspector-toggle-button" title="Toggle HTML Inspector" style="display: none;">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"></path>
-                    <circle cx="12" cy="12" r="3"></circle>
-                </svg>
-            </button>
             <button class="icon-button" id="import-html-button" title="Import HTML File">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
@@ -282,73 +282,71 @@
             </button>
         </div>
 
-        <div id="inspector-divider" class="split-divider inspector-divider hidden"></div>
-
-        <div id="inspector-panel" class="column inspector-pane hidden">
-            <div class="inspector-panel-header">
-                <h3>HTML Inspector</h3>
-                <button class="inspector-close" id="inspector-close-btn">×</button>
+        <!-- CLEAN PROFESSIONAL INSPECTOR PANEL -->
+        <div id="inspector-panel" class="inspector-panel hidden">
+            <div class="inspector-header">
+                <h3>🎨 HTML Inspector</h3>
+                <button class="inspector-close-btn" id="inspector-close-btn">×</button>
             </div>
-            <div class="inspector-panel-content">
+            
+            <div class="inspector-content">
+                <!-- Empty State -->
                 <div id="inspector-empty" class="inspector-empty">
-                    Click an element in the preview to inspect
+                    <div class="empty-icon">👆</div>
+                    <p>Click an element in the preview to inspect and edit</p>
                 </div>
-                <div id="inspector-editor" class="inspector-editor" style="display: none;">
-                    
-                    <!-- Advanced Actions -->
-                    <div class="inspector-section">
-                        <div class="inspector-section-header">Advanced Actions</div>
-                        <button class="inspector-action-btn" id="inspector-lock-btn">Lock Element</button>
-                        <button class="inspector-action-btn" id="inspector-group-btn" style="display: none;">Group Elements</button>
-                        <button class="inspector-action-btn" id="inspector-ungroup-btn" style="display: none;">Ungroup</button>
-                        <button class="inspector-action-btn" id="inspector-copy-style-btn">Copy Style</button>
-                        <button class="inspector-action-btn" id="inspector-paste-style-btn" style="display: none;">Paste Style</button>
-                        <button class="inspector-action-btn" id="inspector-bring-front-btn">Bring to Front</button>
-                        <button class="inspector-action-btn" id="inspector-send-back-btn">Send to Back</button>
-                        <button class="inspector-action-btn" id="inspector-bring-forward-btn">Bring Forward</button>
-                        <button class="inspector-action-btn" id="inspector-send-backward-btn">Send Backward</button>
-                        <button class="inspector-action-btn" id="inspector-distribute-h-btn" style="display: none;">Distribute Horizontally</button>
-                        <button class="inspector-action-btn" id="inspector-distribute-v-btn" style="display: none;">Distribute Vertically</button>
-                    </div>
+                
+                <!-- Editor State -->
+                <div id="inspector-editor" class="inspector-editor hidden">
                     
                     <!-- Element Info -->
                     <div class="inspector-section">
-                        <div class="inspector-section-header">Element Info</div>
+                        <div class="section-title">📋 Element Info</div>
                         <div class="inspector-field">
                             <label>Tag</label>
-                            <input type="text" id="inspector-tag" readonly>
+                            <input type="text" id="insp-tag" readonly>
                         </div>
                         <div class="inspector-field">
                             <label>Text Content</label>
-                            <input type="text" id="inspector-text">
+                            <input type="text" id="insp-text">
                         </div>
                     </div>
-
+                    
+                    <!-- Arrange (Z-Index) -->
+                    <div class="inspector-section">
+                        <div class="section-title">📚 Arrange (Layering)</div>
+                        <div class="button-grid">
+                            <button class="action-btn" id="btn-to-front">⬆️ To Front</button>
+                            <button class="action-btn" id="btn-forward">↑ Forward</button>
+                            <button class="action-btn" id="btn-backward">↓ Backward</button>
+                            <button class="action-btn" id="btn-to-back">⬇️ To Back</button>
+                        </div>
+                        <button class="action-btn full-width" id="btn-arrange-mode">🎯 Bring Above Element</button>
+                    </div>
+                    
+                    <!-- Actions -->
+                    <div class="inspector-section">
+                        <div class="section-title">⚡ Actions</div>
+                        <button class="action-btn full-width" id="btn-lock">🔒 Lock Element</button>
+                        <button class="action-btn full-width" id="btn-multi-select">☑️ Multi-Select Mode</button>
+                        <button class="action-btn full-width" id="btn-copy-style">🎨 Copy Style</button>
+                        <button class="action-btn full-width hidden" id="btn-paste-style">📋 Paste Style</button>
+                        <button class="action-btn full-width" id="btn-delete">🗑️ Delete</button>
+                        <button class="action-btn full-width" id="btn-copy-html">📋 Copy HTML</button>
+                    </div>
+                    
                     <!-- Typography -->
                     <div class="inspector-section">
-                        <div class="inspector-section-header">Typography</div>
-                        <div class="inspector-field">
-                            <label>Font Family</label>
-                            <select id="inspector-font-family">
-                                <option value="inherit">Inherit</option>
-                                <option value="Arial, sans-serif">Arial</option>
-                                <option value="'Segoe UI', Tahoma, sans-serif">Segoe UI</option>
-                                <option value="'Times New Roman', serif">Times New Roman</option>
-                                <option value="Georgia, serif">Georgia</option>
-                                <option value="'Courier New', monospace">Courier New</option>
-                                <option value="Verdana, sans-serif">Verdana</option>
-                            </select>
-                        </div>
+                        <div class="section-title">🔤 Typography</div>
                         <div class="inspector-field">
                             <label>Font Size (px)</label>
-                            <input type="number" id="inspector-font-size">
+                            <input type="number" id="insp-font-size">
                         </div>
                         <div class="inspector-field">
                             <label>Font Weight</label>
-                            <select id="inspector-font-weight">
+                            <select id="insp-font-weight">
                                 <option value="normal">Normal</option>
                                 <option value="bold">Bold</option>
-                                <option value="lighter">Lighter</option>
                                 <option value="100">100</option>
                                 <option value="300">300</option>
                                 <option value="500">500</option>
@@ -356,102 +354,60 @@
                                 <option value="900">900</option>
                             </select>
                         </div>
-                        <div class="inspector-field">
-                            <label>Text Align</label>
-                            <select id="inspector-text-align">
-                                <option value="left">Left</option>
-                                <option value="center">Center</option>
-                                <option value="right">Right</option>
-                                <option value="justify">Justify</option>
-                            </select>
-                        </div>
                     </div>
-
+                    
                     <!-- Colors -->
                     <div class="inspector-section">
-                        <div class="inspector-section-header">Colors</div>
+                        <div class="section-title">🎨 Colors</div>
                         <div class="inspector-field">
                             <label>Text Color</label>
-                            <input type="color" id="inspector-color">
+                            <input type="color" id="insp-color">
                         </div>
                         <div class="inspector-field">
-                            <label>Background Color</label>
-                            <input type="color" id="inspector-bg-color">
+                            <label>Background</label>
+                            <input type="color" id="insp-bg">
                         </div>
                     </div>
-
+                    
                     <!-- Spacing -->
                     <div class="inspector-section">
-                        <div class="inspector-section-header">Spacing</div>
+                        <div class="section-title">📏 Spacing</div>
                         <div class="inspector-field">
                             <label>Padding (px)</label>
-                            <input type="number" id="inspector-padding">
+                            <input type="number" id="insp-padding">
                         </div>
                         <div class="inspector-field">
                             <label>Margin (px)</label>
-                            <input type="number" id="inspector-margin">
+                            <input type="number" id="insp-margin">
                         </div>
                     </div>
-
-                    <!-- Dimensions -->
-                    <div class="inspector-section">
-                        <div class="inspector-section-header">Dimensions</div>
-                        <div class="inspector-field">
-                            <label>Width</label>
-                            <input type="text" id="inspector-width" placeholder="auto">
-                        </div>
-                        <div class="inspector-field">
-                            <label>Height</label>
-                            <input type="text" id="inspector-height" placeholder="auto">
-                        </div>
-                        <div class="inspector-field">
-                            <label>Display</label>
-                            <select id="inspector-display">
-                                <option value="block">Block</option>
-                                <option value="inline">Inline</option>
-                                <option value="inline-block">Inline Block</option>
-                                <option value="flex">Flex</option>
-                                <option value="none">None</option>
-                            </select>
-                        </div>
-                    </div>
-
+                    
                     <!-- Border -->
                     <div class="inspector-section">
-                        <div class="inspector-section-header">Border</div>
+                        <div class="section-title">🔲 Border</div>
                         <div class="inspector-field">
-                            <label>Border Width (px)</label>
-                            <input type="number" id="inspector-border-width" min="0">
+                            <label>Width (px)</label>
+                            <input type="number" id="insp-border-width">
                         </div>
                         <div class="inspector-field">
-                            <label>Border Style</label>
-                            <select id="inspector-border-style">
+                            <label>Style</label>
+                            <select id="insp-border-style">
                                 <option value="none">None</option>
                                 <option value="solid">Solid</option>
                                 <option value="dashed">Dashed</option>
                                 <option value="dotted">Dotted</option>
-                                <option value="double">Double</option>
                             </select>
                         </div>
                         <div class="inspector-field">
-                            <label>Border Color</label>
-                            <input type="color" id="inspector-border-color">
+                            <label>Color</label>
+                            <input type="color" id="insp-border-color">
                         </div>
                         <div class="inspector-field">
-                            <label>Border Radius (px)</label>
-                            <input type="number" id="inspector-border-radius" min="0">
+                            <label>Radius (px)</label>
+                            <input type="number" id="insp-border-radius">
                         </div>
                     </div>
-
-                    <!-- Actions -->
-                    <div class="inspector-section">
-                        <div class="inspector-section-header">Actions</div>
-                        <button class="inspector-action-btn" id="inspector-copy-style">Copy Style</button>
-                        <button class="inspector-action-btn" id="inspector-paste-style" style="display: none;">Paste Style</button>
-                        <button class="inspector-action-btn inspector-action-danger" id="inspector-delete">Delete Element</button>
-                        <button class="inspector-action-btn inspector-action-primary" id="inspector-copy-html">Copy HTML</button>
-                    </div>
-
+                    
                 </div>
             </div>
         </div>

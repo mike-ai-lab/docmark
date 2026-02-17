@@ -4,6 +4,7 @@ import { marked } from 'marked';
 import DOMPurify from 'dompurify';
 import { setupValidationWizard } from './validation-wizard.js';
 import { initializeInspector, getInspector, getCurrentDoc } from './inspector-integration.js';
+import { initInspectorPanel, showInspectorToggle, hideInspectorToggle } from './inspector-panel-ui.js';
 
 const init = () => {
     let hasEdited = false;
@@ -850,13 +851,13 @@ This web site is using ${"`"}markedjs/marked${"`"}.
         if (htmlPreviewMode || isFullHtmlDocument) {
             // HTML Preview Mode: Render full HTML in iframe
             renderFullHtmlPreview(markdown);
-            // updateInspectorVisibility() REMOVED
+            showInspectorToggle(); // Show inspector button in HTML mode
             return;
         }
         
         // Restore normal markdown preview mode (in case we were in HTML mode)
         restoreMarkdownPreview();
-        // updateInspectorVisibility() REMOVED
+        hideInspectorToggle(); // Hide inspector button in markdown mode
         
         // Parse metadata first
         const { metadata, content } = parseMetadata(markdown);
@@ -5867,9 +5868,9 @@ ${fontLinkTags}
     setupImportMarkdownButton(editor);
     setupImportHtmlButton(editor);
     setupImportCssButton(editor);
-    // setupInspectorToggle() REMOVED - using modular InspectorActions
     
-    // Inspector will be initialized when HTML mode is activated
+    // Initialize inspector panel UI
+    initInspectorPanel();
     
     setupPdfSettingsButton();
     setupInsertHeaderButton();

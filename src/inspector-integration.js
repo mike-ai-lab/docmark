@@ -4,13 +4,16 @@
  */
 
 import InspectorActions from './inspector-actions.js';
+import { updatePanelForElement, showEmptyState } from './inspector-panel-ui.js';
 
 let inspectorInstance = null;
 let currentDoc = null;
 
-// Make inspector globally accessible for testing
+// Make inspector globally accessible for testing AND console
 window.getInspector = () => inspectorInstance;
 window.getCurrentDoc = () => currentDoc;
+window.inspector = null; // Will be set after initialization
+window.doc = null; // Will be set after initialization
 
 export function initializeInspector(iframeDoc) {
     if (!iframeDoc) return;
@@ -30,6 +33,10 @@ export function initializeInspector(iframeDoc) {
                 console.log(`Inspector: ${action} - ${index}/${total}`);
             }
         });
+        
+        // Expose globally for console testing
+        window.inspector = inspectorInstance;
+        window.doc = currentDoc;
     }
     
     // Add inspector styles to iframe
@@ -44,7 +51,7 @@ export function initializeInspector(iframeDoc) {
     // Setup keyboard shortcuts
     setupKeyboardShortcuts();
     
-    console.log('Inspector initialized successfully');
+    console.log('✅ Inspector initialized with panel UI');
 }
 
 function addInspectorStyles(doc) {
@@ -55,15 +62,14 @@ function addInspectorStyles(doc) {
     style.setAttribute('data-inspector', 'true');
     style.textContent = `
         * { transition: outline 0.1s; }
-        *.active-inspect { outline: 3px solid #ff9800 !important; outline-offset: -3px; }
-        *.locked-element { outline: 2px dashed #ff5722 !important; outline-offset: -2px; }
+        *.active-inspect { outline: 3px solid #ff9800 !important; outline-offset: -3px; z-index: 9999; }
+        *.locked-element { outline: 2px dashed #ff5722 !important; outline-offset: -2px; pointer-events: none; }
         *.multi-selected { outline: 3px solid #2196f3 !important; outline-offset: -3px; background: rgba(33, 150, 243, 0.1) !important; }
         *.grouped-element { outline: 2px solid #9c27b0 !important; outline-offset: -2px; }
         *.batch-pasted { outline: 3px solid #4caf50 !important; outline-offset: -3px; }
         *.arrange-applied { outline: 3px solid #4caf50 !important; outline-offset: 2px; }
         *.arrange-hover { outline: 3px solid #0288d1 !important; outline-offset: 2px; background: rgba(2, 136, 209, 0.1) !important; }
         *.dragging { opacity: 0.8; cursor: move !important; box-shadow: 0 8px 24px rgba(0,0,0,0.3) !important; }
-        *:hover { outline: 2px dashed #ff9800 !important; cursor: pointer; }
     `;
     doc.head.appendChild(style);
 }
@@ -95,6 +101,9 @@ function setupClickHandler(doc) {
         
         // Normal selection
         inspectorInstance.selectElement(clickedElement);
+        
+        // Update panel UI
+        updatePanelForElement(clickedElement);
     }, true);
 }
 
@@ -116,6 +125,7 @@ function setupKeyboardShortcuts() {
             e.preventDefault();
             if (confirm('Delete this element?')) {
                 inspectorInstance.deleteElement(inspectorInstance.selectedElement, currentDoc);
+                showEmptyState();
             }
         }
         

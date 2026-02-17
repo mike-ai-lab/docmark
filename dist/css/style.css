@@ -5003,3 +5003,240 @@ footer {
   background: #1e3a8a;
   color: #60a5fa;
 }
+
+
+/* ============================================
+   CLEAN PROFESSIONAL INSPECTOR PANEL STYLES
+   ============================================ */
+
+.inspector-panel {
+    position: fixed;
+    right: 0;
+    top: 0;
+    width: 320px;
+    height: 100vh;
+    background: #1e1e1e;
+    color: #e0e0e0;
+    box-shadow: -4px 0 20px rgba(0,0,0,0.3);
+    z-index: 10000;
+    display: flex;
+    flex-direction: column;
+    transition: transform 0.3s ease;
+}
+
+.inspector-panel.hidden {
+    transform: translateX(100%);
+}
+
+.inspector-header {
+    background: #252525;
+    padding: 15px 20px;
+    border-bottom: 2px solid #ff9800;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.inspector-header h3 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: #ff9800;
+}
+
+.inspector-close-btn {
+    background: none;
+    border: none;
+    color: #999;
+    font-size: 28px;
+    cursor: pointer;
+    padding: 0;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    transition: all 0.2s;
+}
+
+.inspector-close-btn:hover {
+    background: #333;
+    color: #fff;
+}
+
+.inspector-content {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 15px;
+}
+
+.inspector-content::-webkit-scrollbar {
+    width: 8px;
+}
+
+.inspector-content::-webkit-scrollbar-track {
+    background: #1e1e1e;
+}
+
+.inspector-content::-webkit-scrollbar-thumb {
+    background: #444;
+    border-radius: 4px;
+}
+
+.inspector-content::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
+
+.inspector-empty {
+    text-align: center;
+    padding: 60px 20px;
+    color: #666;
+}
+
+.empty-icon {
+    font-size: 48px;
+    margin-bottom: 15px;
+}
+
+.inspector-empty p {
+    margin: 0;
+    font-size: 14px;
+    line-height: 1.6;
+}
+
+.inspector-editor {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.inspector-editor.hidden {
+    display: none;
+}
+
+.inspector-section {
+    background: #252525;
+    border-radius: 6px;
+    padding: 12px;
+    border: 1px solid #333;
+}
+
+.section-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: #ff9800;
+    margin-bottom: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.inspector-field {
+    margin-bottom: 10px;
+}
+
+.inspector-field:last-child {
+    margin-bottom: 0;
+}
+
+.inspector-field label {
+    display: block;
+    font-size: 11px;
+    color: #999;
+    margin-bottom: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.inspector-field input[type="text"],
+.inspector-field input[type="number"],
+.inspector-field select {
+    width: 100%;
+    background: #1e1e1e;
+    border: 1px solid #444;
+    color: #e0e0e0;
+    padding: 8px;
+    border-radius: 4px;
+    font-size: 13px;
+    transition: border-color 0.2s;
+}
+
+.inspector-field input[type="text"]:focus,
+.inspector-field input[type="number"]:focus,
+.inspector-field select:focus {
+    outline: none;
+    border-color: #ff9800;
+}
+
+.inspector-field input[type="color"] {
+    width: 100%;
+    height: 36px;
+    background: #1e1e1e;
+    border: 1px solid #444;
+    border-radius: 4px;
+    cursor: pointer;
+    padding: 2px;
+}
+
+.inspector-field input[readonly] {
+    background: #2a2a2a;
+    color: #666;
+    cursor: not-allowed;
+}
+
+.action-btn {
+    background: #333;
+    border: 1px solid #444;
+    color: #e0e0e0;
+    padding: 10px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 500;
+    transition: all 0.2s;
+    white-space: nowrap;
+}
+
+.action-btn:hover {
+    background: #444;
+    border-color: #ff9800;
+    transform: translateY(-1px);
+}
+
+.action-btn:active {
+    transform: translateY(0);
+}
+
+.action-btn.full-width {
+    width: 100%;
+    margin-bottom: 6px;
+}
+
+.action-btn.full-width:last-child {
+    margin-bottom: 0;
+}
+
+.button-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    margin-bottom: 6px;
+}
+
+.action-btn.hidden {
+    display: none;
+}
+
+/* Active state for toggle buttons */
+.action-btn.active {
+    background: #ff9800;
+    color: #000;
+    border-color: #ff9800;
+}
+
+/* Inspector toggle button active state */
+#inspector-toggle-btn.active {
+    background: #ff9800;
+    color: #000;
+}
