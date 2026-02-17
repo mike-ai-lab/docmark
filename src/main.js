@@ -758,10 +758,42 @@ This web site is using ${"`"}markedjs/marked${"`"}.
         `;
         iframe.sandbox = 'allow-scripts allow-same-origin allow-forms allow-modals allow-popups allow-popups-to-escape-sandbox';
         
+        // Parse CSS file paths from special comments
+        // Format: <!-- CSS: path/to/file.css -->
+        const cssRegex = /<!--\s*CSS:\s*(.+?)\s*-->/gi;
+        const cssMatches = [...htmlContent.matchAll(cssRegex)];
+        const cssPaths = cssMatches.map(match => match[1].trim());
+        
+        // Remove CSS comments from HTML
+        let processedHtml = htmlContent.replace(cssRegex, '');
+        
+        // If CSS paths are found, inject them into the HTML
+        if (cssPaths.length > 0) {
+            const cssLinks = cssPaths.map(path => {
+                // Handle both relative and absolute paths
+                const fullPath = path.startsWith('http') ? path : `/${path}`;
+                return `<link rel="stylesheet" href="${fullPath}">`;
+            }).join('\n    ');
+            
+            // Inject CSS links into <head>
+            if (processedHtml.match(/<head[^>]*>/i)) {
+                processedHtml = processedHtml.replace(
+                    /(<head[^>]*>)/i,
+                    `$1\n    ${cssLinks}`
+                );
+            } else if (processedHtml.match(/<html[^>]*>/i)) {
+                // If no <head>, create one
+                processedHtml = processedHtml.replace(
+                    /(<html[^>]*>)/i,
+                    `$1\n<head>\n    ${cssLinks}\n</head>`
+                );
+            }
+        }
+        
         // Write HTML content to iframe
         const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
         iframeDoc.open();
-        iframeDoc.write(htmlContent);
+        iframeDoc.write(processedHtml);
         iframeDoc.close();
     };
 
