@@ -464,7 +464,35 @@ const validateMarkdown = () => {
                 if (htmlTags) {
                     htmlTags.forEach(tag => {
                         const tagName = tag.match(/<(\w+)/)[1];
-                        if (!['img', 'br', 'hr', 'input', 'meta', 'link'].includes(tagName.toLowerCase())) {
+                        // Exclude self-closing tags AND SVG self-closing elements
+                        const selfClosingTags = ['img', 'br', 'hr', 'input', 'meta', 'link'];
+                        const svgSelfClosing = ['rect', 'circle', 'ellipse', 'line', 'polyline', 'polygon', 'path', 'use', 'stop'];
+                        
+                        // For SVG container elements (svg, g, text, defs, etc.), check if closing tag exists in subsequent lines
+                        const svgContainers = ['svg', 'g', 'text', 'defs', 'clipPath', 'mask', 'pattern', 'linearGradient', 'radialGradient', 'symbol'];
+                        
+                        if (svgContainers.includes(tagName.toLowerCase())) {
+                            // Check if closing tag exists in the same line or subsequent lines
+                            const closingTagPattern = new RegExp(`<\/${tagName}>`, 'i');
+                            let hasClosingTag = line.includes(`</${tagName}>`);
+                            
+                            if (!hasClosingTag) {
+                                // Check next 100 lines for closing tag
+                                for (let i = index + 1; i < Math.min(index + 100, lines.length); i++) {
+                                    if (closingTagPattern.test(lines[i])) {
+                                        hasClosingTag = true;
+                                        break;
+                                    }
+                                }
+                            }
+                            
+                            // Don't flag if closing tag was found
+                            if (hasClosingTag) {
+                                return;
+                            }
+                        }
+                        
+                        if (!selfClosingTags.includes(tagName.toLowerCase()) && !svgSelfClosing.includes(tagName.toLowerCase())) {
                             const tagStart = line.indexOf(tag);
                             markers.push({
                                 severity: monaco.MarkerSeverity.Warning,
@@ -477,6 +505,40 @@ const validateMarkdown = () => {
                             });
                         }
                     });
+                }
+                
+                // Check for multi-line SVG without proper spacing - NEW!
+                if (trimmed.startsWith('<svg') && !trimmed.includes('</svg>')) {
+                    // This is a multi-line SVG opening tag
+                    // Check if there's a blank line before it
+                    const hasPrevBlankLine = index === 0 || lines[index - 1].trim() === '';
+                    
+                    // Find the closing </svg> tag
+                    let closingLine = -1;
+                    for (let i = index + 1; i < lines.length; i++) {
+                        if (lines[i].trim().includes('</svg>')) {
+                            closingLine = i;
+                            break;
+                        }
+                    }
+                    
+                    if (closingLine !== -1) {
+                        // Check if there's a blank line after closing tag
+                        const hasNextBlankLine = closingLine === lines.length - 1 || lines[closingLine + 1].trim() === '';
+                        
+                        // If missing blank lines, suggest converting to single-line
+                        if (!hasPrevBlankLine || !hasNextBlankLine) {
+                            markers.push({
+                                severity: monaco.MarkerSeverity.Info,
+                                startLineNumber: lineNumber,
+                                startColumn: 1,
+                                endLineNumber: lineNumber,
+                                endColumn: line.length + 1,
+                                message: 'Multi-line SVG needs blank lines or single-line format: Convert to single line for better compatibility',
+                                source: 'markdown-validator'
+                            });
+                        }
+                    }
                 }
             });
             
@@ -898,6 +960,36 @@ const validateMarkdown = () => {
                     fixDescription = 'Add URL';
                 }
             }
+            // Multi-line SVG without proper spacing - NEW!
+            else if (marker.message.includes('Multi-line SVG needs blank lines or single-line format')) {
+                // Convert multi-line SVG to single line (like import does)
+                const model = editor.getModel();
+                const lineNumber = marker.startLineNumber;
+                let svgLines = [];
+                let currentLine = lineNumber;
+                
+                // Collect all SVG lines until we find </svg>
+                while (currentLine <= model.getLineCount()) {
+                    const content = model.getLineContent(currentLine);
+                    svgLines.push(content);
+                    if (content.trim().includes('</svg>')) {
+                        break;
+                    }
+                    currentLine++;
+                }
+                
+                // Convert to single line - remove line breaks and extra spaces between tags
+                const singleLineSvg = svgLines.join('')
+                    .replace(/\r\n/g, '')
+                    .replace(/\n/g, '')
+                    .replace(/\r/g, '')
+                    .replace(/>\s+</g, '><')
+                    .trim();
+                
+                suggestedFix = singleLineSvg;
+                fixDescription = 'Convert SVG to single-line format';
+                console.log('[generateFix] SVG fix:', suggestedFix.substring(0, 100) + '...');
+            }
             
             return { suggestedFix, fixDescription };
         };
@@ -910,6 +1002,43 @@ const validateMarkdown = () => {
             
             console.log('[applyMultiple] Line', lineNumber, '- Markers:', markers.length);
             console.log('[applyMultiple] BEFORE:', currentLine);
+            
+            // Check if this is a multi-line SVG fix (special handling)
+            const svgMarker = markers.find(m => m.message.includes('Multi-line SVG'));
+            if (svgMarker) {
+                // Find the closing </svg> tag
+                let closingLine = lineNumber;
+                for (let i = lineNumber + 1; i <= model.getLineCount(); i++) {
+                    if (model.getLineContent(i).trim().endsWith('</svg>')) {
+                        closingLine = i;
+                        break;
+                    }
+                }
+                
+                // Collect all SVG lines
+                let svgLines = [];
+                for (let i = lineNumber; i <= closingLine; i++) {
+                    svgLines.push(model.getLineContent(i));
+                }
+                
+                // Convert to single line
+                const singleLineSvg = svgLines.join('')
+                    .replace(/\r\n/g, '')
+                    .replace(/\n/g, '')
+                    .replace(/\r/g, '')
+                    .replace(/>\s+</g, '><')
+                    .trim();
+                
+                // Replace all lines with the single-line version
+                const range = new monaco.Range(lineNumber, 1, closingLine, model.getLineContent(closingLine).length + 1);
+                editor.executeEdits('validation-fix-svg', [{
+                    range: range,
+                    text: singleLineSvg
+                }]);
+                
+                fixDescriptions.push('Convert SVG to single-line format');
+                return { fixed: true, description: fixDescriptions.join(', ') };
+            }
             
             // Sort markers by priority (structural fixes first, then formatting)
             const priorityOrder = [

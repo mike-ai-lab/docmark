@@ -9,6 +9,7 @@ const init = () => {
     let scrollBarSync = false;
     let cursorSync = false;
     let tocEnabled = false;
+    let htmlPreviewMode = false; // Toggle for full HTML preview mode
     
     // Paper layout state (declared early to avoid initialization errors)
     let previewLayout = 'web'; // 'web' or 'paper'
@@ -43,6 +44,7 @@ const init = () => {
     const localStorageHelperMessagesKey = 'helper_messages_settings';
     const localStorageTocKey = 'toc_settings';
     const localStorageValidationKey = 'validation_settings';
+    const localStorageHtmlModeKey = 'html_preview_mode';
     const confirmationMessage = 'Are you sure you want to reset? Your changes will be lost.';
     
     // Editor reference (will be set by setupEditor)
@@ -652,8 +654,132 @@ This web site is using ${"`"}markedjs/marked${"`"}.
         applyPaperZoom();
     };
 
+    // Restore normal markdown preview mode (cleanup from HTML preview mode)
+    let restoreMarkdownPreview = () => {
+        const outputDiv = document.querySelector('#output');
+        const previewWrapper = document.querySelector('#preview-wrapper');
+        const paperScaler = document.querySelector('#paper-scaler');
+        const previewPane = document.querySelector('#preview');
+        
+        if (!outputDiv) return;
+        
+        // Remove HTML mode class
+        if (previewPane) {
+            previewPane.classList.remove('html-preview-mode');
+        }
+        
+        // Remove iframe if it exists
+        const iframe = outputDiv.querySelector('iframe.html-preview-iframe');
+        if (iframe) {
+            iframe.remove();
+        }
+        
+        // Restore markdown-body class
+        outputDiv.classList.add('markdown-body');
+        
+        // Reset output div styles
+        outputDiv.style.width = '';
+        outputDiv.style.height = '';
+        outputDiv.style.maxWidth = '';
+        outputDiv.style.margin = '';
+        outputDiv.style.padding = '';
+        outputDiv.style.boxShadow = '';
+        
+        // Reset preview wrapper styles
+        if (previewWrapper) {
+            previewWrapper.style.padding = '';
+            previewWrapper.style.overflow = '';
+        }
+        
+        // Reset paper scaler styles
+        if (paperScaler) {
+            paperScaler.style.transform = '';
+            paperScaler.style.width = '';
+            paperScaler.style.height = '';
+        }
+    };
+
+    // Render full HTML document in iframe (for HTML Preview Mode)
+    let renderFullHtmlPreview = (htmlContent) => {
+        const outputDiv = document.querySelector('#output');
+        const previewWrapper = document.querySelector('#preview-wrapper');
+        const paperScaler = document.querySelector('#paper-scaler');
+        const previewPane = document.querySelector('#preview');
+        
+        if (!outputDiv) return;
+        
+        // Add HTML mode class to preview pane for styling
+        if (previewPane) {
+            previewPane.classList.add('html-preview-mode');
+        }
+        
+        // Remove all constraining classes and styles
+        outputDiv.classList.remove('paper-layout-active', 'markdown-body', 'content');
+        
+        // Make preview wrapper and paper scaler full size
+        if (previewWrapper) {
+            previewWrapper.style.padding = '0';
+            previewWrapper.style.overflow = 'hidden';
+        }
+        
+        if (paperScaler) {
+            paperScaler.style.transform = 'none';
+            paperScaler.style.width = '100%';
+            paperScaler.style.height = '100%';
+        }
+        
+        // Make output div full size
+        outputDiv.style.width = '100%';
+        outputDiv.style.height = '100%';
+        outputDiv.style.maxWidth = 'none';
+        outputDiv.style.margin = '0';
+        outputDiv.style.padding = '0';
+        outputDiv.style.boxShadow = 'none';
+        
+        // Create or update iframe
+        let iframe = outputDiv.querySelector('iframe.html-preview-iframe');
+        if (!iframe) {
+            iframe = document.createElement('iframe');
+            iframe.className = 'html-preview-iframe';
+            outputDiv.innerHTML = '';
+            outputDiv.appendChild(iframe);
+        }
+        
+        // Set iframe to full size with no constraints
+        iframe.style.cssText = `
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border: none;
+            background: white;
+            display: block;
+        `;
+        iframe.sandbox = 'allow-scripts allow-same-origin allow-forms allow-modals allow-popups allow-popups-to-escape-sandbox';
+        
+        // Write HTML content to iframe
+        const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+        iframeDoc.open();
+        iframeDoc.write(htmlContent);
+        iframeDoc.close();
+    };
+
     // Render markdown text as html with accurate line mapping
     let convert = (markdown) => {
+        // Check if HTML Preview Mode is enabled OR if content looks like a full HTML document
+        const isFullHtmlDocument = markdown.trim().match(/^<!DOCTYPE\s+html>/i) || 
+                                   markdown.trim().match(/^<html[\s>]/i);
+        
+        if (htmlPreviewMode || isFullHtmlDocument) {
+            // HTML Preview Mode: Render full HTML in iframe
+            renderFullHtmlPreview(markdown);
+            return;
+        }
+        
+        // Restore normal markdown preview mode (in case we were in HTML mode)
+        restoreMarkdownPreview();
+        
         // Parse metadata first
         const { metadata, content } = parseMetadata(markdown);
         
@@ -667,6 +793,7 @@ This web site is using ${"`"}markedjs/marked${"`"}.
             smartLists: true,    // Better list handling
             smartypants: false,  // Don't convert quotes/dashes
             sanitize: false,     // Allow HTML passthrough (we sanitize with DOMPurify later)
+            html: true,          // Enable raw HTML support
             highlight: function(code, lang) {
                 // Check if highlight.js is available
                 if (typeof window.hljs === 'undefined') {
@@ -721,14 +848,24 @@ This web site is using ${"`"}markedjs/marked${"`"}.
         
         // Configure DOMPurify to allow HTML elements while maintaining security
         let sanitized = DOMPurify.sanitize(html, {
-            ADD_ATTR: ['class', 'style', 'data-hint-style', 'id', 'target', 'rel', 'href', 'src', 'alt', 'title', 'controls', 'type'],
+            USE_PROFILES: { svg: true, svgFilters: true },  // Enable full SVG support
             ADD_TAGS: ['span', 'div', 'strong', 'em', 'code', 'a', 'img', 'video', 'source', 'table', 'thead', 'tbody', 'tr', 'th', 'td', 
                        'ul', 'ol', 'li', 'p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'blockquote', 'pre', 'br', 'hr',
                        'section', 'article', 'aside', 'nav', 'header', 'footer', 'main', 'figure', 'figcaption',
                        'b', 'i', 'u', 's', 'sub', 'sup', 'mark', 'small', 'del', 'ins', 'abbr', 'cite', 'q', 'dfn',
-                       'time', 'var', 'samp', 'kbd', 'data', 'address', 'details', 'summary', 'dl', 'dt', 'dd'],
+                       'time', 'var', 'samp', 'kbd', 'data', 'address', 'details', 'summary', 'dl', 'dt', 'dd',
+                       'button', 'input', 'textarea', 'select', 'option', 'label', 'fieldset', 'legend', 'form',
+                       'canvas', 'audio', 'track', 'iframe', 'embed', 'object', 'param', 'picture', 'map', 'area'],
+            ADD_ATTR: ['class', 'style', 'data-hint-style', 'id', 'target', 'rel', 'href', 'src', 'alt', 'title', 
+                       'controls', 'type', 'data-source-line', 'width', 'height', 'colspan', 'rowspan', 'align',
+                       'valign', 'border', 'cellpadding', 'cellspacing', 'name', 'value', 'placeholder', 'disabled',
+                       'readonly', 'checked', 'selected', 'multiple', 'size', 'maxlength', 'min', 'max', 'step',
+                       'pattern', 'required', 'autocomplete', 'autofocus', 'loading', 'decoding', 'crossorigin',
+                       'sandbox', 'allow', 'allowfullscreen', 'frameborder', 'scrolling'],
             ALLOW_DATA_ATTR: true,  // Allow data-* attributes for line mapping
-            KEEP_CONTENT: true      // Keep content even if tags are removed
+            KEEP_CONTENT: true,     // Keep content even if tags are removed
+            ALLOW_UNKNOWN_PROTOCOLS: false,  // Security: block unknown protocols
+            ALLOWED_URI_REGEXP: /^(?:(?:(?:f|ht)tps?|mailto|tel|callto|sms|cid|xmpp|data|blob):|[^a-z]|[a-z+.\-]+(?:[^a-z+.\-:]|$))/i
         });
         
         // Create a temporary container
@@ -3212,6 +3349,27 @@ ${fontLinkTags}
         }
     };
 
+    let setupHtmlRefreshButton = () => {
+        const refreshButton = document.querySelector('#html-refresh-button');
+        if (refreshButton) {
+            refreshButton.addEventListener('click', (event) => {
+                event.preventDefault();
+                // Re-render the HTML by calling convert with current editor content
+                const content = editor.getValue();
+                convert(content);
+                
+                // Visual feedback
+                const svg = refreshButton.querySelector('svg');
+                if (svg) {
+                    svg.style.animation = 'spin 0.5s ease-in-out';
+                    setTimeout(() => {
+                        svg.style.animation = 'none';
+                    }, 500);
+                }
+            });
+        }
+    };
+
     let setupExportHtmlButton = () => {
         const exportHtmlLink = document.querySelector('#export-html-link');
         if (exportHtmlLink) {
@@ -5272,6 +5430,12 @@ ${fontLinkTags}
         divider.addEventListener('mousedown', (e) => {
             e.preventDefault();
             
+            // Disable pointer events on iframe during drag to prevent it from capturing mouse events
+            const htmlIframe = document.querySelector('.html-preview-iframe');
+            if (htmlIframe) {
+                htmlIframe.style.pointerEvents = 'none';
+            }
+            
             // Store initial divider position for delta calculation
             const dividerRect = divider.getBoundingClientRect();
             const containerRect = container.getBoundingClientRect();
@@ -5455,6 +5619,7 @@ ${fontLinkTags}
     setupRedoButton();
     setupBeautifyButton();
     setupExportButton();
+    setupHtmlRefreshButton();
     setupPrintPdfButton();
     setupExportHtmlButton();
     setupExportMarkdownButton(editor);
@@ -5659,6 +5824,7 @@ ${fontLinkTags}
         const layoutModeLabel = document.getElementById('status-layout-mode');
         const outputDiv = document.querySelector('#output');
         const previewWrapper = document.querySelector('#preview-wrapper');
+        const paperScaler = document.querySelector('#paper-scaler');
         
         if (previewLayout === 'paper') {
             console.log('[PAPER LAYOUT] Applying paper layout...');
@@ -5695,6 +5861,12 @@ ${fontLinkTags}
             
             if (outputDiv) {
                 outputDiv.classList.remove('paper-layout-active');
+            }
+            
+            // Reset paper-scaler transform for web layout
+            if (paperScaler) {
+                console.log('[PAPER LAYOUT] Resetting paper-scaler transform to scale(1)');
+                paperScaler.style.transform = 'scale(1)';
             }
             
             // Reset wrapper styles
@@ -6805,8 +6977,6 @@ ${fontLinkTags}
         if (!activeResizer) return;
         e.preventDefault();
         
-        console.log('[DRAG] Mouse move during drag');
-        
         const containerRect = activeResizer.container.getBoundingClientRect();
         const dividerWidth = activeResizer.divider.offsetWidth;
         
@@ -6917,6 +7087,13 @@ ${fontLinkTags}
             document.body.style.cursor = 'default';
             document.body.classList.remove('dragging');
             document.body.style.userSelect = '';
+            
+            // Re-enable pointer events on iframe after drag
+            const htmlIframe = document.querySelector('.html-preview-iframe');
+            if (htmlIframe) {
+                htmlIframe.style.pointerEvents = 'auto';
+            }
+            
             activeResizer = null;
         }
     });
