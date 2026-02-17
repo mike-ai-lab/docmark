@@ -628,6 +628,27 @@ header a:hover {
   color: #60a5fa;
 }
 
+/* Specific colors for HTML and CSS import buttons */
+#import-html-button:hover {
+  background-color: #fef3c7;
+  color: #f59e0b;
+}
+
+#import-css-button:hover {
+  background-color: #dbeafe;
+  color: #3b82f6;
+}
+
+[data-theme="dark"] #import-html-button:hover {
+  background-color: #422006;
+  color: #fbbf24;
+}
+
+[data-theme="dark"] #import-css-button:hover {
+  background-color: #1e3a8a;
+  color: #60a5fa;
+}
+
 .controls-group {
   display: flex;
   gap: 12px;
@@ -725,6 +746,103 @@ footer {
   max-width: 100%;
   overflow-wrap: break-word;
   word-wrap: break-word;
+}
+
+/* HTML Preview Mode - Full iframe rendering */
+.html-preview-iframe {
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  border: none !important;
+  background: white !important;
+  display: block !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* When HTML preview is active, make containers full size */
+#preview-wrapper:has(.html-preview-iframe) {
+  padding: 0 !important;
+  overflow: hidden !important;
+  position: relative !important;
+}
+
+#output:has(.html-preview-iframe) {
+  position: relative !important;
+  width: 100% !important;
+  height: 100% !important;
+  max-width: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+#paper-scaler:has(.html-preview-iframe) {
+  transform: none !important;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+/* HTML Preview Refresh Button */
+.html-refresh-btn {
+  position: absolute;
+  bottom: 20px;
+  right: 20px;
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: #3b82f6;
+  color: white;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  transition: all 0.3s ease;
+}
+
+.html-refresh-btn:hover {
+  background: #2563eb;
+  transform: scale(1.1);
+  box-shadow: 0 6px 16px rgba(59, 130, 246, 0.6);
+}
+
+.html-refresh-btn:active {
+  transform: scale(0.95);
+}
+
+.html-refresh-btn svg {
+  animation: none;
+}
+
+.html-refresh-btn:active svg {
+  animation: spin 0.5s ease-in-out;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Show refresh button only in HTML preview mode */
+.preview-pane.html-preview-mode .html-refresh-btn {
+  display: flex !important;
+}
+
+/* Hide header controls in HTML preview mode */
+.preview-pane.html-preview-mode ~ header .header-center {
+  opacity: 0.3;
+  pointer-events: none;
+}
+
+/* Keep only essential buttons visible in HTML mode */
+.preview-pane.html-preview-mode ~ header #settings-button,
+.preview-pane.html-preview-mode ~ header #help-button {
+  opacity: 1;
+  pointer-events: auto;
 }
 
 [data-theme="dark"] #preview-wrapper {

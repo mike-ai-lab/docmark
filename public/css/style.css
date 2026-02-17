@@ -628,6 +628,27 @@ header a:hover {
   color: #60a5fa;
 }
 
+/* Specific colors for HTML and CSS import buttons */
+#import-html-button:hover {
+  background-color: #fef3c7;
+  color: #f59e0b;
+}
+
+#import-css-button:hover {
+  background-color: #dbeafe;
+  color: #3b82f6;
+}
+
+[data-theme="dark"] #import-html-button:hover {
+  background-color: #422006;
+  color: #fbbf24;
+}
+
+[data-theme="dark"] #import-css-button:hover {
+  background-color: #1e3a8a;
+  color: #60a5fa;
+}
+
 .controls-group {
   display: flex;
   gap: 12px;

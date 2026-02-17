@@ -11,6 +11,10 @@ const init = () => {
     let tocEnabled = false;
     let htmlPreviewMode = false; // Toggle for full HTML preview mode
     
+    // HTML/CSS upload state
+    let loadedCSSContent = null; // Store loaded CSS content
+    let lastHtmlFilePath = null; // Store HTML file path for CSS detection
+    
     // Paper layout state (declared early to avoid initialization errors)
     let previewLayout = 'web'; // 'web' or 'paper'
     let paperZoomLevel = 100; // percentage
@@ -764,8 +768,20 @@ This web site is using ${"`"}markedjs/marked${"`"}.
         const cssMatches = [...htmlContent.matchAll(cssRegex)];
         const cssPaths = cssMatches.map(match => match[1].trim());
         
+        console.log('=== CSS INJECTION DEBUG ===');
+        console.log('HTML Content (first 200 chars):', htmlContent.substring(0, 200));
+        console.log('CSS Paths found:', cssPaths);
+        console.log('Loaded CSS Content:', loadedCSSContent ? 'YES (' + loadedCSSContent.length + ' chars)' : 'NO');
+        
         // Remove CSS comments from HTML
         let processedHtml = htmlContent.replace(cssRegex, '');
+        
+        // Inject loaded CSS content directly if available
+        let cssInjection = '';
+        if (loadedCSSContent) {
+            cssInjection = `<style>/* Injected CSS from uploaded file */\n${loadedCSSContent}\n</style>\n    `;
+            console.log('CSS Injection prepared:', cssInjection.substring(0, 100) + '...');
+        }
         
         // If CSS paths are found, inject them into the HTML
         if (cssPaths.length > 0) {
@@ -775,20 +791,38 @@ This web site is using ${"`"}markedjs/marked${"`"}.
                 return `<link rel="stylesheet" href="${fullPath}">`;
             }).join('\n    ');
             
-            // Inject CSS links into <head>
+            cssInjection += cssLinks;
+            console.log('CSS Links added:', cssLinks);
+        }
+        
+        console.log('Total CSS Injection:', cssInjection ? 'YES (' + cssInjection.length + ' chars)' : 'NO');
+        
+        // Inject CSS into HTML - ALWAYS inject if we have CSS content OR paths
+        if (cssInjection) {
+            // Inject CSS into <head>
             if (processedHtml.match(/<head[^>]*>/i)) {
                 processedHtml = processedHtml.replace(
                     /(<head[^>]*>)/i,
-                    `$1\n    ${cssLinks}`
+                    `$1\n    ${cssInjection}`
                 );
+                console.log('CSS injected into <head>');
             } else if (processedHtml.match(/<html[^>]*>/i)) {
                 // If no <head>, create one
                 processedHtml = processedHtml.replace(
                     /(<html[^>]*>)/i,
-                    `$1\n<head>\n    ${cssLinks}\n</head>`
+                    `$1\n<head>\n    ${cssInjection}\n</head>`
                 );
+                console.log('CSS injected into new <head>');
+            } else {
+                // If no <html> tag, prepend CSS as style tag
+                processedHtml = `<style>${loadedCSSContent || ''}</style>\n${processedHtml}`;
+                console.log('CSS prepended as <style>');
             }
+        } else {
+            console.log('No CSS to inject! (loadedCSSContent:', loadedCSSContent ? 'EXISTS' : 'NULL', ', cssPaths:', cssPaths.length, ')');
         }
+        
+        console.log('=== END CSS DEBUG ===');
         
         // Write HTML content to iframe
         const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
@@ -3556,6 +3590,156 @@ ${fontLinkTags}
         }
     };
     
+    // Setup import HTML button with CSS auto-detection
+    let setupImportHtmlButton = (editorInstance) => {
+        const importHtmlButton = document.querySelector('#import-html-button');
+        const importHtmlInput = document.querySelector('#import-html-input');
+        
+        console.log('HTML Button:', importHtmlButton);
+        console.log('HTML Input:', importHtmlInput);
+        
+        if (importHtmlButton && importHtmlInput) {
+            importHtmlButton.addEventListener('click', (e) => {
+                e.preventDefault();
+                console.log('HTML button clicked!');
+                importHtmlInput.click();
+            });
+            
+            importHtmlInput.addEventListener('change', async (event) => {
+                console.log('HTML file selected:', event.target.files[0]);
+                const file = event.target.files[0];
+                if (file) {
+                    lastHtmlFilePath = file.name;
+                    
+                    const reader = new FileReader();
+                    reader.onload = async (e) => {
+                        let htmlContent = e.target.result;
+                        
+                        // Try to auto-detect CSS file in the same folder
+                        // Extract CSS filename from HTML if it has a link tag
+                        const cssLinkMatch = htmlContent.match(/<link[^>]*href=["']([^"']*\.css)["'][^>]*>/i);
+                        
+                        if (cssLinkMatch) {
+                            const cssFileName = cssLinkMatch[1].split('/').pop(); // Get just the filename
+                            showMofuHelper(`HTML imported! This file references <strong>${cssFileName}</strong>. Click the <strong>CSS upload button</strong> (blue icon) to upload it.`);
+                            showToast(`CSS file needed: ${cssFileName}`, 'info');
+                        } else {
+                            showMofuHelper(`HTML imported! If it needs CSS, click the <strong>CSS upload button</strong>.`);
+                        }
+                        
+                        if (editorInstance) {
+                            // Save current state before importing
+                            saveToUndoHistory(editorInstance.getValue());
+                            
+                            // Insert HTML content
+                            const model = editorInstance.getModel();
+                            const fullRange = model.getFullModelRange();
+                            editorInstance.executeEdits('import-html', [{
+                                range: fullRange,
+                                text: htmlContent
+                            }]);
+                            
+                            showToast(`HTML imported: ${file.name}`, 'success');
+                        }
+                    };
+                    reader.onerror = () => {
+                        showToast('Failed to read HTML file', 'error');
+                    };
+                    reader.readAsText(file);
+                }
+                // Reset input
+                event.target.value = '';
+            });
+        } else {
+            console.error('HTML button or input not found!');
+        }
+    };
+    
+    // Setup import CSS button
+    let setupImportCssButton = (editorInstance) => {
+        const importCssButton = document.querySelector('#import-css-button');
+        const importCssInput = document.querySelector('#import-css-input');
+        
+        console.log('CSS Button:', importCssButton);
+        console.log('CSS Input:', importCssInput);
+        
+        if (importCssButton && importCssInput) {
+            importCssButton.addEventListener('click', (e) => {
+                e.preventDefault();
+                console.log('CSS button clicked!');
+                importCssInput.click();
+            });
+            
+            importCssInput.addEventListener('change', (event) => {
+                console.log('CSS file selected:', event.target.files[0]);
+                const file = event.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        loadedCSSContent = e.target.result;
+                        console.log('CSS Content loaded:', loadedCSSContent.length, 'characters');
+                        
+                        // Get current HTML content
+                        const currentContent = editorInstance ? editorInstance.getValue() : '';
+                        
+                        // Check if it's HTML content
+                        if (currentContent.includes('<html') || currentContent.includes('<!DOCTYPE')) {
+                            // Add CSS comment at the top
+                            const cssComment = `<!-- CSS: ${file.name} -->\n`;
+                            
+                            // Check if CSS comment already exists
+                            if (!currentContent.includes('<!-- CSS:')) {
+                                // Save current state
+                                saveToUndoHistory(currentContent);
+                                
+                                // Insert CSS comment at the beginning
+                                const newContent = cssComment + currentContent;
+                                
+                                if (editorInstance) {
+                                    const model = editorInstance.getModel();
+                                    const fullRange = model.getFullModelRange();
+                                    editorInstance.executeEdits('import-css', [{
+                                        range: fullRange,
+                                        text: newContent
+                                    }]);
+                                }
+                                
+                                showToast(`CSS linked: ${file.name}`, 'success');
+                                showMofuHelper(`CSS file linked! The comment <code>&lt;!-- CSS: ${file.name} --&gt;</code> was added to your HTML.`);
+                            } else {
+                                showToast(`CSS applied: ${file.name}`, 'success');
+                                showMofuHelper(`CSS file loaded! The preview will update automatically.`);
+                            }
+                            
+                            // ALWAYS force re-render the preview to apply CSS
+                            console.log('Triggering preview update after CSS upload...');
+                            if (editorInstance) {
+                                // Delay to ensure editor content is updated
+                                setTimeout(() => {
+                                    const updatedContent = editorInstance.getValue();
+                                    console.log('Calling convert() with updated content...');
+                                    convert(updatedContent);
+                                }, 150);
+                            }
+                        } else {
+                            // Not HTML content, just store the CSS
+                            showToast(`CSS loaded: ${file.name}`, 'success');
+                            showMofuHelper(`CSS file loaded! Import an HTML file to use it, or add <code>&lt;!-- CSS: ${file.name} --&gt;</code> to your HTML.`);
+                        }
+                    };
+                    reader.onerror = () => {
+                        showToast('Failed to read CSS file', 'error');
+                    };
+                    reader.readAsText(file);
+                }
+                // Reset input
+                event.target.value = '';
+            });
+        } else {
+            console.error('CSS button or input not found!');
+        }
+    };
+    
     let setupPdfSettingsButton = () => {
         let pdfSettingsLink = document.querySelector('#pdf-settings-link');
         if (pdfSettingsLink) {
@@ -5656,6 +5840,8 @@ ${fontLinkTags}
     setupExportHtmlButton();
     setupExportMarkdownButton(editor);
     setupImportMarkdownButton(editor);
+    setupImportHtmlButton(editor);
+    setupImportCssButton(editor);
     setupPdfSettingsButton();
     setupInsertHeaderButton();
     setupInsertFooterButton();

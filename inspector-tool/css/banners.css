@@ -1,0 +1,190 @@
+/* Banner Styles */
+
+@keyframes slideDown {
+    from { transform: translateY(-100%); }
+    to { transform: translateY(0); }
+}
+
+/* Batch Paste Mode Banner */
+.batch-mode-banner {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    background: linear-gradient(135deg, #673ab7, #9c27b0);
+    color: white;
+    padding: 15px;
+    z-index: 9999;
+    display: none;
+    align-items: center;
+    justify-content: space-between;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    animation: slideDown 0.3s ease;
+}
+.batch-mode-banner.active {
+    display: flex;
+}
+.batch-mode-info {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+.batch-mode-counter {
+    background: rgba(255,255,255,0.2);
+    padding: 5px 15px;
+    border-radius: 20px;
+    font-weight: bold;
+}
+.batch-mode-actions {
+    display: flex;
+    gap: 10px;
+}
+.batch-mode-btn {
+    padding: 8px 20px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 12px;
+}
+.batch-mode-btn.done {
+    background: #4caf50;
+    color: white;
+}
+.batch-mode-btn.undo {
+    background: #ff9800;
+    color: white;
+}
+.batch-mode-btn.cancel {
+    background: rgba(255,255,255,0.2);
+    color: white;
+}
+
+/* Arrange Mode Banner */
+.arrange-mode-banner {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    background: linear-gradient(135deg, #0288d1, #0277bd);
+    color: white;
+    padding: 15px;
+    z-index: 9999;
+    display: none;
+    align-items: center;
+    justify-content: space-between;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    animation: slideDown 0.3s ease;
+}
+.arrange-mode-banner.active {
+    display: flex;
+}
+.arrange-mode-info {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+.arrange-mode-counter {
+    background: rgba(255,255,255,0.2);
+    padding: 5px 15px;
+    border-radius: 20px;
+    font-weight: bold;
+}
+.arrange-mode-actions {
+    display: flex;
+    gap: 10px;
+}
+.arrange-mode-btn {
+    padding: 8px 20px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 12px;
+}
+.arrange-mode-btn.done {
+    background: #4caf50;
+    color: white;
+}
+.arrange-mode-btn.undo {
+    background: #ff9800;
+    color: white;
+}
+.arrange-mode-btn.cancel {
+    background: rgba(255,255,255,0.2);
+    color: white;
+}
+
+/* Arrange hover effect */
+.arrange-hover {
+    outline: 3px solid #0288d1 !important;
+    outline-offset: 2px;
+    background: rgba(2, 136, 209, 0.1) !important;
+}
+
+/* Arrange applied effect */
+.arrange-applied {
+    outline: 3px solid #4caf50 !important;
+    outline-offset: 2px;
+    animation: arrangeFlash 0.5s ease;
+}
+
+@keyframes arrangeFlash {
+    0%, 100% { background: transparent; }
+    50% { background: rgba(76, 175, 80, 0.3); }
+}
+
+/* Multi-Select Mode Banner */
+.multiselect-mode-banner {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    background: linear-gradient(135deg, #2196f3, #1976d2);
+    color: white;
+    padding: 15px;
+    z-index: 9999;
+    display: none;
+    align-items: center;
+    justify-content: space-between;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    animation: slideDown 0.3s ease;
+}
+.multiselect-mode-banner.active {
+    display: flex;
+}
+.multiselect-mode-info {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+.multiselect-mode-counter {
+    background: rgba(255,255,255,0.2);
+    padding: 5px 15px;
+    border-radius: 20px;
+    font-weight: bold;
+}
+.multiselect-mode-actions {
+    display: flex;
+    gap: 10px;
+}
+.multiselect-mode-btn {
+    padding: 8px 20px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 12px;
+}
+.multiselect-mode-btn.distribute {
+    background: #4caf50;
+    color: white;
+}
+.multiselect-mode-btn.clear {
+    background: #ff9800;
+    color: white;
+}
+.multiselect-mode-btn.cancel {
+    background: rgba(255,255,255,0.2);
+    color: white;
+}
