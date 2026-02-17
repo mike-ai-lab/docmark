@@ -2733,10 +2733,20 @@ let performBeautify = (content) => {
         let markdownCss = '';
         
         if (ghMarkdownLink && ghMarkdownLink.href) {
-            console.log('[PDF Export] Fetching CSS from:', ghMarkdownLink.href);
+            let cssUrl = ghMarkdownLink.href;
+            
+            // CRITICAL FIX: Force light theme for PDF export
+            // Replace dark/dark_dimmed with light version
+            if (cssUrl.includes('github-markdown-dark')) {
+                cssUrl = cssUrl.replace('github-markdown-dark_dimmed', 'github-markdown-light');
+                cssUrl = cssUrl.replace('github-markdown-dark', 'github-markdown-light');
+                console.log('[PDF Export] Forcing light theme for PDF:', cssUrl);
+            }
+            
+            console.log('[PDF Export] Fetching CSS from:', cssUrl);
             try {
                 // Fetch the CSS content
-                const response = await fetch(ghMarkdownLink.href);
+                const response = await fetch(cssUrl);
                 markdownCss = await response.text();
                 console.log('[PDF Export] CSS fetched successfully, length:', markdownCss.length);
             } catch (e) {
@@ -2745,14 +2755,23 @@ let performBeautify = (content) => {
         }
         
         // Get all CSS from style tags and extract @import statements
+        // EXCLUDE Monaco Editor CSS and Dark Theme CSS
         let inlineCss = '';
         let fontLinks = [];
         const styleTags = document.querySelectorAll('style');
         styleTags.forEach(tag => {
             let cssText = tag.textContent;
             
+            // Skip Monaco Editor styles
+            if (cssText.includes('monaco-editor') || cssText.includes('monaco-')) {
+                console.log('[PDF Export] Skipping Monaco Editor CSS');
+                return;
+            }
+            
+            // Remove dark theme styles - only keep light theme
+            cssText = cssText.replace(/\[data-theme="dark"\][^}]*\{[^}]*\}/g, '/* Dark theme removed */');
+            
             // Extract @import statements for Google Fonts
-            // These need to be converted to <link> tags for Puppeteer
             const importRegex = /@import\s+url\(['"]?(https:\/\/fonts\.googleapis\.com\/[^'"]+)['"]?\);?/g;
             let match;
             while ((match = importRegex.exec(cssText)) !== null) {
@@ -2776,7 +2795,7 @@ let performBeautify = (content) => {
         });
 
         // Build font link tags for Google Fonts
-        // CRITICAL: Use <link> tags instead of @import for Puppeteer compatibility
+        // Use <link> tags instead of @import for Puppeteer compatibility
         const fontLinkTags = fontLinks.map(url => {
             // Ensure the URL has display=swap for better loading
             const fontUrl = url.includes('display=') ? url : `${url}${url.includes('?') ? '&' : '?'}display=swap`;
@@ -2785,45 +2804,12 @@ let performBeautify = (content) => {
     <link href="${fontUrl}" rel="stylesheet">`
         }).join('\n');
         
-        // CRITICAL FIX: Add Inter font explicitly if not already included
-        let interFontTag = '';
-        const hasInter = fontLinks.some(url => url.includes('Inter'));
-        if (!hasInter) {
-            console.log('[PDF Export] Adding Inter font explicitly');
-            interFontTag = `    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">`;
-        }
-        
-        // CRITICAL FIX: Prepend Inter font to ALL font-family declarations
-        // This ensures Inter is used instead of system fonts
-        markdownCss = markdownCss.replace(
-            /font-family:\s*([^;]+);/g,
-            (match, fontStack) => {
-                // If Inter is not already first, prepend it
-                if (!fontStack.trim().startsWith("'Inter'") && !fontStack.trim().startsWith('"Inter"')) {
-                    return `font-family: 'Inter', ${fontStack};`;
-                }
-                return match;
-            }
-        );
-        
-        // Also add a global font-family rule to ensure Inter is used everywhere
-        const globalFontRule = `
-        * {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif !important;
-        }
-        `;
-        
-        inlineCss = globalFontRule + inlineCss;
-
         // Build complete HTML document with all CSS inlined
         const htmlContent = `
 <!DOCTYPE html>
 <html>
 <head>
     <meta charset="UTF-8">
-${interFontTag}
 ${fontLinkTags}
     <style>
         /* Markdown body styles */
@@ -2879,7 +2865,9 @@ ${fontLinkTags}
     </style>
 </head>
 <body>
-    ${outputElement.innerHTML}
+    <div class="markdown-body">
+        ${outputElement.innerHTML}
+    </div>
 </body>
 </html>`;
 
