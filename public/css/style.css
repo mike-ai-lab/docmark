@@ -52,7 +52,7 @@ header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0 24px;
+  padding: 0 16px;
   width: 100%;
   height: 60px;
   background-color: #ffffff;
@@ -61,8 +61,9 @@ header {
   color: #1e293b;
   box-shadow: 0 1px 3px rgba(0,0,0,0.05);
   position: relative;
-  overflow: visible;
+  overflow: hidden;
   z-index: 100;
+  box-sizing: border-box;
 }
 
 header a:link, header a:hover, header a:visited, header a:active {
@@ -77,8 +78,9 @@ header a:hover {
 .header-left {
   display: flex;
   align-items: center;
-  gap: 16px;
-  min-width: 200px;
+  gap: 12px;
+  min-width: 180px;
+  flex-shrink: 0;
 }
 
 .brand {
@@ -86,6 +88,9 @@ header a:hover {
   font-weight: 800;
   letter-spacing: -0.5px;
   text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .brand a {
@@ -450,10 +455,20 @@ header a:hover {
 
 .header-center {
   display: flex;
-  gap: 20px;
+  gap: 12px;
   align-items: center;
   flex: 1;
   justify-content: center;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 0 8px;
+  min-width: 0;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.header-center::-webkit-scrollbar {
+  display: none;
 }
 
 .button-group {
@@ -462,6 +477,7 @@ header a:hover {
   background: #f1f5f9;
   padding: 4px;
   border-radius: 10px;
+  flex-shrink: 0;
 }
 
 .btn-item {
@@ -590,9 +606,10 @@ header a:hover {
 .header-right {
   display: flex;
   align-items: center;
-  gap: 16px;
-  min-width: 200px;
+  gap: 8px;
+  min-width: 180px;
   justify-content: flex-end;
+  flex-shrink: 0;
 }
 
 /* Icon buttons for import/export */
@@ -2767,16 +2784,7 @@ footer {
     margin-bottom: 28px;
 }
 
-/* Paper Layout - CSS-only visual effect (no DOM changes) */
-.preview-pane.paper-layout {
-    background: #f5f5f5;
-    padding: 20px;
-    overflow-y: auto;
-}
-
-.preview-pane.paper-layout #preview-wrapper {
-    background: transparent;
-    padding: 20px 0 40px 0; /* Added 40px bottom padding to clear status bar */
+/* Added 40px bottom padding to clear status bar */
     display: flex;
     justify-content: center;
     align-items: flex-start;
@@ -2814,6 +2822,53 @@ footer {
     background: #fefefe !important; /* Realistic paper white */
 }
 
+/* Table overflow fixes for paper layout */
+#output.paper-layout-active table {
+    width: 100% !important;
+    max-width: 100% !important;
+    table-layout: auto !important;
+    word-wrap: break-word !important;
+    overflow-wrap: break-word !important;
+}
+
+#output.paper-layout-active table th,
+#output.paper-layout-active table td {
+    word-wrap: break-word !important;
+    overflow-wrap: break-word !important;
+    word-break: normal !important;
+    white-space: normal !important;
+    padding: 8px !important;
+    font-size: 12px !important;
+    line-height: 1.5 !important;
+}
+
+#output.paper-layout-active table thead th {
+    font-size: 12px !important;
+    font-weight: 600 !important;
+    padding: 8px !important;
+}
+
+/* Ensure table container respects paper boundaries */
+#output.paper-layout-active .markdown-body > table,
+#output.paper-layout-active .markdown-body table {
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    display: table !important;
+}
+
+/* Prevent any element from overflowing paper layout */
+#output.paper-layout-active img,
+#output.paper-layout-active video,
+#output.paper-layout-active iframe {
+    max-width: 100% !important;
+    height: auto !important;
+}
+
+#output.paper-layout-active pre {
+    max-width: 100% !important;
+    overflow-x: auto !important;
+}
+
 [data-theme="dark"] .preview-pane.paper-layout {
     background: #0d0d0d;
 }
@@ -2828,12 +2883,78 @@ footer {
     color: #24292f !important; /* Dark text on white paper */
 }
 
-/* Paper Layout Controls */
-.paper-controls {
-    position: fixed;
-    top: 70px; /* Below main header */
+/* Paper Page Pagination */
+.paper-page {
+    width: var(--paper-width, 21cm);
+    height: var(--paper-height, 29.7cm);
+    background: #fefefe;
+    margin: 0 auto 20px auto;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    position: relative;
+    page-break-after: always;
+    break-after: page;
+    overflow: hidden;
+    box-sizing: border-box;
+}
+
+.paper-page:last-child {
+    margin-bottom: 0;
+}
+
+.paper-page-content {
+    width: 100%;
+    height: calc(100% - 30px); /* Reserve space for footer */
+    padding: var(--paper-margin-top, 2cm) var(--paper-margin-right, 2cm) var(--paper-margin-bottom, 2cm) var(--paper-margin-left, 2cm);
+    overflow: hidden;
+    box-sizing: border-box;
+}
+
+/* Ensure markdown-body styling applies to page content */
+.paper-page-content.markdown-body {
+    background: transparent !important;
+    box-shadow: none !important;
+    min-height: auto !important;
+}
+
+.paper-page-footer {
+    position: absolute;
+    bottom: 10px;
+    right: 20px;
+    font-size: 10px;
+    color: #666;
+    font-family: 'Inter', sans-serif;
+}
+
+#output.paper-layout-active .markdown-body {
+    background: transparent !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    box-shadow: none !important;
+    min-height: auto !important;
+}
+
+/* When output is paginated, it won't have markdown-body class */
+#output.paper-layout-active {
+    background: transparent !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    box-shadow: none !important;
+    min-height: auto !important;
+}
+
+[data-theme="dark"] .paper-page {
+    background: #fefefe;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.6);
+}
+
+[data-theme="dark"] .paper-page-footer {
+    color: #666;
+}
+
+/* Below main header */
     right: 20px;
     display: flex;
+
     flex-direction: row;
     align-items: center;
     gap: 8px;
@@ -4180,219 +4301,6 @@ footer {
     background: rgba(200, 200, 200, 0.5);
 }
 
-
-/* Page Setup Modal */
-.page-setup-modal {
-    display: none;
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.5);
-    z-index: 10000;
-    align-items: center;
-    justify-content: center;
-}
-
-.page-setup-modal.visible {
-    display: flex;
-}
-
-.page-setup-modal-content {
-    background: #ffffff;
-    border-radius: 12px;
-    box-shadow: 0 10px 40px rgba(0,0,0,0.3);
-    width: 90%;
-    max-width: 500px;
-    max-height: 90vh;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-}
-
-[data-theme="dark"] .page-setup-modal-content {
-    background: #2d2d2d;
-}
-
-.page-setup-modal-header {
-    padding: 20px 24px;
-    border-bottom: 1px solid #e2e8f0;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-[data-theme="dark"] .page-setup-modal-header {
-    border-bottom-color: #3d3d3d;
-}
-
-.page-setup-modal-header h3 {
-    margin: 0;
-    font-size: 18px;
-    font-weight: 600;
-    color: #1e293b;
-}
-
-[data-theme="dark"] .page-setup-modal-header h3 {
-    color: #e2e8f0;
-}
-
-.page-setup-modal-close {
-    background: none;
-    border: none;
-    font-size: 28px;
-    cursor: pointer;
-    padding: 0;
-    width: 32px;
-    height: 32px;
-    line-height: 28px;
-    border-radius: 6px;
-    transition: all 0.2s;
-    color: #64748b;
-}
-
-.page-setup-modal-close:hover {
-    background: #f1f5f9;
-    color: #1e293b;
-}
-
-[data-theme="dark"] .page-setup-modal-close {
-    color: #94a3b8;
-}
-
-[data-theme="dark"] .page-setup-modal-close:hover {
-    background: #3d3d3d;
-    color: #e2e8f0;
-}
-
-.page-setup-modal-body {
-    padding: 24px;
-    overflow-y: auto;
-}
-
-.page-setup-section {
-    margin-bottom: 24px;
-}
-
-.page-setup-section > label {
-    display: block;
-    font-size: 14px;
-    font-weight: 600;
-    color: #475569;
-    margin-bottom: 12px;
-}
-
-[data-theme="dark"] .page-setup-section > label {
-    color: #cbd5e1;
-}
-
-.page-setup-row {
-    display: flex;
-    gap: 16px;
-    margin-bottom: 12px;
-}
-
-.page-setup-field {
-    flex: 1;
-}
-
-.page-setup-field label {
-    display: block;
-    font-size: 13px;
-    color: #64748b;
-    margin-bottom: 6px;
-}
-
-[data-theme="dark"] .page-setup-field label {
-    color: #94a3b8;
-}
-
-.page-setup-field input {
-    width: 100%;
-    padding: 8px 12px;
-    border: 1px solid #e2e8f0;
-    border-radius: 6px;
-    font-size: 14px;
-    color: #1e293b;
-    background: #ffffff;
-    box-sizing: border-box;
-}
-
-.page-setup-field input:focus {
-    outline: none;
-    border-color: #3b82f6;
-}
-
-[data-theme="dark"] .page-setup-field input {
-    background: #1e1e1e;
-    border-color: #3d3d3d;
-    color: #e2e8f0;
-}
-
-[data-theme="dark"] .page-setup-field input:focus {
-    border-color: #60a5fa;
-}
-
-.page-setup-modal-footer {
-    padding: 16px 24px;
-    border-top: 1px solid #e2e8f0;
-    display: flex;
-    justify-content: flex-end;
-    gap: 12px;
-}
-
-[data-theme="dark"] .page-setup-modal-footer {
-    border-top-color: #3d3d3d;
-}
-
-.page-setup-btn-cancel,
-.page-setup-btn-save {
-    padding: 8px 16px;
-    border-radius: 6px;
-    font-size: 14px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.2s;
-    border: none;
-}
-
-.page-setup-btn-cancel {
-    background: #f1f5f9;
-    color: #475569;
-}
-
-.page-setup-btn-cancel:hover {
-    background: #e2e8f0;
-}
-
-.page-setup-btn-save {
-    background: #3b82f6;
-    color: #ffffff;
-}
-
-.page-setup-btn-save:hover {
-    background: #2563eb;
-}
-
-[data-theme="dark"] .page-setup-btn-cancel {
-    background: #3d3d3d;
-    color: #cbd5e1;
-}
-
-[data-theme="dark"] .page-setup-btn-cancel:hover {
-    background: #4d4d4d;
-}
-
-[data-theme="dark"] .page-setup-btn-save {
-    background: #3b82f6;
-}
-
-[data-theme="dark"] .page-setup-btn-save:hover {
-    background: #60a5fa;
-}
-
-
 /* ============================================================================
    SETTINGS PANEL
    ============================================================================ */
@@ -5044,6 +4952,39 @@ footer {
     color: #ff9800;
 }
 
+.inspector-header-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.inspector-icon-btn {
+    background: #333;
+    border: 1px solid #444;
+    color: #ff9800;
+    font-size: 18px;
+    cursor: pointer;
+    padding: 4px 8px;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    transition: all 0.2s;
+}
+
+.inspector-icon-btn:hover {
+    background: #444;
+    transform: translateY(-1px);
+}
+
+.inspector-icon-btn:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+    transform: none;
+}
+
 .inspector-close-btn {
     background: none;
     border: none;
@@ -5239,4 +5180,554 @@ footer {
 #inspector-toggle-btn.active {
     background: #ff9800;
     color: #000;
+}
+
+/* ============================================================================
+   RESPONSIVE HEADER FIXES - Prevent overflow on smaller screens
+   ============================================================================ */
+
+@media (max-width: 1600px) {
+  .header-center {
+    gap: 8px;
+  }
+  
+  .button-group {
+    gap: 1px;
+    padding: 3px;
+  }
+  
+  .btn-item {
+    padding: 6px 12px;
+    font-size: 11px;
+  }
+  
+  .btn-item.icon-btn {
+    padding: 6px 8px;
+  }
+}
+
+@media (max-width: 1400px) {
+  header {
+    padding: 0 12px;
+  }
+  
+  .header-left {
+    gap: 8px;
+    min-width: 150px;
+  }
+  
+  .header-right {
+    gap: 6px;
+    min-width: 150px;
+  }
+  
+  .brand {
+    font-size: 14px;
+  }
+  
+  .header-center {
+    gap: 6px;
+  }
+  
+  .button-group {
+    padding: 2px;
+  }
+  
+  .btn-item {
+    padding: 5px 10px;
+    font-size: 11px;
+  }
+  
+  .btn-item.icon-btn {
+    padding: 5px 7px;
+  }
+  
+  .icon-button {
+    width: 32px;
+    height: 32px;
+  }
+  
+  .icon-button svg {
+    width: 16px;
+    height: 16px;
+  }
+}
+
+@media (max-width: 1200px) {
+  header {
+    padding: 0 8px;
+  }
+  
+  .header-left {
+    min-width: 120px;
+  }
+  
+  .header-right {
+    min-width: 120px;
+  }
+  
+  .brand {
+    font-size: 13px;
+  }
+  
+  /* Hide some less critical buttons on smaller screens - but keep dropdowns */
+  .btn-item:not(.icon-btn):not(#cheatsheet-button):not(.dropdown) {
+    display: none;
+  }
+  
+  /* Keep only essential button groups visible */
+  .button-group:nth-child(2) {
+    display: none;
+  }
+}
+
+@media (max-width: 900px) {
+  .header-center {
+    justify-content: flex-start;
+  }
+  
+  /* Show only the most essential buttons */
+  .button-group:not(:first-child):not(:last-child) {
+    display: none;
+  }
+}
+
+
+/* ============================================================================
+   PAPER LAYOUT STYLES - Pagination System
+   ============================================================================ */
+
+/* Paper Layout Controls - Compact Floating Bar */
+.paper-controls-bar {
+  position: sticky;
+  top: 12px;
+  margin-bottom: 12px;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(12px);
+  padding: 6px 16px;
+  border-radius: 24px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  z-index: 50;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  width: fit-content;
+  margin-left: auto;
+  margin-right: auto;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.paper-controls-bar.hidden {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-10px);
+}
+
+.paper-controls-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Smaller compact buttons */
+.paper-control-btn-sm {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  color: #64748b;
+  border-radius: 6px;
+}
+
+.paper-control-btn-sm:hover {
+  background: #f1f5f9;
+  color: #1e293b;
+}
+
+.paper-control-btn-sm:active {
+  transform: scale(0.95);
+}
+
+.paper-control-btn-sm:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.paper-zoom-display {
+  font-size: 11px;
+  font-weight: 600;
+  color: #475569;
+  min-width: 42px;
+  text-align: center;
+}
+
+.paper-controls-divider {
+  width: 1px;
+  height: 20px;
+  background: #e2e8f0;
+}
+
+.paper-page-info {
+  font-size: 11px;
+  font-weight: 600;
+  color: #64748b;
+  min-width: 48px;
+  text-align: center;
+}
+
+/* Navigation Mode Toggle Button */
+.paper-mode-toggle {
+  background: #1e293b;
+  color: white;
+  padding: 6px 12px;
+  border-radius: 16px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.15s ease;
+}
+
+.paper-mode-toggle:hover {
+  background: #0f172a;
+}
+
+.paper-mode-toggle:active {
+  transform: scale(0.98);
+}
+
+.paper-mode-toggle.pagination-mode {
+  background: #2563eb;
+}
+
+.paper-mode-toggle.pagination-mode:hover {
+  background: #1d4ed8;
+}
+
+/* Dark theme for paper controls */
+[data-theme="dark"] .paper-controls-bar {
+  background: rgba(30, 30, 30, 0.95);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+[data-theme="dark"] .paper-control-btn-sm {
+  color: #64748b;
+}
+
+[data-theme="dark"] .paper-control-btn-sm:hover {
+  background: #334155;
+  color: #e2e8f0;
+}
+
+[data-theme="dark"] .paper-zoom-display {
+  color: #94a3b8;
+}
+
+[data-theme="dark"] .paper-controls-divider {
+  background: #334155;
+}
+
+[data-theme="dark"] .paper-page-info {
+  color: #64748b;
+}
+
+[data-theme="dark"] .paper-mode-toggle {
+  background: #f8fafc;
+  color: #1e293b;
+}
+
+[data-theme="dark"] .paper-mode-toggle:hover {
+  background: #ffffff;
+}
+
+[data-theme="dark"] .paper-mode-toggle.pagination-mode {
+  background: #3b82f6;
+  color: white;
+}
+
+[data-theme="dark"] .paper-mode-toggle.pagination-mode:hover {
+  background: #2563eb;
+}
+
+/* Paper Layout Active State - Match mockup behavior */
+#preview-wrapper.paper-layout-active {
+  background: #cbd5e1;
+  padding: 100px 40px 40px 40px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  box-sizing: border-box;
+}
+
+#output.paper-layout-active {
+  max-width: none;
+  width: auto;
+  margin: 0;
+  padding: 0;
+  background: transparent;
+}
+
+/* Paper Scaler - Handles zoom transformation */
+#paper-scaler {
+  transform-origin: top center;
+  transition: transform 0.05s linear;
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Paper Page Styles */
+.paper-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+  margin: 0;
+  padding: 0;
+}
+
+.paper-page {
+  width: 794px;
+  min-height: 1123px;
+  background: white;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);
+  margin: 0 auto;
+  padding: 80px;
+  box-sizing: border-box;
+  position: relative;
+  overflow: hidden;
+  page-break-after: always;
+  page-break-inside: avoid;
+  flex-shrink: 0;
+}
+
+.paper-page:last-child {
+  margin-bottom: 0;
+}
+
+/* Pagination Mode - Show only one page at a time */
+.paper-stack.pagination-mode .paper-page {
+  display: none;
+}
+
+.paper-stack.pagination-mode .paper-page.active-page {
+  display: block;
+  margin-bottom: 0;
+}
+
+/* Page number at bottom */
+.paper-page-number {
+  position: absolute;
+  bottom: 40px;
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-size: 11px;
+  color: #94a3b8;
+  font-weight: 500;
+}
+
+/* Paper content area */
+.paper-content {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  font-size: 14px;
+  line-height: 1.6;
+  color: #1e293b;
+}
+
+/* Preserve markdown formatting in paper layout */
+.paper-content h1,
+.paper-content h2,
+.paper-content h3,
+.paper-content h4,
+.paper-content h5,
+.paper-content h6 {
+  margin-top: 0;
+  margin-bottom: 16px;
+  font-weight: 600;
+  line-height: 1.25;
+  page-break-after: avoid;
+}
+
+.paper-content h1 { font-size: 2em; }
+.paper-content h2 { font-size: 1.5em; }
+.paper-content h3 { font-size: 1.25em; }
+.paper-content h4 { font-size: 1em; }
+.paper-content h5 { font-size: 0.875em; }
+.paper-content h6 { font-size: 0.85em; }
+
+.paper-content p {
+  margin: 0 0 16px 0;
+  line-height: 1.6;
+}
+
+.paper-content ul,
+.paper-content ol {
+  margin: 0 0 16px 0;
+  padding-left: 2em;
+}
+
+.paper-content li {
+  margin-bottom: 4px;
+}
+
+.paper-content pre {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 16px;
+  overflow-x: auto;
+  margin: 0 0 16px 0;
+  page-break-inside: avoid;
+}
+
+.paper-content code {
+  background: #f8fafc;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 0.9em;
+  font-family: 'Courier New', monospace;
+}
+
+.paper-content pre code {
+  background: none;
+  padding: 0;
+}
+
+.paper-content blockquote {
+  border-left: 4px solid #e2e8f0;
+  padding-left: 16px;
+  margin: 0 0 16px 0;
+  color: #64748b;
+  font-style: italic;
+}
+
+.paper-content table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0 0 16px 0;
+  page-break-inside: avoid;
+}
+
+.paper-content table th,
+.paper-content table td {
+  border: 1px solid #e2e8f0;
+  padding: 8px 12px;
+  text-align: left;
+}
+
+.paper-content table th {
+  background: #f8fafc;
+  font-weight: 600;
+}
+
+.paper-content img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin: 16px 0;
+}
+
+.paper-content hr {
+  border: none;
+  border-top: 1px solid #e2e8f0;
+  margin: 24px 0;
+}
+
+/* Pages container for multiple pages */
+.paper-pages-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
+
+/* Print styles for paper layout */
+@media print {
+  #preview-wrapper.paper-layout-active {
+    background: white;
+    padding: 0;
+  }
+  
+  .paper-page {
+    box-shadow: none;
+    margin: 0;
+    page-break-after: always;
+    width: 100%;
+    height: 100%;
+  }
+  
+  .paper-page:last-child {
+    page-break-after: auto;
+  }
+  
+  .paper-controls-bar,
+  .no-print {
+    display: none !important;
+  }
+  
+  #paper-scaler {
+    transform: none !important;
+  }
+}
+
+/* Dark theme for paper layout */
+[data-theme="dark"] #preview-wrapper.paper-layout-active {
+  background: #0f172a;
+}
+
+[data-theme="dark"] .paper-page {
+  background: #1e293b;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+}
+
+[data-theme="dark"] .paper-content {
+  color: #e2e8f0;
+}
+
+[data-theme="dark"] .paper-content pre {
+  background: #0f172a;
+  border-color: #334155;
+}
+
+[data-theme="dark"] .paper-content code {
+  background: #0f172a;
+}
+
+[data-theme="dark"] .paper-content blockquote {
+  border-left-color: #334155;
+  color: #94a3b8;
+}
+
+[data-theme="dark"] .paper-content table th,
+[data-theme="dark"] .paper-content table td {
+  border-color: #334155;
+}
+
+[data-theme="dark"] .paper-content table th {
+  background: #0f172a;
+}
+
+[data-theme="dark"] .paper-content hr {
+  border-top-color: #334155;
+}
+
+[data-theme="dark"] .paper-page-number {
+  color: #64748b;
 }

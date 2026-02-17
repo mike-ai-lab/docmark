@@ -12,6 +12,8 @@ export function initInspectorPanel() {
     const panel = document.getElementById('inspector-panel');
     const toggleBtn = document.getElementById('inspector-toggle-btn');
     const closeBtn = document.getElementById('inspector-close-btn');
+    const undoBtn = document.getElementById('inspector-undo-btn');
+    const redoBtn = document.getElementById('inspector-redo-btn');
     const emptyState = document.getElementById('inspector-empty');
     const editorState = document.getElementById('inspector-editor');
     
@@ -41,13 +43,51 @@ export function initInspectorPanel() {
         });
     }
     
+    // Undo button
+    if (undoBtn) {
+        undoBtn.addEventListener('click', () => {
+            const inspector = getInspector();
+            const doc = getCurrentDoc();
+            if (inspector && doc) {
+                inspector.undo(doc);
+                updateUndoRedoButtons();
+            }
+        });
+    }
+    
+    // Redo button
+    if (redoBtn) {
+        redoBtn.addEventListener('click', () => {
+            const inspector = getInspector();
+            const doc = getCurrentDoc();
+            if (inspector && doc) {
+                inspector.redo(doc);
+                updateUndoRedoButtons();
+            }
+        });
+    }
+    
     // Wire up all action buttons
     wireActionButtons();
     
     // Wire up style inputs
     wireStyleInputs();
     
+    // Update undo/redo buttons periodically
+    setInterval(updateUndoRedoButtons, 500);
+    
     console.log('✅ Inspector panel UI initialized');
+}
+
+function updateUndoRedoButtons() {
+    const inspector = getInspector();
+    const undoBtn = document.getElementById('inspector-undo-btn');
+    const redoBtn = document.getElementById('inspector-redo-btn');
+    
+    if (inspector && undoBtn && redoBtn) {
+        undoBtn.disabled = inspector.historyIndex <= 0;
+        redoBtn.disabled = inspector.historyIndex >= inspector.history.length - 1;
+    }
 }
 
 export function showInspectorToggle() {
@@ -235,17 +275,14 @@ function wireActionButtons() {
     document.getElementById('btn-copy-style')?.addEventListener('click', () => {
         const { inspector, element } = getReferences();
         if (inspector && element) {
-            inspector.copyStyle(element);
-            updateButtonStates();
-            showToast('Style copied!');
+            inspector.showCopyStyleModal();
         }
     });
     
     document.getElementById('btn-paste-style')?.addEventListener('click', () => {
         const { inspector, doc, element } = getReferences();
         if (inspector && element && doc) {
-            inspector.pasteStyle(element, null, doc);
-            showToast('Style pasted!');
+            inspector.showPasteStyleModal();
         }
     });
     

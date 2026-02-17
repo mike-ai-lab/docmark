@@ -75,6 +75,7 @@ function addInspectorStyles(doc) {
 }
 
 function setupClickHandler(doc) {
+    // Left click - select element
     doc.body.addEventListener('click', (e) => {
         e.preventDefault();
         e.stopPropagation();
@@ -98,13 +99,32 @@ function setupClickHandler(doc) {
             inspectorInstance.batchPasteToElement(clickedElement, doc);
             return;
         }
-        
+
         // Normal selection
         inspectorInstance.selectElement(clickedElement);
-        
-        // Update panel UI
         updatePanelForElement(clickedElement);
-    }, true);
+    });
+    
+    // Right click - context menu
+    doc.body.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        const clickedElement = e.target;
+        
+        // Select element first
+        inspectorInstance.selectElement(clickedElement);
+        updatePanelForElement(clickedElement);
+        
+        // Convert iframe coordinates to window coordinates
+        const iframe = doc.defaultView.frameElement;
+        const iframeRect = iframe.getBoundingClientRect();
+        const windowX = iframeRect.left + e.clientX;
+        const windowY = iframeRect.top + e.clientY;
+        
+        // Show context menu at cursor position
+        inspectorInstance.showContextMenu(windowX, windowY, clickedElement, doc);
+    });
 }
 
 function setupKeyboardShortcuts() {

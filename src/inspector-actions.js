@@ -45,6 +45,10 @@ class InspectorActions {
         this.isDragging = false;
         this.dragStartPos = { x: 0, y: 0 };
         this.hasMoved = false;
+        
+        // Context Menu
+        this.contextMenu = null;
+        this.subContextMenu = null;
     }
 
     // ===== UTILITY METHODS =====
@@ -117,11 +121,13 @@ class InspectorActions {
         if (this.historyIndex > 0) {
             this.historyIndex--;
             this.restoreState(doc, this.history[this.historyIndex]);
+            this.showFeedback(`Undo (${this.historyIndex + 1}/${this.history.length})`, 'success');
             if (this.config.onStateChange) {
                 this.config.onStateChange('undo', this.historyIndex, this.history.length);
             }
             return true;
         }
+        this.showFeedback('Nothing to undo', 'error');
         return false;
     }
 
@@ -129,11 +135,13 @@ class InspectorActions {
         if (this.historyIndex < this.history.length - 1) {
             this.historyIndex++;
             this.restoreState(doc, this.history[this.historyIndex]);
+            this.showFeedback(`Redo (${this.historyIndex + 1}/${this.history.length})`, 'success');
             if (this.config.onStateChange) {
                 this.config.onStateChange('redo', this.historyIndex, this.history.length);
             }
             return true;
         }
+        this.showFeedback('Nothing to redo', 'error');
         return false;
     }
 
@@ -501,6 +509,215 @@ class InspectorActions {
     }
 
     // ===== COPY/PASTE STYLE ACTIONS =====
+    
+    showCopyStyleModal() {
+        if (!this.selectedElement) return;
+        if (!this.copyModal) this.createModals();
+        this.copyModal.classList.add('active');
+    }
+    
+    showPasteStyleModal() {
+        if (!this.selectedElement || !this.copiedStyles) return;
+        if (!this.pasteModal) this.createModals();
+        
+        // Check compatibility
+        const warnings = this.checkCompatibility(this.selectedElement, this.copiedStyles);
+        const warningDiv = this.pasteModal.querySelector('.inspector-compat-warning');
+        if (warnings.length > 0) {
+            warningDiv.innerHTML = '<strong>⚠️ Warning:</strong><br>' + warnings.join('<br>');
+            warningDiv.style.display = 'block';
+        } else {
+            warningDiv.style.display = 'none';
+        }
+        
+        // Populate paste categories
+        const pasteCategories = this.pasteModal.querySelector('.inspector-paste-categories');
+        pasteCategories.innerHTML = '';
+        
+        const catNames = {
+            colors: 'Colors',
+            typography: 'Typography',
+            spacing: 'Spacing',
+            dimensions: 'Dimensions',
+            border: 'Border',
+            radius: 'Border Radius',
+            display: 'Display & Alignment'
+        };
+        
+        Object.keys(this.copiedStyles.categories).forEach(cat => {
+            const label = document.createElement('label');
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.checked = true;
+            checkbox.dataset.category = cat;
+            
+            label.appendChild(checkbox);
+            label.appendChild(document.createTextNode(' ' + catNames[cat]));
+            pasteCategories.appendChild(label);
+        });
+        
+        this.pasteModal.classList.add('active');
+    }
+    
+    createModals() {
+        // Copy Style Modal
+        this.copyModal = document.createElement('div');
+        this.copyModal.className = 'inspector-modal';
+        this.copyModal.innerHTML = `
+            <div class="inspector-modal-content">
+                <h3>📋 Copy Styles From Element</h3>
+                <div class="inspector-style-categories">
+                    <label><input type="checkbox" class="cat-checkbox" data-cat="colors" checked> Colors (text, background)</label>
+                    <label><input type="checkbox" class="cat-checkbox" data-cat="typography" checked> Typography (font, size, weight)</label>
+                    <label><input type="checkbox" class="cat-checkbox" data-cat="spacing" checked> Spacing (padding, margin)</label>
+                    <label><input type="checkbox" class="cat-checkbox" data-cat="dimensions" checked> Dimensions (width, height)</label>
+                    <label><input type="checkbox" class="cat-checkbox" data-cat="border" checked> Border (width, style, color)</label>
+                    <label><input type="checkbox" class="cat-checkbox" data-cat="radius" checked> Border Radius (corners)</label>
+                    <label><input type="checkbox" class="cat-checkbox" data-cat="display" checked> Display & Alignment</label>
+                </div>
+                <div class="inspector-modal-actions">
+                    <button class="inspector-modal-btn inspector-select-all">Select All</button>
+                    <button class="inspector-modal-btn inspector-select-none">Select None</button>
+                </div>
+                <div class="inspector-modal-actions">
+                    <button class="inspector-modal-btn inspector-modal-btn-primary inspector-copy-selected">Copy Selected</button>
+                    <button class="inspector-modal-btn inspector-cancel-copy">Cancel</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(this.copyModal);
+        
+        // Paste Style Modal
+        this.pasteModal = document.createElement('div');
+        this.pasteModal.className = 'inspector-modal';
+        this.pasteModal.innerHTML = `
+            <div class="inspector-modal-content">
+                <h3>📋 Paste Styles To Element</h3>
+                <p style="color: #aaa; font-size: 12px; margin-bottom: 15px;">Select which properties to paste:</p>
+                <div class="inspector-compat-warning" style="display:none;"></div>
+                <div class="inspector-paste-categories"></div>
+                <div class="inspector-modal-actions">
+                    <button class="inspector-modal-btn inspector-modal-btn-primary inspector-paste-selected">Paste Selected</button>
+                    <button class="inspector-modal-btn inspector-paste-all">Paste All</button>
+                    <button class="inspector-modal-btn inspector-batch-paste" style="background: #9c27b0; color: white;">Batch Paste</button>
+                    <button class="inspector-modal-btn inspector-cancel-paste">Cancel</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(this.pasteModal);
+        
+        // Batch Banner
+        this.batchBanner = document.createElement('div');
+        this.batchBanner.className = 'inspector-batch-banner';
+        this.batchBanner.innerHTML = `
+            <div class="inspector-batch-info">
+                <span style="font-size: 20px;">📋</span>
+                <div>
+                    <div style="font-weight: bold;">BATCH PASTE MODE</div>
+                    <div style="font-size: 12px; opacity: 0.9;">Click elements to paste styles</div>
+                </div>
+                <div class="inspector-batch-counter">
+                    <span class="batch-counter-num">0</span> elements
+                </div>
+            </div>
+            <div class="inspector-batch-actions">
+                <button class="inspector-batch-btn inspector-batch-undo">↶ Undo Last</button>
+                <button class="inspector-batch-btn inspector-batch-done">✓ Done</button>
+                <button class="inspector-batch-btn inspector-batch-cancel">✗ Cancel</button>
+            </div>
+        `;
+        document.body.appendChild(this.batchBanner);
+        
+        // Setup event listeners
+        this.setupModalListeners();
+    }
+    
+    setupModalListeners() {
+        // Copy modal
+        this.copyModal.querySelector('.inspector-select-all').addEventListener('click', () => {
+            this.copyModal.querySelectorAll('.cat-checkbox').forEach(cb => cb.checked = true);
+        });
+        
+        this.copyModal.querySelector('.inspector-select-none').addEventListener('click', () => {
+            this.copyModal.querySelectorAll('.cat-checkbox').forEach(cb => cb.checked = false);
+        });
+        
+        this.copyModal.querySelector('.inspector-copy-selected').addEventListener('click', () => {
+            const categories = {};
+            this.copyModal.querySelectorAll('.cat-checkbox').forEach(cb => {
+                categories[cb.dataset.cat] = cb.checked;
+            });
+            this.copyStyle(this.selectedElement, categories);
+            this.copyModal.classList.remove('active');
+        });
+        
+        this.copyModal.querySelector('.inspector-cancel-copy').addEventListener('click', () => {
+            this.copyModal.classList.remove('active');
+        });
+        
+        // Paste modal
+        this.pasteModal.querySelector('.inspector-paste-selected').addEventListener('click', () => {
+            const categories = [];
+            this.pasteModal.querySelectorAll('.inspector-paste-categories input:checked').forEach(cb => {
+                categories.push(cb.dataset.category);
+            });
+            this.pasteStyle(this.selectedElement, categories, this.targetDocument);
+            this.pasteModal.classList.remove('active');
+        });
+        
+        this.pasteModal.querySelector('.inspector-paste-all').addEventListener('click', () => {
+            this.pasteStyle(this.selectedElement, null, this.targetDocument);
+            this.pasteModal.classList.remove('active');
+        });
+        
+        this.pasteModal.querySelector('.inspector-batch-paste').addEventListener('click', () => {
+            const categories = [];
+            this.pasteModal.querySelectorAll('.inspector-paste-categories input:checked').forEach(cb => {
+                categories.push(cb.dataset.category);
+            });
+            this.pasteModal.classList.remove('active');
+            this.startBatchPasteMode(categories);
+            this.batchBanner.classList.add('active');
+        });
+        
+        this.pasteModal.querySelector('.inspector-cancel-paste').addEventListener('click', () => {
+            this.pasteModal.classList.remove('active');
+        });
+        
+        // Batch banner
+        this.batchBanner.querySelector('.inspector-batch-done').addEventListener('click', () => {
+            this.exitBatchPasteMode(true, this.targetDocument);
+            this.batchBanner.classList.remove('active');
+        });
+        
+        this.batchBanner.querySelector('.inspector-batch-cancel').addEventListener('click', () => {
+            this.cancelBatchPasteMode();
+            this.batchBanner.classList.remove('active');
+        });
+        
+        this.batchBanner.querySelector('.inspector-batch-undo').addEventListener('click', () => {
+            if (this.batchPastedElements.length > 0) {
+                const lastElement = this.batchPastedElements.pop();
+                if (lastElement && lastElement.dataset.originalStyles) {
+                    const originalStyles = JSON.parse(lastElement.dataset.originalStyles);
+                    Object.keys(originalStyles).forEach(prop => {
+                        lastElement.style[prop] = originalStyles[prop] || '';
+                    });
+                    delete lastElement.dataset.originalStyles;
+                }
+                lastElement.classList.remove('batch-pasted');
+                this.batchBanner.querySelector('.batch-counter-num').textContent = this.batchPastedElements.length;
+            }
+        });
+        
+        // Click outside to close
+        this.copyModal.addEventListener('click', (e) => {
+            if (e.target === this.copyModal) this.copyModal.classList.remove('active');
+        });
+        this.pasteModal.addEventListener('click', (e) => {
+            if (e.target === this.pasteModal) this.pasteModal.classList.remove('active');
+        });
+    }
 
     copyStyle(element, categories = {}) {
         if (!element) return false;
@@ -679,6 +896,11 @@ class InspectorActions {
         
         this.batchPastedElements.push(element);
         element.classList.add('batch-pasted');
+        
+        // Update counter
+        if (this.batchBanner) {
+            this.batchBanner.querySelector('.batch-counter-num').textContent = this.batchPastedElements.length;
+        }
         
         return this.batchPastedElements.length;
     }
@@ -1038,7 +1260,304 @@ class InspectorActions {
         this.saveState(doc);
         return true;
     }
+    
+    // ===== CONTEXT MENU SYSTEM =====
+    
+    showContextMenu(x, y, element, doc) {
+        this.hideContextMenu();
+        
+        if (!this.contextMenu) {
+            this.createContextMenu();
+        }
+        
+        // Position at cursor with small offset
+        this.contextMenu.style.left = (x + 2) + 'px';
+        this.contextMenu.style.top = (y + 2) + 'px';
+        this.contextMenu.classList.add('active');
+        
+        // Adjust if menu goes off screen
+        setTimeout(() => {
+            const rect = this.contextMenu.getBoundingClientRect();
+            if (rect.right > window.innerWidth) {
+                this.contextMenu.style.left = (window.innerWidth - rect.width - 5) + 'px';
+            }
+            if (rect.bottom > window.innerHeight) {
+                this.contextMenu.style.top = (window.innerHeight - rect.height - 5) + 'px';
+            }
+        }, 0);
+        
+        // Update menu items based on state
+        const pasteItem = this.contextMenu.querySelector('[data-action="paste"]');
+        if (pasteItem) {
+            pasteItem.style.display = this.copiedStyles ? 'flex' : 'none';
+        }
+        
+        const lockItem = this.contextMenu.querySelector('[data-action="lock"]');
+        if (lockItem) {
+            const isLocked = this.isElementLocked(element);
+            lockItem.innerHTML = `<span>${isLocked ? '🔓' : '🔒'}</span> ${isLocked ? 'Unlock' : 'Lock'}`;
+        }
+        
+        // Update undo/redo state
+        const undoItem = this.contextMenu.querySelector('[data-action="undo"]');
+        const redoItem = this.contextMenu.querySelector('[data-action="redo"]');
+        if (undoItem) {
+            undoItem.style.opacity = this.historyIndex > 0 ? '1' : '0.5';
+            undoItem.style.pointerEvents = this.historyIndex > 0 ? 'auto' : 'none';
+        }
+        if (redoItem) {
+            redoItem.style.opacity = this.historyIndex < this.history.length - 1 ? '1' : '0.5';
+            redoItem.style.pointerEvents = this.historyIndex < this.history.length - 1 ? 'auto' : 'none';
+        }
+    }
+    
+    hideContextMenu() {
+        if (this.contextMenu) {
+            this.contextMenu.classList.remove('active');
+        }
+        if (this.subContextMenu) {
+            this.subContextMenu.classList.remove('active');
+        }
+    }
+    
+    createContextMenu() {
+        // Main context menu
+        this.contextMenu = document.createElement('div');
+        this.contextMenu.className = 'inspector-context-menu';
+        this.contextMenu.innerHTML = `
+            <div class="context-menu-item" data-action="undo">
+                <span>↶</span> Undo <span style="margin-left: auto; opacity: 0.6; font-size: 10px;">Ctrl+Z</span>
+            </div>
+            <div class="context-menu-item" data-action="redo">
+                <span>↷</span> Redo <span style="margin-left: auto; opacity: 0.6; font-size: 10px;">Ctrl+Y</span>
+            </div>
+            <div class="context-menu-separator"></div>
+            <div class="context-menu-item" data-action="copy">
+                <span>📋</span> Copy Styles...
+            </div>
+            <div class="context-menu-item" data-action="paste" style="display:none;">
+                <span>📋</span> Paste Styles...
+            </div>
+            <div class="context-menu-separator"></div>
+            <div class="context-menu-item" data-action="arrange">
+                <span>📚</span> Arrange...
+            </div>
+            <div class="context-menu-separator"></div>
+            <div class="context-menu-item" data-action="lock">
+                <span>🔒</span> Lock
+            </div>
+            <div class="context-menu-item" data-action="delete">
+                <span>🗑️</span> Delete
+            </div>
+        `;
+        document.body.appendChild(this.contextMenu);
+        
+        // Sub context menu for copy/paste options
+        this.subContextMenu = document.createElement('div');
+        this.subContextMenu.className = 'inspector-context-menu inspector-sub-menu';
+        document.body.appendChild(this.subContextMenu);
+        
+        // Setup event listeners
+        this.setupContextMenuListeners();
+        
+        // Close on click outside
+        document.addEventListener('click', (e) => {
+            if (!this.contextMenu.contains(e.target) && !this.subContextMenu.contains(e.target)) {
+                this.hideContextMenu();
+            }
+        });
+    }
+    
+    setupContextMenuListeners() {
+        this.contextMenu.querySelector('[data-action="undo"]').addEventListener('click', () => {
+            this.undo(this.targetDocument);
+            this.hideContextMenu();
+        });
+        
+        this.contextMenu.querySelector('[data-action="redo"]').addEventListener('click', () => {
+            this.redo(this.targetDocument);
+            this.hideContextMenu();
+        });
+        
+        this.contextMenu.querySelector('[data-action="copy"]').addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.showCopySubmenu(e.target.getBoundingClientRect());
+        });
+        
+        this.contextMenu.querySelector('[data-action="paste"]').addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.showPasteSubmenu(e.target.getBoundingClientRect());
+        });
+        
+        this.contextMenu.querySelector('[data-action="arrange"]').addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.showArrangeSubmenu(e.target.getBoundingClientRect());
+        });
+        
+        this.contextMenu.querySelector('[data-action="lock"]').addEventListener('click', () => {
+            this.toggleLock(this.selectedElement);
+            this.hideContextMenu();
+        });
+        
+        this.contextMenu.querySelector('[data-action="delete"]').addEventListener('click', () => {
+            if (confirm('Delete this element?')) {
+                this.deleteElement(this.selectedElement, this.targetDocument);
+            }
+            this.hideContextMenu();
+        });
+    }
+    
+    showCopySubmenu(rect) {
+        this.subContextMenu.innerHTML = `
+            <div class="context-menu-header">Copy Styles</div>
+            <label class="context-menu-checkbox">
+                <input type="checkbox" data-cat="colors" checked> Colors
+            </label>
+            <label class="context-menu-checkbox">
+                <input type="checkbox" data-cat="typography" checked> Typography
+            </label>
+            <label class="context-menu-checkbox">
+                <input type="checkbox" data-cat="spacing" checked> Spacing
+            </label>
+            <label class="context-menu-checkbox">
+                <input type="checkbox" data-cat="dimensions" checked> Dimensions
+            </label>
+            <label class="context-menu-checkbox">
+                <input type="checkbox" data-cat="border" checked> Border
+            </label>
+            <label class="context-menu-checkbox">
+                <input type="checkbox" data-cat="radius" checked> Radius
+            </label>
+            <label class="context-menu-checkbox">
+                <input type="checkbox" data-cat="display" checked> Display
+            </label>
+            <div class="context-menu-separator"></div>
+            <div class="context-menu-item context-menu-action" data-action="copy-selected">
+                ✓ Copy Selected
+            </div>
+        `;
+        
+        this.subContextMenu.style.left = (rect.right + 5) + 'px';
+        this.subContextMenu.style.top = rect.top + 'px';
+        this.subContextMenu.classList.add('active');
+        
+        this.subContextMenu.querySelector('[data-action="copy-selected"]').addEventListener('click', () => {
+            const categories = {};
+            this.subContextMenu.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+                categories[cb.dataset.cat] = cb.checked;
+            });
+            this.copyStyle(this.selectedElement, categories);
+            this.hideContextMenu();
+        });
+    }
+    
+    showPasteSubmenu(rect) {
+        const catNames = {
+            colors: 'Colors',
+            typography: 'Typography',
+            spacing: 'Spacing',
+            dimensions: 'Dimensions',
+            border: 'Border',
+            radius: 'Radius',
+            display: 'Display'
+        };
+        
+        let checkboxes = '';
+        Object.keys(this.copiedStyles.categories).forEach(cat => {
+            checkboxes += `
+                <label class="context-menu-checkbox">
+                    <input type="checkbox" data-cat="${cat}" checked> ${catNames[cat]}
+                </label>
+            `;
+        });
+        
+        this.subContextMenu.innerHTML = `
+            <div class="context-menu-header">Paste Styles</div>
+            ${checkboxes}
+            <div class="context-menu-separator"></div>
+            <div class="context-menu-item context-menu-action" data-action="paste-selected">
+                ✓ Paste Selected
+            </div>
+            <div class="context-menu-item context-menu-action" data-action="paste-all">
+                ✓ Paste All
+            </div>
+            <div class="context-menu-item context-menu-action" data-action="batch-paste">
+                📋 Batch Paste
+            </div>
+        `;
+        
+        this.subContextMenu.style.left = (rect.right + 5) + 'px';
+        this.subContextMenu.style.top = rect.top + 'px';
+        this.subContextMenu.classList.add('active');
+        
+        this.subContextMenu.querySelector('[data-action="paste-selected"]').addEventListener('click', () => {
+            const categories = [];
+            this.subContextMenu.querySelectorAll('input[type="checkbox"]:checked').forEach(cb => {
+                categories.push(cb.dataset.cat);
+            });
+            this.pasteStyle(this.selectedElement, categories, this.targetDocument);
+            this.hideContextMenu();
+        });
+        
+        this.subContextMenu.querySelector('[data-action="paste-all"]').addEventListener('click', () => {
+            this.pasteStyle(this.selectedElement, null, this.targetDocument);
+            this.hideContextMenu();
+        });
+        
+        this.subContextMenu.querySelector('[data-action="batch-paste"]').addEventListener('click', () => {
+            const categories = [];
+            this.subContextMenu.querySelectorAll('input[type="checkbox"]:checked').forEach(cb => {
+                categories.push(cb.dataset.cat);
+            });
+            this.startBatchPasteMode(categories);
+            this.batchBanner.classList.add('active');
+            this.hideContextMenu();
+        });
+    }
+    
+    showArrangeSubmenu(rect) {
+        this.subContextMenu.innerHTML = `
+            <div class="context-menu-header">Arrange</div>
+            <div class="context-menu-item" data-action="to-front">
+                <span>⬆️</span> Bring to Front
+            </div>
+            <div class="context-menu-item" data-action="forward">
+                <span>↑</span> Bring Forward
+            </div>
+            <div class="context-menu-item" data-action="backward">
+                <span>↓</span> Send Backward
+            </div>
+            <div class="context-menu-item" data-action="to-back">
+                <span>⬇️</span> Send to Back
+            </div>
+        `;
+        
+        this.subContextMenu.style.left = (rect.right + 5) + 'px';
+        this.subContextMenu.style.top = rect.top + 'px';
+        this.subContextMenu.classList.add('active');
+        
+        this.subContextMenu.querySelector('[data-action="to-front"]').addEventListener('click', () => {
+            this.bringToFront(this.selectedElement, this.targetDocument);
+            this.hideContextMenu();
+        });
+        
+        this.subContextMenu.querySelector('[data-action="forward"]').addEventListener('click', () => {
+            this.bringForward(this.selectedElement, this.targetDocument);
+            this.hideContextMenu();
+        });
+        
+        this.subContextMenu.querySelector('[data-action="backward"]').addEventListener('click', () => {
+            this.sendBackward(this.selectedElement, this.targetDocument);
+            this.hideContextMenu();
+        });
+        
+        this.subContextMenu.querySelector('[data-action="to-back"]').addEventListener('click', () => {
+            this.sendToBack(this.selectedElement, this.targetDocument);
+            this.hideContextMenu();
+        });
+    }
 }
+
 
 // Export for ES6 modules
 export { InspectorActions };

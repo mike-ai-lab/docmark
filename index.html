@@ -86,6 +86,7 @@
       window.hljs = hljs;
       window.TurndownService = TurndownService;
     </script>
+    <script src="/pagination-engine.js"></script>
     <script type="module" src="/src/main.js?v=2.0.0"></script>
     <title>Markdown Live Preview</title>
   </head>
@@ -185,14 +186,28 @@
             </div>
             
             <div class="button-group">
-                <div class="btn-item dropdown" id="export-dropdown">
-                    <a href="#">Export ▾</a>
-                    <div class="dropdown-content">
-                        <a href="#" id="export-pdf-link">Export PDF</a>
-                        <a href="#" id="print-pdf-link">Print to PDF</a>
-                        <a href="#" id="export-html-link">Export HTML</a>
-                    </div>
-                </div>
+                <button class="icon-button" id="export-pdf-button" title="Export PDF">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                        <polyline points="14 2 14 8 20 8"></polyline>
+                        <line x1="16" y1="13" x2="8" y2="13"></line>
+                        <line x1="16" y1="17" x2="8" y2="17"></line>
+                        <polyline points="10 9 9 9 8 9"></polyline>
+                    </svg>
+                </button>
+                <button class="icon-button" id="print-pdf-button" title="Print to PDF">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="6 9 6 2 18 2 18 9"></polyline>
+                        <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+                        <rect x="6" y="14" width="12" height="8"></rect>
+                    </svg>
+                </button>
+                <button class="icon-button" id="export-html-button" title="Export HTML">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="16 18 22 12 16 6"></polyline>
+                        <polyline points="8 6 2 12 8 18"></polyline>
+                    </svg>
+                </button>
                 <button class="icon-button" id="inspector-toggle-btn" title="Toggle HTML Inspector" style="display: none;">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"></path>
@@ -270,10 +285,60 @@
 
         <div id="preview" class="column preview-pane">
             <div id="preview-wrapper">
+                <!-- Paper Layout Controls (Compact Floating Bar) -->
+                <div id="paper-controls" class="paper-controls-bar hidden">
+                    <!-- Zoom Controls -->
+                    <div class="paper-controls-group">
+                        <button class="paper-control-btn-sm" id="paper-zoom-out" title="Zoom Out">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M5 12h14"></path>
+                            </svg>
+                        </button>
+                        <span class="paper-zoom-display" id="paper-zoom-display">100%</span>
+                        <button class="paper-control-btn-sm" id="paper-zoom-in" title="Zoom In">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M5 12h14"></path>
+                                <path d="M12 5v14"></path>
+                            </svg>
+                        </button>
+                    </div>
+                    
+                    <div class="paper-controls-divider"></div>
+                    
+                    <!-- Page Navigation -->
+                    <div class="paper-controls-group">
+                        <button class="paper-control-btn-sm" id="paper-prev-page" title="Previous Page">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M15 18l-6-6 6-6"></path>
+                            </svg>
+                        </button>
+                        <span class="paper-page-info" id="paper-page-info">1 / 1</span>
+                        <button class="paper-control-btn-sm" id="paper-next-page" title="Next Page">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M9 18l6-6-6-6"></path>
+                            </svg>
+                        </button>
+                    </div>
+                    
+                    <div class="paper-controls-divider"></div>
+                    
+                    <!-- Navigation Mode Toggle -->
+                    <button class="paper-mode-toggle" id="paper-mode-toggle" title="Toggle Navigation Mode">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M3 3h7v7H3z"></path>
+                            <path d="M14 3h7v7h-7z"></path>
+                            <path d="M14 14h7v7h-7z"></path>
+                            <path d="M3 14h7v7H3z"></path>
+                        </svg>
+                        <span id="paper-mode-text">Flow</span>
+                    </button>
+                </div>
+                
                 <div id="paper-scaler">
                     <div id="output" class="content markdown-body"></div>
                 </div>
             </div>
+            
             <!-- HTML Preview Refresh Button (hidden by default, shown in HTML mode) -->
             <button id="html-refresh-button" class="html-refresh-btn" title="Refresh HTML Preview" style="display: none;">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -286,7 +351,11 @@
         <div id="inspector-panel" class="inspector-panel hidden">
             <div class="inspector-header">
                 <h3>🎨 HTML Inspector</h3>
-                <button class="inspector-close-btn" id="inspector-close-btn">×</button>
+                <div class="inspector-header-actions">
+                    <button class="inspector-icon-btn" id="inspector-undo-btn" title="Undo (Ctrl+Z)">↶</button>
+                    <button class="inspector-icon-btn" id="inspector-redo-btn" title="Redo (Ctrl+Y)">↷</button>
+                    <button class="inspector-close-btn" id="inspector-close-btn">×</button>
+                </div>
             </div>
             
             <div class="inspector-content">

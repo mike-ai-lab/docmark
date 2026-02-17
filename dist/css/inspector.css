@@ -342,3 +342,337 @@
 .inspector-panel-content::-webkit-scrollbar-thumb:hover {
     background: var(--text-muted);
 }
+
+/* Inspector Modals - Lightweight Context Menu Style */
+.inspector-modal {
+    display: none;
+    position: fixed;
+    z-index: 99999;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+}
+
+.inspector-modal.active {
+    display: block;
+    pointer-events: auto;
+}
+
+.inspector-modal-content {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: #1e1e1e;
+    padding: 15px;
+    border-radius: 6px;
+    min-width: 280px;
+    max-width: 320px;
+    border: 1px solid #444;
+    color: #eee;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+}
+
+.inspector-modal-content h3 {
+    margin: 0 0 12px 0;
+    color: #ff9800;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.inspector-style-categories {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.inspector-style-categories label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #eee;
+    font-size: 12px;
+    cursor: pointer;
+    padding: 4px 0;
+}
+
+.inspector-style-categories input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+}
+
+.inspector-modal-actions {
+    display: flex;
+    gap: 6px;
+    margin-top: 10px;
+}
+
+.inspector-modal-btn {
+    flex: 1;
+    padding: 6px 10px;
+    border: 1px solid #444;
+    background: #2b2b2b;
+    color: white;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.inspector-modal-btn:hover {
+    background: #3b3b3b;
+}
+
+.inspector-modal-btn-primary {
+    background: #ff9800;
+    color: black;
+    border-color: #ff9800;
+}
+
+.inspector-modal-btn-primary:hover {
+    background: #fb8c00;
+}
+
+.inspector-compat-warning {
+    background: #ff9800;
+    color: black;
+    padding: 8px;
+    border-radius: 4px;
+    margin: 8px 0;
+    font-size: 11px;
+    display: none;
+}
+
+/* Batch Paste Banner */
+.inspector-batch-banner {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    background: linear-gradient(135deg, #673ab7, #9c27b0);
+    color: white;
+    padding: 15px;
+    z-index: 99998;
+    display: none;
+    align-items: center;
+    justify-content: space-between;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    animation: slideDown 0.3s ease;
+}
+
+.inspector-batch-banner.active {
+    display: flex;
+}
+
+@keyframes slideDown {
+    from { transform: translateY(-100%); }
+    to { transform: translateY(0); }
+}
+
+.inspector-batch-info {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.inspector-batch-counter {
+    background: rgba(255,255,255,0.2);
+    padding: 5px 15px;
+    border-radius: 20px;
+    font-weight: bold;
+}
+
+.inspector-batch-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.inspector-batch-btn {
+    padding: 8px 20px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 12px;
+    transition: all 0.2s;
+}
+
+.inspector-batch-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
+
+.inspector-batch-done {
+    background: #4caf50;
+    color: white;
+}
+
+.inspector-batch-undo {
+    background: #ff9800;
+    color: white;
+}
+
+.inspector-batch-cancel {
+    background: rgba(255,255,255,0.2);
+    color: white;
+}
+
+.batch-pasted {
+    outline: 3px solid #4caf50 !important;
+    outline-offset: -3px;
+}
+
+/* Light theme support - FORCE DARK MODALS */
+[data-theme="light"] .inspector-modal-content {
+    background: #1e1e1e !important;
+    color: #eee !important;
+    border-color: #444 !important;
+}
+
+[data-theme="light"] .inspector-modal-content h3 {
+    color: #ff9800 !important;
+}
+
+[data-theme="light"] .inspector-modal-btn {
+    background: #2b2b2b !important;
+    color: white !important;
+    border-color: #444 !important;
+}
+
+[data-theme="light"] .inspector-modal-btn:hover {
+    background: #3b3b3b !important;
+}
+
+[data-theme="light"] .inspector-modal-btn-primary {
+    background: #ff9800 !important;
+    color: black !important;
+}
+
+[data-theme="light"] .inspector-modal-btn-primary:hover {
+    background: #fb8c00 !important;
+}
+
+[data-theme="light"] .inspector-style-categories label {
+    color: #eee !important;
+}
+
+[data-theme="light"] .inspector-compat-warning {
+    background: #ff9800 !important;
+    color: black !important;
+}
+
+
+/* Context Menu System */
+.inspector-context-menu {
+    position: fixed;
+    background: #1e1e1e;
+    border: 1px solid #444;
+    border-radius: 6px;
+    padding: 4px;
+    min-width: 180px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+    z-index: 99999;
+    display: none;
+    color: #eee;
+}
+
+.inspector-context-menu.active {
+    display: block;
+}
+
+.context-menu-header {
+    padding: 6px 10px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #ff9800;
+    border-bottom: 1px solid #333;
+    margin-bottom: 4px;
+}
+
+.context-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    font-size: 12px;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: background 0.1s;
+}
+
+.context-menu-item:hover {
+    background: #2b2b2b;
+}
+
+.context-menu-item span {
+    font-size: 14px;
+}
+
+.context-menu-separator {
+    height: 1px;
+    background: #333;
+    margin: 4px 0;
+}
+
+.context-menu-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 10px;
+    font-size: 11px;
+    cursor: pointer;
+}
+
+.context-menu-checkbox:hover {
+    background: #2b2b2b;
+}
+
+.context-menu-checkbox input[type="checkbox"] {
+    width: 14px;
+    height: 14px;
+    cursor: pointer;
+}
+
+.context-menu-action {
+    background: #2b2b2b;
+    font-weight: 600;
+    color: #ff9800;
+}
+
+.context-menu-action:hover {
+    background: #3b3b3b;
+}
+
+.inspector-sub-menu {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+/* Light theme */
+[data-theme="light"] .inspector-context-menu {
+    background: #1e1e1e !important;
+    border-color: #444 !important;
+    color: #eee !important;
+}
+
+[data-theme="light"] .context-menu-header {
+    color: #ff9800 !important;
+    border-bottom-color: #333 !important;
+}
+
+[data-theme="light"] .context-menu-item:hover {
+    background: #2b2b2b !important;
+}
+
+[data-theme="light"] .context-menu-separator {
+    background: #333 !important;
+}
+
+[data-theme="light"] .context-menu-action {
+    background: #2b2b2b !important;
+    color: #ff9800 !important;
+}

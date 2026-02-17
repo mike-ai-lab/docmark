@@ -1,10 +1,11 @@
 import Storehouse from 'storehouse-js';
-import * as monaco from 'https://cdn.jsdelivr.net/npm/monaco-editor@0.52.2/+esm';
+import * as monaco from 'monaco-editor';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
 import { setupValidationWizard } from './validation-wizard.js';
-import { initializeInspector, getInspector, getCurrentDoc } from './inspector-integration.js';
-import { initInspectorPanel, showInspectorToggle, hideInspectorToggle } from './inspector-panel-ui.js';
+// DISABLED FOR DEPLOYMENT - Inspector and HTML Editor features not finished
+// import { initializeInspector, getInspector, getCurrentDoc } from './inspector-integration.js';
+// import { initInspectorPanel, showInspectorToggle, hideInspectorToggle } from './inspector-panel-ui.js';
 
 const init = () => {
     let hasEdited = false;
@@ -13,21 +14,13 @@ const init = () => {
     let tocEnabled = false;
     let htmlPreviewMode = false; // Toggle for full HTML preview mode
     
+    // Paper layout state (global within init scope)
+    let paperLayoutActive = false;
+    let paperLayoutPaginator = null;
+    
     // HTML/CSS upload state
     let loadedCSSContent = null; // Store loaded CSS content
     let lastHtmlFilePath = null; // Store HTML file path for CSS detection
-    
-    // Paper layout state (declared early to avoid initialization errors)
-    let previewLayout = 'web'; // 'web' or 'paper'
-    let paperZoomLevel = 100; // percentage
-    let pageSetup = {
-        width: 21.0,  // cm
-        height: 29.7, // cm
-        marginTop: 2.0,    // Reduced from 4.5cm
-        marginBottom: 2.0, // Reduced from 2.54cm
-        marginLeft: 2.0,   // Reduced from 2.54cm
-        marginRight: 2.0   // Reduced from 1.47cm
-    };
 
     // Global drag state - only one resizer can be active at a time
     let activeResizer = null;
@@ -370,6 +363,11 @@ This web site is using ${"`"}markedjs/marked${"`"}.
             
             // Update status bar
             updateStatusBar();
+            
+            // Re-paginate if in paper layout mode
+            if (typeof paperLayoutActive !== 'undefined' && paperLayoutActive && typeof handleContentChangeInPaperLayout !== 'undefined') {
+                setTimeout(handleContentChangeInPaperLayout, 100);
+            }
         });
 
         // Scroll sync is now handled in the consolidated section at the bottom
@@ -493,173 +491,6 @@ This web site is using ${"`"}markedjs/marked${"`"}.
     };
     
     // ============================================================================
-    // PAPER LAYOUT HELPER FUNCTIONS (defined before convert)
-    // ============================================================================
-    
-    // Paginate content into A4 pages
-    const paginateToA4 = (html) => {
-        const tempDiv = document.createElement('div');
-        tempDiv.style.visibility = 'hidden';
-        tempDiv.style.position = 'absolute';
-        tempDiv.style.top = '-9999px';
-        tempDiv.style.width = pageSetup.width + 'cm';
-        document.body.appendChild(tempDiv);
-        
-        const content = document.createElement('div');
-        content.className = 'markdown-body';
-        const contentWidth = pageSetup.width - pageSetup.marginLeft - pageSetup.marginRight;
-        content.style.width = contentWidth + 'cm';
-        content.style.padding = '0';
-        content.style.margin = '0';
-        content.innerHTML = html;
-        tempDiv.appendChild(content);
-        
-        // Calculate available content height
-        const pageContentHeight = (pageSetup.height - pageSetup.marginTop - pageSetup.marginBottom) * 37.795275591; // cm to px
-        const pages = [];
-        
-        // Get all top-level elements
-        const elements = Array.from(content.children);
-        let currentPageContent = [];
-        let currentHeight = 0;
-        
-        elements.forEach((el, index) => {
-            // Measure element height
-            const testDiv = document.createElement('div');
-            testDiv.className = 'markdown-body';
-            testDiv.style.width = contentWidth + 'cm';
-            testDiv.style.padding = '0';
-            testDiv.style.margin = '0';
-            testDiv.appendChild(el.cloneNode(true));
-            tempDiv.innerHTML = '';
-            tempDiv.appendChild(testDiv);
-            
-            const elHeight = testDiv.offsetHeight;
-            
-            // If adding this element exceeds page height and we have content, start new page
-            if (currentHeight + elHeight > pageContentHeight && currentPageContent.length > 0) {
-                // Save current page
-                const pageDiv = document.createElement('div');
-                currentPageContent.forEach(node => pageDiv.appendChild(node));
-                pages.push(pageDiv.innerHTML);
-                
-                // Start new page with current element
-                currentPageContent = [el.cloneNode(true)];
-                currentHeight = elHeight;
-            } else {
-                // Add to current page
-                currentPageContent.push(el.cloneNode(true));
-                currentHeight += elHeight;
-            }
-        });
-        
-        // Add remaining content as last page
-        if (currentPageContent.length > 0) {
-            const pageDiv = document.createElement('div');
-            currentPageContent.forEach(node => pageDiv.appendChild(node));
-            pages.push(pageDiv.innerHTML);
-        }
-        
-        document.body.removeChild(tempDiv);
-        return pages.length ? pages : [html];
-    };
-    
-    // Apply paper layout to current content
-    // Apply paper layout - CSS-only, no DOM restructuring
-    const applyPaperLayout = () => {
-        const outputDiv = document.querySelector('#output');
-        if (!outputDiv) return;
-        
-        // Simply add a class - all styling done via CSS
-        outputDiv.classList.add('paper-layout-active');
-        
-        // Store page setup as CSS variables on the output element
-        outputDiv.style.setProperty('--paper-width', pageSetup.width + 'cm');
-        outputDiv.style.setProperty('--paper-height', pageSetup.height + 'cm');
-        outputDiv.style.setProperty('--paper-margin-top', pageSetup.marginTop + 'cm');
-        outputDiv.style.setProperty('--paper-margin-right', pageSetup.marginRight + 'cm');
-        outputDiv.style.setProperty('--paper-margin-bottom', pageSetup.marginBottom + 'cm');
-        outputDiv.style.setProperty('--paper-margin-left', pageSetup.marginLeft + 'cm');
-        
-        applyPaperZoom();
-    };
-    
-    // Remove paper layout
-    const removePaperLayout = () => {
-        const outputDiv = document.querySelector('#output');
-        if (!outputDiv) return;
-        
-        outputDiv.classList.remove('paper-layout-active');
-    };
-    
-    // Apply zoom to paper layout
-    const applyPaperZoom = () => {
-        console.log('[APPLY-ZOOM] applyPaperZoom called with zoom level:', paperZoomLevel, '%');
-        
-        const paperScaler = document.querySelector('#paper-scaler');
-        const zoomLabel = document.querySelector('.paper-zoom-label');
-        
-        if (paperScaler) {
-            const scale = paperZoomLevel / 100;
-            paperScaler.style.transform = `scale(${scale})`;
-            console.log('[APPLY-ZOOM] Applied transform scale:', scale);
-        } else {
-            console.log('[APPLY-ZOOM] No paper-scaler element found');
-        }
-        
-        if (zoomLabel) {
-            zoomLabel.textContent = `${paperZoomLevel}%`;
-        }
-    };
-    
-    // Auto-scale paper to fit preview panel width with equal margins
-    const autoScalePaperToFit = () => {
-        console.log('[AUTO-SCALE] autoScalePaperToFit called');
-        
-        const outputDiv = document.querySelector('#output');
-        const previewPane = document.querySelector('.preview-pane');
-        
-        if (!outputDiv || !previewPane || !outputDiv.classList.contains('paper-layout-active')) {
-            console.log('[AUTO-SCALE] Skipping - conditions not met:', {
-                hasOutput: !!outputDiv,
-                hasPreviewPane: !!previewPane,
-                isPaperActive: outputDiv?.classList.contains('paper-layout-active')
-            });
-            return;
-        }
-        
-        // Get the actual available width (accounting for scrollbar and padding)
-        const previewWrapper = document.querySelector('#preview-wrapper');
-        const availableWidth = previewWrapper ? previewWrapper.clientWidth : previewPane.clientWidth;
-        
-        console.log('[AUTO-SCALE] Available width:', availableWidth);
-        
-        // Get the paper width in pixels (convert from cm)
-        const pageWidthCm = pageSetup.width;
-        const pageWidthPx = pageWidthCm * 37.795275591; // cm to pixels at 96 DPI
-        
-        console.log('[AUTO-SCALE] Page width:', pageWidthCm, 'cm =', pageWidthPx, 'px');
-        
-        // Calculate scale to fit with minimal margins (20px on each side)
-        const desiredMargin = 20; // Reduced from 40px
-        const targetWidth = availableWidth - (desiredMargin * 2);
-        
-        console.log('[AUTO-SCALE] Target width (with margins):', targetWidth);
-        
-        // Calculate the scale percentage
-        const scale = (targetWidth / pageWidthPx) * 100;
-        
-        console.log('[AUTO-SCALE] Calculated scale:', scale, '%');
-        
-        // Clamp between 50% and 200%
-        const oldZoom = paperZoomLevel;
-        paperZoomLevel = Math.max(50, Math.min(200, Math.round(scale)));
-        
-        console.log('[AUTO-SCALE] Zoom level changed from', oldZoom, '% to', paperZoomLevel, '%');
-        
-        applyPaperZoom();
-    };
-
     // Restore normal markdown preview mode (cleanup from HTML preview mode)
     let restoreMarkdownPreview = () => {
         const outputDiv = document.querySelector('#output');
@@ -832,14 +663,15 @@ This web site is using ${"`"}markedjs/marked${"`"}.
         iframeDoc.write(processedHtml);
         iframeDoc.close();
         
+        // DISABLED FOR DEPLOYMENT - Inspector feature not finished
         // Initialize inspector with modular actions after iframe loads
-        iframe.onload = () => {
-            const iframeDocument = iframe.contentDocument || iframe.contentWindow.document;
-            if (iframeDocument) {
-                initializeInspector(iframeDocument);
-                console.log('✅ Inspector initialized with full modular actions');
-            }
-        };
+        // iframe.onload = () => {
+        //     const iframeDocument = iframe.contentDocument || iframe.contentWindow.document;
+        //     if (iframeDocument) {
+        //         initializeInspector(iframeDocument);
+        //         console.log('✅ Inspector initialized with full modular actions');
+        //     }
+        // };
     };
 
     // Render markdown text as html with accurate line mapping
@@ -851,13 +683,15 @@ This web site is using ${"`"}markedjs/marked${"`"}.
         if (htmlPreviewMode || isFullHtmlDocument) {
             // HTML Preview Mode: Render full HTML in iframe
             renderFullHtmlPreview(markdown);
-            showInspectorToggle(); // Show inspector button in HTML mode
+            // DISABLED FOR DEPLOYMENT - Inspector feature not finished
+            // showInspectorToggle(); // Show inspector button in HTML mode
             return;
         }
         
         // Restore normal markdown preview mode (in case we were in HTML mode)
         restoreMarkdownPreview();
-        hideInspectorToggle(); // Hide inspector button in markdown mode
+        // DISABLED FOR DEPLOYMENT - Inspector feature not finished
+        // hideInspectorToggle(); // Hide inspector button in markdown mode
         
         // Parse metadata first
         const { metadata, content } = parseMetadata(markdown);
@@ -1131,18 +965,6 @@ This web site is using ${"`"}markedjs/marked${"`"}.
         
         // Update the output
         document.querySelector('#output').innerHTML = finalHtml;
-        
-        // Paper layout is managed by updatePreviewLayout(), not here
-        // Just ensure the output element has the right class if paper mode is active
-        const outputDiv = document.querySelector('#output');
-        if (previewLayout === 'paper' && outputDiv) {
-            if (!outputDiv.classList.contains('paper-layout-active')) {
-                outputDiv.classList.add('paper-layout-active');
-                applyPaperZoom();
-            }
-        } else if (outputDiv) {
-            outputDiv.classList.remove('paper-layout-active');
-        }
         
         // Apply edit mode if enabled
         if (editModeEnabled) {
@@ -3034,6 +2856,43 @@ ${fontLinkTags}
         /* Inline styles from page */
         ${inlineCss}
         
+        /* Table overflow fixes for PDF export */
+        table {
+            width: 100% !important;
+            max-width: 100% !important;
+            table-layout: auto !important;
+            word-wrap: break-word !important;
+            overflow-wrap: break-word !important;
+            page-break-inside: auto !important;
+        }
+        
+        table th,
+        table td {
+            word-wrap: break-word !important;
+            overflow-wrap: break-word !important;
+            white-space: normal !important;
+            padding: 6px 8px !important;
+            font-size: 11px !important;
+            line-height: 1.4 !important;
+        }
+        
+        table thead th {
+            font-size: 11px !important;
+            font-weight: 600 !important;
+        }
+        
+        /* Prevent images from overflowing page */
+        img, video, iframe {
+            max-width: 100% !important;
+            height: auto !important;
+        }
+        
+        pre {
+            max-width: 100% !important;
+            overflow-x: auto !important;
+            white-space: pre-wrap !important;
+        }
+        
         /* Print-specific resets */
         @media print {
             html, body {
@@ -3067,13 +2926,20 @@ ${fontLinkTags}
                 break-inside: avoid;
             }
             
-            /* Avoid breaking inside these elements */
+            /* Avoid breaking inside these elements - RELAXED RULES */
             h1, h2, h3, h4, h5, h6 {
                 break-after: avoid;
                 page-break-after: avoid;
             }
             
+            /* Allow breaking in paragraphs, lists, and tables for better page utilization */
             p, ul, ol, table {
+                break-inside: auto;
+                page-break-inside: auto;
+            }
+            
+            /* Only prevent breaking in code blocks */
+            pre, code {
                 break-inside: avoid;
                 page-break-inside: avoid;
             }
@@ -3152,6 +3018,37 @@ ${fontLinkTags}
             }
         } catch (e) {
             console.error('Failed to load PDF settings', e);
+        }
+    };
+    
+    let savePdfSettings = () => {
+        try {
+            localStorage.setItem(localStorageNamespace + '.' + localStoragePdfSettingsKey, JSON.stringify(pdfFontSettings));
+        } catch (e) {
+            console.error('Failed to save PDF settings', e);
+        }
+    };
+    
+    let loadPageSetupSettings = () => {
+        try {
+            let raw = localStorage.getItem(localStorageNamespace + '.page_setup_settings');
+            if (raw) {
+                return JSON.parse(raw);
+            }
+        } catch (e) {
+            console.error('Failed to load page setup settings', e);
+        }
+        // Return default settings
+        return {
+            margins: { top: 20, right: 20, bottom: 20, left: 20 }
+        };
+    };
+    
+    let savePageSetupSettings = (settings) => {
+        try {
+            localStorage.setItem(localStorageNamespace + '.page_setup_settings', JSON.stringify(settings));
+        } catch (e) {
+            console.error('Failed to save page setup settings', e);
         }
     };
     
@@ -3419,11 +3316,30 @@ ${fontLinkTags}
     };
 
     let setupExportButton = () => {
-        const exportPdfLink = document.querySelector('#export-pdf-link');
-        if (exportPdfLink) {
-            exportPdfLink.addEventListener('click', (event) => {
+        // Setup PDF export button
+        const exportPdfButton = document.querySelector('#export-pdf-button');
+        if (exportPdfButton) {
+            exportPdfButton.addEventListener('click', (event) => {
                 event.preventDefault();
                 exportPreviewToPdf();
+            });
+        }
+        
+        // Setup Print PDF button
+        const printPdfButton = document.querySelector('#print-pdf-button');
+        if (printPdfButton) {
+            printPdfButton.addEventListener('click', (event) => {
+                event.preventDefault();
+                printPreviewToPdf();
+            });
+        }
+        
+        // Setup HTML export button
+        const exportHtmlButton = document.querySelector('#export-html-button');
+        if (exportHtmlButton) {
+            exportHtmlButton.addEventListener('click', (event) => {
+                event.preventDefault();
+                exportPreviewToHtml();
             });
         }
     };
@@ -3852,6 +3768,44 @@ ${fontLinkTags}
             margin: 0 auto;
             color: ${isDark ? '#e6edf3' : '#24292f'};
         }
+        
+        /* Table overflow fixes for print */
+        table {
+            width: 100% !important;
+            max-width: 100% !important;
+            table-layout: auto !important;
+            word-wrap: break-word !important;
+            overflow-wrap: break-word !important;
+            page-break-inside: auto !important;
+        }
+        
+        table th,
+        table td {
+            word-wrap: break-word !important;
+            overflow-wrap: break-word !important;
+            white-space: normal !important;
+            padding: 6px 8px !important;
+            font-size: 11px !important;
+            line-height: 1.4 !important;
+        }
+        
+        table thead th {
+            font-size: 11px !important;
+            font-weight: 600 !important;
+        }
+        
+        /* Prevent images from overflowing page */
+        img, video, iframe {
+            max-width: 100% !important;
+            height: auto !important;
+        }
+        
+        pre {
+            max-width: 100% !important;
+            overflow-x: auto !important;
+            white-space: pre-wrap !important;
+        }
+        
         ${css}
     </style>
 </head>
@@ -4622,91 +4576,6 @@ ${fontLinkTags}
             editor.revealLineInCenter(signatureLine);
             editor.focus();
         }, 50);
-    };
-
-    // Setup dropdown menus to work reliably
-    let setupDropdowns = () => {
-        const dropdowns = document.querySelectorAll('.dropdown');
-        
-        dropdowns.forEach(dropdown => {
-            const dropdownContent = dropdown.querySelector('.dropdown-content');
-            if (!dropdownContent) return;
-            
-            let isOpen = false;
-            let closeTimeout = null;
-            
-            // Check if mouse is within dropdown area (parent or content)
-            const isMouseInDropdown = () => {
-                const rect = dropdown.getBoundingClientRect();
-                return true; // We'll use a different approach
-            };
-            
-            // Open on hover
-            dropdown.addEventListener('mouseenter', () => {
-                clearTimeout(closeTimeout);
-                isOpen = true;
-                dropdownContent.style.display = 'block';
-            });
-            
-            // Keep open when hovering over dropdown content
-            dropdownContent.addEventListener('mouseenter', () => {
-                clearTimeout(closeTimeout);
-                isOpen = true;
-            });
-            
-            // Only close when mouse leaves BOTH parent AND content
-            const scheduleClose = () => {
-                closeTimeout = setTimeout(() => {
-                    if (!isOpen) return;
-                    isOpen = false;
-                    dropdownContent.style.display = 'none';
-                }, 150);
-            };
-            
-            dropdown.addEventListener('mouseleave', (e) => {
-                // Only close if we're actually leaving the dropdown area
-                const rect = dropdown.getBoundingClientRect();
-                if (e.clientX < rect.left || e.clientX > rect.right || 
-                    e.clientY < rect.top || e.clientY > rect.bottom) {
-                    scheduleClose();
-                }
-            });
-            
-            dropdownContent.addEventListener('mouseleave', (e) => {
-                // Only close if we're actually leaving the content area
-                const rect = dropdownContent.getBoundingClientRect();
-                if (e.clientX < rect.left || e.clientX > rect.right || 
-                    e.clientY < rect.top || e.clientY > rect.bottom) {
-                    scheduleClose();
-                }
-            });
-            
-            // Toggle on click
-            dropdown.addEventListener('click', (e) => {
-                // Don't toggle if clicking inside dropdown-content (checkboxes, labels, etc.)
-                if (e.target.closest('.dropdown-content')) {
-
-                    return;
-                }
-                
-                clearTimeout(closeTimeout);
-                isOpen = !isOpen;
-                dropdownContent.style.display = isOpen ? 'block' : 'none';
-
-            });
-        });
-        
-        // Close all dropdowns when clicking outside
-        document.addEventListener('click', (e) => {
-            if (!e.target.closest('.dropdown')) {
-                dropdowns.forEach(dropdown => {
-                    const content = dropdown.querySelector('.dropdown-content');
-                    if (content) {
-                        content.style.display = 'none';
-                    }
-                });
-            }
-        });
     };
 
     // ----- Cheat Sheet Panel (Third Panel) -----
@@ -5869,8 +5738,9 @@ ${fontLinkTags}
     setupImportHtmlButton(editor);
     setupImportCssButton(editor);
     
+    // DISABLED FOR DEPLOYMENT - Inspector panel UI not finished
     // Initialize inspector panel UI
-    initInspectorPanel();
+    // initInspectorPanel();
     
     setupPdfSettingsButton();
     setupInsertHeaderButton();
@@ -5879,7 +5749,6 @@ ${fontLinkTags}
     setupInsertMediaButton();
     setupInsertBreakButton();
     setupMediaContextMenu();
-    setupDropdowns();
     setupCheatSheetButton();
     setupTocCheckbox();
     setupValidationCheckbox();
@@ -5998,371 +5867,6 @@ ${fontLinkTags}
     
     // Initial status bar update
     updateStatusBar();
-    
-    // ============================================================================
-    // PAPER LAYOUT FUNCTIONALITY
-    // ============================================================================
-    
-    const localStoragePaperLayoutKey = 'paper_layout_settings';
-    const localStoragePageSetupKey = 'page_setup_settings';
-    
-    // Load paper layout settings
-    const loadPaperLayoutSettings = () => {
-        try {
-            const stored = localStorage.getItem(`${localStorageNamespace}.${localStoragePaperLayoutKey}`);
-            if (stored) {
-                const settings = JSON.parse(stored);
-                previewLayout = settings.layout || 'web';
-                paperZoomLevel = settings.zoom || 100;
-            }
-        } catch (e) {
-            console.error('Failed to load paper layout settings:', e);
-        }
-    };
-    
-    // Load page setup settings
-    const loadPageSetupSettings = () => {
-        try {
-            const stored = localStorage.getItem(`${localStorageNamespace}.${localStoragePageSetupKey}`);
-            if (stored) {
-                pageSetup = JSON.parse(stored);
-            }
-        } catch (e) {
-            console.error('Failed to load page setup settings:', e);
-        }
-        
-        // Return settings with margins in mm for PDF export
-        return {
-            pageSize: 'A4',
-            pageOrientation: 'portrait',
-            margins: {
-                top: (pageSetup.marginTop || 2.54) * 10,    // Convert cm to mm
-                right: (pageSetup.marginRight || 2.54) * 10,
-                bottom: (pageSetup.marginBottom || 2.54) * 10,
-                left: (pageSetup.marginLeft || 2.54) * 10
-            }
-        };
-    };
-    
-    // Save page setup settings
-    const savePageSetupSettings = () => {
-        try {
-            localStorage.setItem(`${localStorageNamespace}.${localStoragePageSetupKey}`, JSON.stringify(pageSetup));
-        } catch (e) {
-            console.error('Failed to save page setup settings:', e);
-        }
-    };
-    
-    // Save paper layout settings
-    const savePaperLayoutSettings = () => {
-        try {
-            const settings = { layout: previewLayout, zoom: paperZoomLevel };
-            localStorage.setItem(`${localStorageNamespace}.${localStoragePaperLayoutKey}`, JSON.stringify(settings));
-        } catch (e) {
-            console.error('Failed to save paper layout settings:', e);
-        }
-    };
-    
-    // Update preview layout
-    const updatePreviewLayout = () => {
-        console.log('[PAPER LAYOUT] updatePreviewLayout called, previewLayout:', previewLayout);
-        
-        const previewPanel = document.querySelector('.preview-pane');
-        const paperControls = document.querySelector('.paper-controls');
-        const layoutModeLabel = document.getElementById('status-layout-mode');
-        const outputDiv = document.querySelector('#output');
-        const previewWrapper = document.querySelector('#preview-wrapper');
-        const paperScaler = document.querySelector('#paper-scaler');
-        
-        if (previewLayout === 'paper') {
-            console.log('[PAPER LAYOUT] Applying paper layout...');
-            
-            if (previewPanel) previewPanel.classList.add('paper-layout');
-            if (paperControls) paperControls.classList.add('visible');
-            if (layoutModeLabel) layoutModeLabel.textContent = 'Paper Layout';
-            
-            if (outputDiv) {
-                outputDiv.classList.add('paper-layout-active');
-                applyPaperZoom();
-                
-                console.log('[PAPER LAYOUT] Paper layout activated');
-                
-                if (outputDiv) {
-                    outputDiv.style.margin = '0 auto';
-                    outputDiv.style.display = '';
-                    outputDiv.style.position = '';
-                    outputDiv.style.left = '';
-                    outputDiv.style.transform = '';
-                    
-                    console.log('[PAPER LAYOUT] Output div styles:', {
-                        margin: outputDiv.style.margin,
-                        display: outputDiv.style.display
-                    });
-                }
-            }
-        } else {
-            console.log('[PAPER LAYOUT] Removing paper layout...');
-            
-            if (previewPanel) previewPanel.classList.remove('paper-layout');
-            if (paperControls) paperControls.classList.remove('visible');
-            if (layoutModeLabel) layoutModeLabel.textContent = 'Web Layout';
-            
-            if (outputDiv) {
-                outputDiv.classList.remove('paper-layout-active');
-            }
-            
-            // Reset paper-scaler transform for web layout
-            if (paperScaler) {
-                console.log('[PAPER LAYOUT] Resetting paper-scaler transform to scale(1)');
-                paperScaler.style.transform = 'scale(1)';
-            }
-            
-            // Reset wrapper styles
-            if (previewWrapper) {
-                console.log('[PAPER LAYOUT] Resetting preview-wrapper styles');
-                previewWrapper.style.display = '';
-                previewWrapper.style.justifyContent = '';
-                previewWrapper.style.alignItems = '';
-                previewWrapper.style.textAlign = '';
-                previewWrapper.style.padding = '';
-            }
-        }
-        
-        // Re-render markdown with new layout
-        if (editor) {
-            const currentContent = editor.getValue();
-            convert(currentContent);
-        }
-    };
-    
-    // Zoom in
-    const zoomIn = () => {
-        console.log('[ZOOM-IN] Button clicked, current zoom:', paperZoomLevel);
-        if (paperZoomLevel < 200) {
-            paperZoomLevel += 10;
-            applyPaperZoom();
-            savePaperLayoutSettings();
-        }
-    };
-    
-    // Zoom out
-    const zoomOut = () => {
-        console.log('[ZOOM-OUT] Button clicked, current zoom:', paperZoomLevel);
-        if (paperZoomLevel > 50) {
-            paperZoomLevel -= 10;
-            applyPaperZoom();
-            savePaperLayoutSettings();
-        }
-    };
-    
-    // Fit to width
-    const fitToWidth = () => {
-        console.log('[FIT-TO-WIDTH] Button clicked');
-        const previewPanel = document.querySelector('.preview-pane');
-        if (!previewPanel) return;
-        
-        const panelWidth = previewPanel.clientWidth;
-        const pageWidth = pageSetup.width * 37.795275591; // cm to pixels
-        const padding = 40;
-        
-        const scale = ((panelWidth - padding) / pageWidth) * 100;
-        paperZoomLevel = Math.max(50, Math.min(200, Math.round(scale)));
-        console.log('[FIT-TO-WIDTH] Calculated zoom:', paperZoomLevel);
-        applyPaperZoom();
-        savePaperLayoutSettings();
-    };
-    
-    // Reset to 100%
-    const resetZoom = () => {
-        paperZoomLevel = 100;
-        applyPaperZoom();
-        savePaperLayoutSettings();
-    };
-    
-    // Toggle paper layout
-    const togglePaperLayout = () => {
-        previewLayout = previewLayout === 'web' ? 'paper' : 'web';
-        savePaperLayoutSettings();
-        updatePreviewLayout();
-    };
-    
-    // Page setup modal
-    const openPageSetupModal = () => {
-        const modal = document.getElementById('page-setup-modal');
-        if (modal) {
-            // Populate current values
-            document.getElementById('page-width').value = pageSetup.width;
-            document.getElementById('page-height').value = pageSetup.height;
-            document.getElementById('margin-top').value = pageSetup.marginTop;
-            document.getElementById('margin-bottom').value = pageSetup.marginBottom;
-            document.getElementById('margin-left').value = pageSetup.marginLeft;
-            document.getElementById('margin-right').value = pageSetup.marginRight;
-            modal.classList.add('visible');
-        }
-    };
-    
-    const closePageSetupModal = () => {
-        const modal = document.getElementById('page-setup-modal');
-        if (modal) modal.classList.remove('visible');
-    };
-    
-    const savePageSetup = () => {
-        pageSetup.width = parseFloat(document.getElementById('page-width').value) || 21.0;
-        pageSetup.height = parseFloat(document.getElementById('page-height').value) || 29.7;
-        pageSetup.marginTop = parseFloat(document.getElementById('margin-top').value) || 4.5;
-        pageSetup.marginBottom = parseFloat(document.getElementById('margin-bottom').value) || 2.54;
-        pageSetup.marginLeft = parseFloat(document.getElementById('margin-left').value) || 2.54;
-        pageSetup.marginRight = parseFloat(document.getElementById('margin-right').value) || 1.47;
-        
-        savePageSetupSettings();
-        closePageSetupModal();
-        
-        // Re-render if in paper mode
-        if (previewLayout === 'paper') {
-            updatePreviewLayout();
-        }
-    };
-    
-    // Setup paper controls in status bar
-    const setupPaperControls = () => {
-        const layoutModeItem = document.querySelector('.status-item[title="Layout mode"]');
-        if (layoutModeItem) {
-            layoutModeItem.classList.add('clickable');
-            layoutModeItem.addEventListener('click', togglePaperLayout);
-            layoutModeItem.title = 'Click to toggle between Web and Paper layout';
-        }
-        
-        // Create paper controls overlay with test buttons
-        const controlsHtml = `
-            <div class="paper-controls">
-                <button class="paper-control-btn" id="paper-zoom-out" title="Zoom Out (-)">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <circle cx="11" cy="11" r="8"></circle>
-                        <path d="m21 21-4.35-4.35"></path>
-                        <line x1="8" y1="11" x2="14" y2="11"></line>
-                    </svg>
-                </button>
-                <button class="paper-control-btn" id="paper-zoom-in" title="Zoom In (+)">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <circle cx="11" cy="11" r="8"></circle>
-                        <path d="m21 21-4.35-4.35"></path>
-                        <line x1="11" y1="8" x2="11" y2="14"></line>
-                        <line x1="8" y1="11" x2="14" y2="11"></line>
-                    </svg>
-                </button>
-                <div class="paper-zoom-label">100%</div>
-                <div class="paper-control-separator"></div>
-                <button class="paper-control-btn" id="paper-fit-width" title="Fit to Width">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <polyline points="5 9 2 12 5 15"></polyline>
-                        <polyline points="9 5 12 2 15 5"></polyline>
-                        <polyline points="15 19 12 22 9 19"></polyline>
-                        <polyline points="19 9 22 12 19 15"></polyline>
-                        <line x1="2" y1="12" x2="22" y2="12"></line>
-                        <line x1="12" y1="2" x2="12" y2="22"></line>
-                    </svg>
-                </button>
-                <button class="paper-control-btn" id="paper-reset-zoom" title="Actual Size (100%)">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-                        <line x1="9" y1="9" x2="15" y2="15"></line>
-                        <line x1="15" y1="9" x2="9" y2="15"></line>
-                    </svg>
-                </button>
-                <div class="paper-control-separator"></div>
-                <button class="paper-control-btn" id="paper-page-setup" title="Page Setup">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                        <polyline points="14 2 14 8 20 8"></polyline>
-                        <line x1="12" y1="18" x2="12" y2="12"></line>
-                        <line x1="9" y1="15" x2="15" y2="15"></line>
-                    </svg>
-                </button>
-            </div>
-        `;
-        
-        document.body.insertAdjacentHTML('beforeend', controlsHtml);
-        
-        // Setup event listeners
-        document.getElementById('paper-zoom-in').addEventListener('click', zoomIn);
-        document.getElementById('paper-zoom-out').addEventListener('click', zoomOut);
-        document.getElementById('paper-fit-width').addEventListener('click', fitToWidth);
-        document.getElementById('paper-reset-zoom').addEventListener('click', resetZoom);
-        document.getElementById('paper-page-setup').addEventListener('click', openPageSetupModal);
-    };
-    
-    // Initialize paper layout after DOM is ready
-    setTimeout(() => {
-        loadPaperLayoutSettings();
-        loadPageSetupSettings();
-        setupPaperControls();
-        updatePreviewLayout(); // Apply the loaded layout state to UI
-        
-        // Create page setup modal
-        const modalHtml = `
-            <div class="page-setup-modal" id="page-setup-modal">
-                <div class="page-setup-modal-content">
-                    <div class="page-setup-modal-header">
-                        <h3>Page Setup</h3>
-                        <button class="page-setup-modal-close" id="page-setup-close-btn">�</button>
-                    </div>
-                    <div class="page-setup-modal-body">
-                        <div class="page-setup-section">
-                            <label>Paper Size (cm)</label>
-                            <div class="page-setup-row">
-                                <div class="page-setup-field">
-                                    <label>Width</label>
-                                    <input type="number" id="page-width" step="0.1" min="10" max="50">
-                                </div>
-                                <div class="page-setup-field">
-                                    <label>Height</label>
-                                    <input type="number" id="page-height" step="0.1" min="10" max="50">
-                                </div>
-                            </div>
-                        </div>
-                        <div class="page-setup-section">
-                            <label>Margins (cm)</label>
-                            <div class="page-setup-row">
-                                <div class="page-setup-field">
-                                    <label>Top</label>
-                                    <input type="number" id="margin-top" step="0.1" min="0" max="10">
-                                </div>
-                                <div class="page-setup-field">
-                                    <label>Bottom</label>
-                                    <input type="number" id="margin-bottom" step="0.1" min="0" max="10">
-                                </div>
-                            </div>
-                            <div class="page-setup-row">
-                                <div class="page-setup-field">
-                                    <label>Left</label>
-                                    <input type="number" id="margin-left" step="0.1" min="0" max="10">
-                                </div>
-                                <div class="page-setup-field">
-                                    <label>Right</label>
-                                    <input type="number" id="margin-right" step="0.1" min="0" max="10">
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="page-setup-modal-footer">
-                        <button class="page-setup-btn-cancel" id="page-setup-cancel-btn">Cancel</button>
-                        <button class="page-setup-btn-save" id="page-setup-save-btn">Apply</button>
-                    </div>
-                </div>
-            </div>
-        `;
-        document.body.insertAdjacentHTML('beforeend', modalHtml);
-        
-        // Setup modal event listeners
-        document.getElementById('page-setup-close-btn').addEventListener('click', closePageSetupModal);
-        document.getElementById('page-setup-cancel-btn').addEventListener('click', closePageSetupModal);
-        document.getElementById('page-setup-save-btn').addEventListener('click', savePageSetup);
-        document.getElementById('page-setup-modal').addEventListener('click', (e) => {
-            if (e.target.id === 'page-setup-modal') closePageSetupModal();
-        });
-        
-        updatePreviewLayout();
-    }, 100);
     
     // ============================================================================
     // VERSION HISTORY FUNCTIONALITY
@@ -7694,6 +7198,453 @@ ${fontLinkTags}
             window.open('/docs/index.html', '_blank');
         });
     }
+    
+    // ============================================================================
+    // PAPER LAYOUT & PAGINATION SYSTEM
+    // ============================================================================
+    
+    // paperLayoutActive already declared at top of scope (line 18)
+    // let paperLayoutPaginator already declared at top (line 19)
+    let currentZoom = 1.0;
+    const MIN_ZOOM = 0.5;
+    const MAX_ZOOM = 2.0;
+    const ZOOM_STEP = 0.1;
+    
+    const localStoragePaperLayoutKey = 'paper_layout_settings';
+    
+    // Load paper layout settings
+    const loadPaperLayoutSettings = () => {
+        try {
+            const stored = localStorage.getItem(`${localStorageNamespace}.${localStoragePaperLayoutKey}`);
+            if (stored) {
+                const settings = JSON.parse(stored);
+                return settings;
+            }
+        } catch (e) {
+            console.error('Failed to load paper layout settings:', e);
+        }
+        return { active: false, zoom: 1.0 };
+    };
+    
+    // Save paper layout settings
+    const savePaperLayoutSettings = () => {
+        try {
+            const settings = {
+                active: paperLayoutActive,
+                zoom: currentZoom
+            };
+            localStorage.setItem(`${localStorageNamespace}.${localStoragePaperLayoutKey}`, JSON.stringify(settings));
+        } catch (e) {
+            console.error('Failed to save paper layout settings:', e);
+        }
+    };
+    
+    // Render content in paper layout
+    const renderPaperLayout = () => {
+        const outputDiv = document.querySelector('#output');
+        const previewWrapper = document.querySelector('#preview-wrapper');
+        
+        if (!outputDiv || !previewWrapper) return;
+        
+        // Get the rendered HTML content
+        const htmlContent = outputDiv.innerHTML;
+        
+        // Create a temporary container to measure actual rendered heights
+        const tempContainer = document.createElement('div');
+        tempContainer.style.cssText = `
+            position: absolute;
+            top: -10000px;
+            left: -10000px;
+            width: ${794 - 160}px;
+            visibility: hidden;
+            font-size: 14px;
+            font-family: Inter, sans-serif;
+            line-height: 1.6;
+        `;
+        tempContainer.innerHTML = htmlContent;
+        document.body.appendChild(tempContainer);
+        
+        // Split content into pages based on actual element heights
+        const pages = [];
+        let currentPage = [];
+        let currentHeight = 0;
+        const maxPageHeight = 1123 - 160; // A4 height minus margins
+        
+        // Get all top-level elements
+        const elements = Array.from(tempContainer.children);
+        
+        elements.forEach((element) => {
+            const elementHeight = element.offsetHeight;
+            
+            // If element is too tall for a page, allow it to break
+            if (elementHeight > maxPageHeight * 0.8) {
+                // Large element - add to current page and start new page
+                if (currentPage.length > 0) {
+                    pages.push(currentPage);
+                    currentPage = [];
+                    currentHeight = 0;
+                }
+                // Add the large element to its own page
+                pages.push([element.cloneNode(true)]);
+            } else if (currentHeight + elementHeight > maxPageHeight && currentPage.length > 0) {
+                // Would overflow - start new page
+                pages.push(currentPage);
+                currentPage = [element.cloneNode(true)];
+                currentHeight = elementHeight;
+            } else {
+                // Fits on current page
+                currentPage.push(element.cloneNode(true));
+                currentHeight += elementHeight;
+            }
+        });
+        
+        // Add last page
+        if (currentPage.length > 0) {
+            pages.push(currentPage);
+        }
+        
+        // Clean up temp container
+        document.body.removeChild(tempContainer);
+        
+        console.log(`📄 Paginated into ${pages.length} pages`);
+        
+        // Clear output and render pages
+        outputDiv.innerHTML = '';
+        outputDiv.classList.add('paper-layout-active');
+        previewWrapper.classList.add('paper-layout-active');
+        
+        // Create paper stack container
+        const paperStack = document.createElement('div');
+        paperStack.className = 'paper-stack';
+        paperStack.id = 'paper-stack';
+        
+        // Render each page
+        pages.forEach((pageElements, pageIndex) => {
+            const paperPage = document.createElement('div');
+            paperPage.className = 'paper-page';
+            
+            const paperContent = document.createElement('div');
+            paperContent.className = 'paper-content';
+            
+            // Add elements to page
+            pageElements.forEach(element => {
+                paperContent.appendChild(element);
+            });
+            
+            // Add page number
+            const pageNumber = document.createElement('div');
+            pageNumber.className = 'paper-page-number';
+            pageNumber.textContent = `Page ${pageIndex + 1}`;
+            
+            paperPage.appendChild(paperContent);
+            paperPage.appendChild(pageNumber);
+            paperStack.appendChild(paperPage);
+        });
+        
+        outputDiv.appendChild(paperStack);
+        
+        // Update page count
+        updatePageCount(pages.length);
+        
+        // Apply current zoom
+        applyZoom(currentZoom);
+    };
+    
+    // Restore normal web layout
+    const restoreWebLayout = () => {
+        const outputDiv = document.querySelector('#output');
+        const previewWrapper = document.querySelector('#preview-wrapper');
+        
+        if (!outputDiv || !previewWrapper) return;
+        
+        outputDiv.classList.remove('paper-layout-active');
+        previewWrapper.classList.remove('paper-layout-active');
+        
+        // Re-render markdown content
+        const markdown = editor.getValue();
+        convert(markdown);
+        
+        console.log('✅ Restored web layout');
+    };
+    
+    // Update page count display
+    const updatePageCount = (count) => {
+        const pageInfo = document.getElementById('paper-page-info');
+        if (pageInfo) {
+            pageInfo.textContent = `1 / ${count}`;
+        }
+    };
+    
+    // Apply zoom to paper scaler
+    const applyZoom = (zoom) => {
+        const paperScaler = document.getElementById('paper-scaler');
+        if (paperScaler) {
+            paperScaler.style.transform = `scale(${zoom})`;
+        }
+        
+        // Update zoom display
+        const zoomDisplay = document.getElementById('paper-zoom-display');
+        if (zoomDisplay) {
+            zoomDisplay.textContent = `${Math.round(zoom * 100)}%`;
+        }
+    };
+    
+    // Zoom in
+    const zoomIn = () => {
+        currentZoom = Math.min(MAX_ZOOM, currentZoom + ZOOM_STEP);
+        applyZoom(currentZoom);
+        savePaperLayoutSettings();
+    };
+    
+    // Zoom out
+    const zoomOut = () => {
+        currentZoom = Math.max(MIN_ZOOM, currentZoom - ZOOM_STEP);
+        applyZoom(currentZoom);
+        savePaperLayoutSettings();
+    };
+    
+    // Fit to width
+    const fitToWidth = () => {
+        const previewWrapper = document.querySelector('#preview-wrapper');
+        const paperPage = document.querySelector('.paper-page');
+        
+        if (!previewWrapper || !paperPage) return;
+        
+        const wrapperWidth = previewWrapper.clientWidth - 96; // Account for padding
+        const pageWidth = 794; // A4 width
+        
+        currentZoom = wrapperWidth / pageWidth;
+        currentZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, currentZoom));
+        
+        applyZoom(currentZoom);
+        savePaperLayoutSettings();
+    };
+    
+    // Reset zoom
+    const resetZoom = () => {
+        currentZoom = 1.0;
+        applyZoom(currentZoom);
+        savePaperLayoutSettings();
+    };
+    
+    // Toggle paper layout
+    const togglePaperLayout = () => {
+        paperLayoutActive = !paperLayoutActive;
+        
+        const toggleBtn = document.getElementById('paper-layout-toggle');
+        const paperControls = document.getElementById('paper-controls');
+        const statusLayoutMode = document.getElementById('status-layout-mode');
+        
+        if (paperLayoutActive) {
+            // Activate paper layout
+            renderPaperLayout();
+            
+            if (toggleBtn) toggleBtn.classList.add('active');
+            if (paperControls) paperControls.classList.remove('hidden');
+            if (statusLayoutMode) statusLayoutMode.textContent = 'Paper Layout';
+            
+            showMofuHelper('Paper Layout activated! Content flows naturally across pages.');
+        } else {
+            // Deactivate paper layout
+            restoreWebLayout();
+            
+            if (toggleBtn) toggleBtn.classList.remove('active');
+            if (paperControls) paperControls.classList.add('hidden');
+            if (statusLayoutMode) statusLayoutMode.textContent = 'Web Layout';
+            
+            showMofuHelper('Web Layout restored!');
+        }
+        
+        savePaperLayoutSettings();
+    };
+    
+    // Setup paper layout controls
+    const setupPaperLayoutControls = () => {
+        const toggleBtn = document.getElementById('paper-layout-toggle');
+        const zoomInBtn = document.getElementById('paper-zoom-in');
+        const zoomOutBtn = document.getElementById('paper-zoom-out');
+        const fitWidthBtn = document.getElementById('paper-fit-width');
+        const resetZoomBtn = document.getElementById('paper-reset-zoom');
+        const statusLayoutMode = document.getElementById('status-layout-mode');
+        const paperControls = document.getElementById('paper-controls');
+        const modeToggleBtn = document.getElementById('paper-mode-toggle');
+        const prevPageBtn = document.getElementById('paper-prev-page');
+        const nextPageBtn = document.getElementById('paper-next-page');
+        
+        // Pagination state
+        let paginationMode = false;
+        let currentPageIndex = 0;
+        let totalPages = 0;
+        
+        // Update page info display
+        const updatePageInfo = () => {
+            const pageInfo = document.getElementById('paper-page-info');
+            if (pageInfo) {
+                pageInfo.textContent = `${currentPageIndex + 1} / ${totalPages}`;
+            }
+            
+            // Update button states
+            if (prevPageBtn) {
+                prevPageBtn.disabled = currentPageIndex === 0;
+            }
+            if (nextPageBtn) {
+                nextPageBtn.disabled = currentPageIndex >= totalPages - 1;
+            }
+        };
+        
+        // Show specific page in pagination mode
+        const showPage = (index) => {
+            const paperStack = document.getElementById('paper-stack');
+            if (!paperStack) return;
+            
+            const pages = paperStack.querySelectorAll('.paper-page');
+            totalPages = pages.length;
+            
+            // Clamp index
+            currentPageIndex = Math.max(0, Math.min(index, totalPages - 1));
+            
+            // Hide all pages, show only current
+            pages.forEach((page, i) => {
+                if (i === currentPageIndex) {
+                    page.classList.add('active-page');
+                } else {
+                    page.classList.remove('active-page');
+                }
+            });
+            
+            updatePageInfo();
+            
+            // Scroll to top
+            const previewWrapper = document.querySelector('#preview-wrapper');
+            if (previewWrapper) {
+                previewWrapper.scrollTop = 0;
+            }
+        };
+        
+        // Toggle between flow and pagination mode
+        const toggleNavigationMode = () => {
+            paginationMode = !paginationMode;
+            const paperStack = document.getElementById('paper-stack');
+            const modeText = document.getElementById('paper-mode-text');
+            
+            if (!paperStack) return;
+            
+            if (paginationMode) {
+                // Switch to pagination mode
+                paperStack.classList.add('pagination-mode');
+                if (modeToggleBtn) modeToggleBtn.classList.add('pagination-mode');
+                if (modeText) modeText.textContent = 'Pages';
+                
+                // Show first page
+                const pages = paperStack.querySelectorAll('.paper-page');
+                totalPages = pages.length;
+                currentPageIndex = 0;
+                showPage(0);
+                
+                // Show navigation buttons
+                if (prevPageBtn) prevPageBtn.style.display = 'flex';
+                if (nextPageBtn) nextPageBtn.style.display = 'flex';
+                
+                showMofuHelper('Pagination mode: Navigate page by page');
+            } else {
+                // Switch to flow mode
+                paperStack.classList.remove('pagination-mode');
+                if (modeToggleBtn) modeToggleBtn.classList.remove('pagination-mode');
+                if (modeText) modeText.textContent = 'Flow';
+                
+                // Show all pages
+                const pages = paperStack.querySelectorAll('.paper-page');
+                pages.forEach(page => page.classList.remove('active-page'));
+                
+                // Hide navigation buttons
+                if (prevPageBtn) prevPageBtn.style.display = 'none';
+                if (nextPageBtn) nextPageBtn.style.display = 'none';
+                
+                showMofuHelper('Flow mode: Scroll through all pages');
+            }
+        };
+        
+        // Navigation handlers
+        const goToPrevPage = () => {
+            if (paginationMode && currentPageIndex > 0) {
+                showPage(currentPageIndex - 1);
+            }
+        };
+        
+        const goToNextPage = () => {
+            if (paginationMode && currentPageIndex < totalPages - 1) {
+                showPage(currentPageIndex + 1);
+            }
+        };
+        
+        // Keyboard navigation
+        const handleKeyboardNav = (e) => {
+            if (!paperLayoutActive || !paginationMode) return;
+            
+            if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+                e.preventDefault();
+                goToPrevPage();
+            } else if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+                e.preventDefault();
+                goToNextPage();
+            }
+        };
+        
+        // Event listeners
+        if (zoomInBtn) {
+            zoomInBtn.addEventListener('click', zoomIn);
+        }
+        
+        if (zoomOutBtn) {
+            zoomOutBtn.addEventListener('click', zoomOut);
+        }
+        
+        if (modeToggleBtn) {
+            modeToggleBtn.addEventListener('click', toggleNavigationMode);
+        }
+        
+        if (prevPageBtn) {
+            prevPageBtn.addEventListener('click', goToPrevPage);
+            prevPageBtn.style.display = 'none'; // Hidden by default
+        }
+        
+        if (nextPageBtn) {
+            nextPageBtn.addEventListener('click', goToNextPage);
+            nextPageBtn.style.display = 'none'; // Hidden by default
+        }
+        
+        // Keyboard navigation
+        document.addEventListener('keydown', handleKeyboardNav);
+        
+        // Make status bar layout mode clickable to toggle
+        if (statusLayoutMode) {
+            statusLayoutMode.style.cursor = 'pointer';
+            statusLayoutMode.title = 'Click to toggle layout mode';
+            statusLayoutMode.addEventListener('click', togglePaperLayout);
+        }
+        
+        // Load saved settings
+        const settings = loadPaperLayoutSettings();
+        if (settings.active) {
+            currentZoom = settings.zoom || 1.0;
+            // Activate paper layout after a short delay to ensure everything is loaded
+            setTimeout(() => {
+                togglePaperLayout();
+            }, 500);
+        }
+        
+        console.log('✅ Paper layout controls initialized');
+    };
+    
+    // Re-paginate when content changes in paper layout mode
+    const handleContentChangeInPaperLayout = () => {
+        if (paperLayoutActive) {
+            renderPaperLayout();
+        }
+    };
+    
+    // Initialize paper layout system
+    setupPaperLayoutControls();
 };
 
 window.addEventListener("load", () => {

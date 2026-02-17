@@ -32,7 +32,8 @@
         "playwright_get_visible_text",
         "playwright_get_visible_html",
         "playwright_upload_file",
-        "playwright_fill"
+        "playwright_fill",
+        "playwright_hover"
       ]
     }
   }
