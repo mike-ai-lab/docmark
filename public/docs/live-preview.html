@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live Preview - DocMark Documentation</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="docs-layout">
+        <aside class="docs-sidebar">
+            <div class="docs-header">
+                <h1>DocMark</h1>
+                <p class="docs-subtitle">Documentation</p>
+            </div>
+            <nav class="docs-toc">
+                <div class="toc-section">
+                    <button class="toc-parent"><span class="toc-icon">+</span><span class="toc-label">Getting Started</span></button>
+                    <div class="toc-children">
+                        <a href="index.html" class="toc-item">Introduction</a>
+                        <a href="quick-start.html" class="toc-item">Quick Start</a>
+                        <a href="interface.html" class="toc-item">Interface Overview</a>
+                    </div>
+                </div>
+                <div class="toc-section">
+                    <button class="toc-parent"><span class="toc-icon">-</span><span class="toc-label">Core Features</span></button>
+                    <div class="toc-children active">
+                        <a href="editor.html" class="toc-item">Editor</a>
+                        <a href="live-preview.html" class="toc-item active">Live Preview</a>
+                        <a href="synchronization.html" class="toc-item">Synchronization</a>
+                        <a href="themes.html" class="toc-item">Themes & Styles</a>
+                    </div>
+                </div>
+                <div class="toc-section">
+                    <button class="toc-parent"><span class="toc-icon">+</span><span class="toc-label">Advanced Features</span></button>
+                    <div class="toc-children">
+                        <a href="validation.html" class="toc-item">Markdown Validation</a>
+                        <a href="beautify.html" class="toc-item">Beautify & Format</a>
+                        <a href="media.html" class="toc-item">Media Handling</a>
+                        <a href="toc.html" class="toc-item">Table of Contents</a>
+                    </div>
+                </div>
+                <div class="toc-section">
+                    <button class="toc-parent"><span class="toc-icon">+</span><span class="toc-label">Export & Sharing</span></button>
+                    <div class="toc-children">
+                        <a href="pdf-export.html" class="toc-item">PDF Export</a>
+                        <a href="html-export.html" class="toc-item">HTML Export</a>
+                        <a href="markdown-export.html" class="toc-item">Markdown Export</a>
+                    </div>
+                </div>
+                <div class="toc-section">
+                    <button class="toc-parent"><span class="toc-icon">+</span><span class="toc-label">Reference</span></button>
+                    <div class="toc-children">
+                        <a href="markdown-syntax.html" class="toc-item">Markdown Syntax</a>
+                        <a href="keyboard-shortcuts.html" class="toc-item">Keyboard Shortcuts</a>
+                        <a href="tips.html" class="toc-item">Tips & Best Practices</a>
+                    </div>
+                </div>
+            </nav>
+        </aside>
+        <main class="docs-content">
+            <div class="ask-more-container">
+                <button class="ask-more-button" id="ask-more-btn">Ask More</button>
+                <div class="ask-more-dropdown">
+                    <button id="copy-markdown-btn">Copy as Markdown</button>
+                    <a href="#" id="ask-chatgpt-btn" target="_blank">Ask ChatGPT</a>
+                </div>
+            </div>
+            <article class="docs-article">
+                <h1 id="live-preview">Live Preview</h1>
+                <p class="lead">See your formatted document instantly as you type with zero delay.</p>
+                <section class="content-section">
+                    <h2 id="how-it-works">How It Works</h2>
+                    <p>DocMark renders your markdown in real-time using the marked library and DOMPurify for security:</p>
+                    <ol class="step-list">
+                        <li><strong>Parse</strong><p>Markdown is converted to HTML</p></li>
+                        <li><strong>Sanitize</strong><p>HTML is cleaned for security</p></li>
+                        <li><strong>Render</strong><p>Output is displayed with your chosen style</p></li>
+                    </ol>
+                </section>
+                <section class="content-section">
+                    <h2 id="preview-features">Preview Features</h2>
+                    <ul>
+                        <li><strong>Instant Updates</strong> - Changes appear as you type</li>
+                        <li><strong>Click Navigation</strong> - Click any element to jump to its source</li>
+                        <li><strong>Scroll Sync</strong> - Preview scrolls with your cursor</li>
+                        <li><strong>Style Themes</strong> - Multiple professional styles</li>
+                    </ul>
+                </section>
+                <section class="content-section">
+                    <h2 id="next-steps">Related Topics</h2>
+                    <div class="quick-links">
+                        <a href="synchronization.html" class="quick-link-card">
+                            <h3>Synchronization</h3>
+                            <p>Cursor and scroll sync</p>
+                        </a>
+                        <a href="themes.html" class="quick-link-card">
+                            <h3>Themes & Styles</h3>
+                            <p>Customize preview appearance</p>
+                        </a>
+                        <a href="pdf-export.html" class="quick-link-card">
+                            <h3>PDF Export</h3>
+                            <p>Export your preview</p>
+                        </a>
+                    </div>
+                </section>
+            </article>
+        </main>
+        <aside class="docs-index">
+            <div class="index-header">On This Page</div>
+            <nav class="page-index"></nav>
+        </aside>
+    </div>
+    <script src="docs.js"></script>
+</body>
+</html>

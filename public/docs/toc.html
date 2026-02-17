@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Table of Contents - DocMark Documentation</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="docs-layout">
+        <aside class="docs-sidebar">
+            <div class="docs-header"><h1>DocMark</h1><p class="docs-subtitle">Documentation</p></div>
+            <nav class="docs-toc">
+                <div class="toc-section"><button class="toc-parent"><span class="toc-icon">+</span><span class="toc-label">Getting Started</span></button><div class="toc-children"><a href="index.html" class="toc-item">Introduction</a><a href="quick-start.html" class="toc-item">Quick Start</a><a href="interface.html" class="toc-item">Interface Overview</a></div></div>
+                <div class="toc-section"><button class="toc-parent"><span class="toc-icon">+</span><span class="toc-label">Core Features</span></button><div class="toc-children"><a href="editor.html" class="toc-item">Editor</a><a href="live-preview.html" class="toc-item">Live Preview</a><a href="synchronization.html" class="toc-item">Synchronization</a><a href="themes.html" class="toc-item">Themes & Styles</a></div></div>
+                <div class="toc-section"><button class="toc-parent"><span class="toc-icon">-</span><span class="toc-label">Advanced Features</span></button><div class="toc-children active"><a href="validation.html" class="toc-item">Markdown Validation</a><a href="beautify.html" class="toc-item">Beautify & Format</a><a href="media.html" class="toc-item">Media Handling</a><a href="toc.html" class="toc-item active">Table of Contents</a></div></div>
+                <div class="toc-section"><button class="toc-parent"><span class="toc-icon">+</span><span class="toc-label">Export & Sharing</span></button><div class="toc-children"><a href="pdf-export.html" class="toc-item">PDF Export</a><a href="html-export.html" class="toc-item">HTML Export</a><a href="markdown-export.html" class="toc-item">Markdown Export</a></div></div>
+                <div class="toc-section"><button class="toc-parent"><span class="toc-icon">+</span><span class="toc-label">Reference</span></button><div class="toc-children"><a href="markdown-syntax.html" class="toc-item">Markdown Syntax</a><a href="keyboard-shortcuts.html" class="toc-item">Keyboard Shortcuts</a><a href="tips.html" class="toc-item">Tips & Best Practices</a></div></div>
+            </nav>
+        </aside>
+        <main class="docs-content">
+            <div class="ask-more-container"><button class="ask-more-button" id="ask-more-btn">Ask More</button><div class="ask-more-dropdown"><button id="copy-markdown-btn">Copy as Markdown</button><a href="#" id="ask-chatgpt-btn" target="_blank">Ask ChatGPT</a></div></div>
+            <article class="docs-article">
+                <h1 id="toc">Table of Contents</h1>
+                <p class="lead">Navigate long documents easily with auto-generated table of contents.</p>
+                <section class="content-section">
+                    <h2 id="auto-generation">Auto-Generation</h2>
+                    <p>DocMark automatically generates a table of contents based on your document headings (H1-H6). The TOC updates in real-time as you edit.</p>
+                </section>
+                <section class="content-section">
+                    <h2 id="navigation">Navigation</h2>
+                    <p>Click any heading in the TOC panel to jump directly to that section in both the editor and preview.</p>
+                </section>
+                <section class="content-section">
+                    <h2 id="pdf-export">PDF Export Integration</h2>
+                    <p>When exporting to PDF, you can optionally include the table of contents at the beginning of your document with clickable links.</p>
+                </section>
+                <section class="content-section">
+                    <h2 id="next-steps">Related Topics</h2>
+                    <div class="quick-links">
+                        <a href="synchronization.html" class="quick-link-card"><h3>Synchronization</h3><p>Navigation features</p></a>
+                        <a href="pdf-export.html" class="quick-link-card"><h3>PDF Export</h3><p>Export with TOC</p></a>
+                        <a href="interface.html" class="quick-link-card"><h3>Interface</h3><p>TOC panel location</p></a>
+                    </div>
+                </section>
+            </article>
+        </main>
+        <aside class="docs-index"><div class="index-header">On This Page</div><nav class="page-index"></nav></aside>
+    </div>
+    <script src="docs.js"></script>
+</body>
+</html>

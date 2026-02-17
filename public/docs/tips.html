@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tips & Best Practices - DocMark Documentation</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="docs-layout">
+        <aside class="docs-sidebar">
+            <div class="docs-header"><h1>DocMark</h1><p class="docs-subtitle">Documentation</p></div>
+            <nav class="docs-toc">
+                <div class="toc-section"><button class="toc-parent"><span class="toc-icon">+</span><span class="toc-label">Getting Started</span></button><div class="toc-children"><a href="index.html" class="toc-item">Introduction</a><a href="quick-start.html" class="toc-item">Quick Start</a><a href="interface.html" class="toc-item">Interface Overview</a></div></div>
+                <div class="toc-section"><button class="toc-parent"><span class="toc-icon">+</span><span class="toc-label">Core Features</span></button><div class="toc-children"><a href="editor.html" class="toc-item">Editor</a><a href="live-preview.html" class="toc-item">Live Preview</a><a href="synchronization.html" class="toc-item">Synchronization</a><a href="themes.html" class="toc-item">Themes & Styles</a></div></div>
+                <div class="toc-section"><button class="toc-parent"><span class="toc-icon">+</span><span class="toc-label">Advanced Features</span></button><div class="toc-children"><a href="validation.html" class="toc-item">Markdown Validation</a><a href="beautify.html" class="toc-item">Beautify & Format</a><a href="media.html" class="toc-item">Media Handling</a><a href="toc.html" class="toc-item">Table of Contents</a></div></div>
+                <div class="toc-section"><button class="toc-parent"><span class="toc-icon">+</span><span class="toc-label">Export & Sharing</span></button><div class="toc-children"><a href="pdf-export.html" class="toc-item">PDF Export</a><a href="html-export.html" class="toc-item">HTML Export</a><a href="markdown-export.html" class="toc-item">Markdown Export</a></div></div>
+                <div class="toc-section"><button class="toc-parent"><span class="toc-icon">-</span><span class="toc-label">Reference</span></button><div class="toc-children active"><a href="markdown-syntax.html" class="toc-item">Markdown Syntax</a><a href="keyboard-shortcuts.html" class="toc-item">Keyboard Shortcuts</a><a href="tips.html" class="toc-item active">Tips & Best Practices</a></div></div>
+            </nav>
+        </aside>
+        <main class="docs-content">
+            <div class="ask-more-container"><button class="ask-more-button" id="ask-more-btn">Ask More</button><div class="ask-more-dropdown"><button id="copy-markdown-btn">Copy as Markdown</button><a href="#" id="ask-chatgpt-btn" target="_blank">Ask ChatGPT</a></div></div>
+            <article class="docs-article">
+                <h1 id="tips">Tips & Best Practices</h1>
+                <p class="lead">Get the most out of DocMark with these productivity tips and best practices.</p>
+                <section class="content-section">
+                    <h2 id="writing-tips">Writing Tips</h2>
+                    <ul>
+                        <li><strong>Use Headings Hierarchically</strong> - Don't skip heading levels (H1 → H2 → H3)</li>
+                        <li><strong>Add Blank Lines</strong> - Separate paragraphs and sections with blank lines</li>
+                        <li><strong>Keep Lines Short</strong> - Aim for 80-100 characters per line for readability</li>
+                        <li><strong>Use Lists</strong> - Break up long paragraphs with bullet points</li>
+                    </ul>
+                </section>
+                <section class="content-section">
+                    <h2 id="ai-content">Working with AI Content</h2>
+                    <ul>
+                        <li><strong>Ask for Markdown</strong> - Tell AI models to output in markdown format</li>
+                        <li><strong>Beautify After Paste</strong> - Use the Beautify tool to clean up AI-generated markdown</li>
+                        <li><strong>Validate Before Export</strong> - Run validation to catch any formatting issues</li>
+                    </ul>
+                </section>
+                <section class="content-section">
+                    <h2 id="productivity">Productivity Hacks</h2>
+                    <ul>
+                        <li><strong>Use Keyboard Shortcuts</strong> - Learn common shortcuts to speed up editing</li>
+                        <li><strong>Enable Auto-Save</strong> - Your work is automatically saved to localStorage</li>
+                        <li><strong>Use TOC for Navigation</strong> - Jump to sections quickly in long documents</li>
+                        <li><strong>Preview Different Styles</strong> - Try multiple themes before exporting</li>
+                    </ul>
+                </section>
+                <section class="content-section">
+                    <h2 id="export-tips">Export Tips</h2>
+                    <ul>
+                        <li><strong>Validate First</strong> - Always validate before exporting to PDF</li>
+                        <li><strong>Check Preview</strong> - Use Paper Layout to see how PDF will look</li>
+                        <li><strong>Add Metadata</strong> - Use YAML front matter for professional PDFs</li>
+                        <li><strong>Test Fonts</strong> - Preview with different font settings</li>
+                    </ul>
+                </section>
+                <section class="content-section">
+                    <h2 id="next-steps">Related Topics</h2>
+                    <div class="quick-links">
+                        <a href="keyboard-shortcuts.html" class="quick-link-card"><h3>Shortcuts</h3><p>Speed up your workflow</p></a>
+                        <a href="beautify.html" class="quick-link-card"><h3>Beautify</h3><p>Clean up formatting</p></a>
+                        <a href="validation.html" class="quick-link-card"><h3>Validation</h3><p>Check for errors</p></a>
+                    </div>
+                </section>
+            </article>
+        </main>
+        <aside class="docs-index"><div class="index-header">On This Page</div><nav class="page-index"></nav></aside>
+    </div>
+    <script src="docs.js"></script>
+</body>
+</html>

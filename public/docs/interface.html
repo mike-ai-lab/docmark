@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Introduction - DocMark Documentation</title>
+    <title>Interface Overview - DocMark Documentation</title>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -22,9 +22,9 @@
                         <span class="toc-label">Getting Started</span>
                     </button>
                     <div class="toc-children active">
-                        <a href="index.html" class="toc-item active">Introduction</a>
+                        <a href="index.html" class="toc-item">Introduction</a>
                         <a href="quick-start.html" class="toc-item">Quick Start</a>
-                        <a href="interface.html" class="toc-item">Interface Overview</a>
+                        <a href="interface.html" class="toc-item active">Interface Overview</a>
                     </div>
                 </div>
                 
@@ -92,65 +92,80 @@
             </div>
             
             <article class="docs-article">
-                <h1 id="introduction">Welcome to DocMark</h1>
+                <h1 id="interface-overview">Interface Overview</h1>
                 
-                <p class="lead">DocMark is a powerful, browser-based markdown editor with real-time preview, advanced formatting tools, and professional export capabilities.</p>
-                
-                <section class="content-section">
-                    <h2 id="what-is-docmark">What is DocMark?</h2>
-                    <p>DocMark transforms the way you work with markdown by providing instant visual feedback, intelligent formatting assistance, and professional export options. Whether you're writing documentation, creating reports, or drafting content, you'll see exactly how your document looks without switching between edit and preview modes.</p>
-                </section>
+                <p class="lead">DocMark's interface is designed for maximum productivity with a clean, distraction-free layout.</p>
                 
                 <section class="content-section">
-                    <h2 id="key-benefits">Key Benefits</h2>
+                    <h2 id="main-components">Main Components</h2>
+                    
+                    <h3 id="header-toolbar">Header Toolbar</h3>
+                    <p>The top toolbar contains all essential controls:</p>
                     <ul>
-                        <li><strong>No Installation Required</strong> - Works entirely in your browser</li>
-                        <li><strong>Real-Time Preview</strong> - See changes instantly as you type</li>
-                        <li><strong>Smart Validation</strong> - Catch markdown errors before export</li>
-                        <li><strong>One-Click Beautify</strong> - Professional formatting automatically</li>
-                        <li><strong>Media Support</strong> - Drag & drop images and videos</li>
-                        <li><strong>Multiple Export Formats</strong> - PDF, HTML, and Markdown</li>
-                        <li><strong>Auto-Save</strong> - Never lose your work</li>
-                        <li><strong>Completely Free</strong> - No limitations or sign-up required</li>
+                        <li><strong>File Operations</strong> - New, Open, Save, Import</li>
+                        <li><strong>Export Options</strong> - PDF, HTML, Markdown</li>
+                        <li><strong>View Controls</strong> - Layout, Theme, Style selector</li>
+                        <li><strong>Tools</strong> - Validation, Beautify, TOC, Help</li>
+                    </ul>
+                    
+                    <h3 id="editor-pane">Editor Pane</h3>
+                    <p>The left pane features Monaco Editor with:</p>
+                    <ul>
+                        <li>Syntax highlighting for markdown</li>
+                        <li>Line numbers and code folding</li>
+                        <li>Auto-completion and snippets</li>
+                        <li>Find and replace functionality</li>
+                    </ul>
+                    
+                    <h3 id="preview-pane">Preview Pane</h3>
+                    <p>The right pane shows your rendered document with:</p>
+                    <ul>
+                        <li>Real-time updates as you type</li>
+                        <li>Multiple style themes</li>
+                        <li>Click-to-navigate to source</li>
+                        <li>Scroll synchronization</li>
                     </ul>
                 </section>
                 
                 <section class="content-section">
-                    <h2 id="how-it-works">How It Works</h2>
-                    <p>DocMark operates entirely in your browser with no server-side processing:</p>
+                    <h2 id="layout-options">Layout Options</h2>
+                    <p>DocMark supports multiple layout configurations:</p>
                     
-                    <ol class="step-list">
-                        <li>
-                            <strong>Write or Paste</strong>
-                            <p>Type markdown directly or paste content from AI models, text files, or existing documents.</p>
-                        </li>
-                        <li>
-                            <strong>Preview in Real-Time</strong>
-                            <p>See your formatted document instantly as you type with live synchronization.</p>
-                        </li>
-                        <li>
-                            <strong>Export to PDF</strong>
-                            <p>Generate professional PDFs with consistent formatting in one click.</p>
-                        </li>
-                    </ol>
+                    <ul>
+                        <li><strong>Side-by-Side</strong> - Editor on left, preview on right (default)</li>
+                        <li><strong>Stacked</strong> - Editor on top, preview on bottom</li>
+                        <li><strong>Editor Only</strong> - Full-width editor for focused writing</li>
+                        <li><strong>Preview Only</strong> - Full-width preview for presentation</li>
+                    </ul>
+                    
+                    <p>Resize panes by dragging the divider between them.</p>
                 </section>
                 
                 <section class="content-section">
-                    <h2 id="next-steps">Get Started</h2>
-                    <p>Ready to start using DocMark? Choose a topic below to learn more:</p>
+                    <h2 id="side-panels">Side Panels</h2>
+                    
+                    <h3 id="cheatsheet-panel">Markdown Cheatsheet</h3>
+                    <p>Quick reference for markdown syntax, accessible from the toolbar.</p>
+                    
+                    <h3 id="toc-panel">Table of Contents</h3>
+                    <p>Auto-generated navigation based on your document headings.</p>
+                </section>
+                
+                <section class="content-section">
+                    <h2 id="next-steps">Explore Features</h2>
                     
                     <div class="quick-links">
-                        <a href="quick-start.html" class="quick-link-card">
-                            <h3>Quick Start</h3>
-                            <p>Get up and running in 3 simple steps</p>
-                        </a>
-                        <a href="interface.html" class="quick-link-card">
-                            <h3>Interface Overview</h3>
-                            <p>Learn about the main components</p>
-                        </a>
                         <a href="editor.html" class="quick-link-card">
                             <h3>Editor Features</h3>
-                            <p>Discover powerful editing tools</p>
+                            <p>Learn about editing tools</p>
+                        </a>
+                        <a href="live-preview.html" class="quick-link-card">
+                            <h3>Live Preview</h3>
+                            <p>Real-time rendering explained</p>
+                        </a>
+                        <a href="themes.html" class="quick-link-card">
+                            <h3>Themes & Styles</h3>
+                            <p>Customize your preview</p>
                         </a>
                     </div>
                 </section>

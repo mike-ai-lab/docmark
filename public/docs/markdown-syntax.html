@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Markdown Syntax - DocMark Documentation</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="docs-layout">
+        <aside class="docs-sidebar">
+            <div class="docs-header"><h1>DocMark</h1><p class="docs-subtitle">Documentation</p></div>
+            <nav class="docs-toc">
+                <div class="toc-section"><button class="toc-parent"><span class="toc-icon">+</span><span class="toc-label">Getting Started</span></button><div class="toc-children"><a href="index.html" class="toc-item">Introduction</a><a href="quick-start.html" class="toc-item">Quick Start</a><a href="interface.html" class="toc-item">Interface Overview</a></div></div>
+                <div class="toc-section"><button class="toc-parent"><span class="toc-icon">+</span><span class="toc-label">Core Features</span></button><div class="toc-children"><a href="editor.html" class="toc-item">Editor</a><a href="live-preview.html" class="toc-item">Live Preview</a><a href="synchronization.html" class="toc-item">Synchronization</a><a href="themes.html" class="toc-item">Themes & Styles</a></div></div>
+                <div class="toc-section"><button class="toc-parent"><span class="toc-icon">+</span><span class="toc-label">Advanced Features</span></button><div class="toc-children"><a href="validation.html" class="toc-item">Markdown Validation</a><a href="beautify.html" class="toc-item">Beautify & Format</a><a href="media.html" class="toc-item">Media Handling</a><a href="toc.html" class="toc-item">Table of Contents</a></div></div>
+                <div class="toc-section"><button class="toc-parent"><span class="toc-icon">+</span><span class="toc-label">Export & Sharing</span></button><div class="toc-children"><a href="pdf-export.html" class="toc-item">PDF Export</a><a href="html-export.html" class="toc-item">HTML Export</a><a href="markdown-export.html" class="toc-item">Markdown Export</a></div></div>
+                <div class="toc-section"><button class="toc-parent"><span class="toc-icon">-</span><span class="toc-label">Reference</span></button><div class="toc-children active"><a href="markdown-syntax.html" class="toc-item active">Markdown Syntax</a><a href="keyboard-shortcuts.html" class="toc-item">Keyboard Shortcuts</a><a href="tips.html" class="toc-item">Tips & Best Practices</a></div></div>
+            </nav>
+        </aside>
+        <main class="docs-content">
+            <div class="ask-more-container"><button class="ask-more-button" id="ask-more-btn">Ask More</button><div class="ask-more-dropdown"><button id="copy-markdown-btn">Copy as Markdown</button><a href="#" id="ask-chatgpt-btn" target="_blank">Ask ChatGPT</a></div></div>
+            <article class="docs-article">
+                <h1 id="markdown-syntax">Markdown Syntax Reference</h1>
+                <p class="lead">Complete guide to markdown syntax supported by DocMark.</p>
+                <section class="content-section">
+                    <h2 id="headings">Headings</h2>
+                    <pre><code># H1 Heading
+## H2 Heading
+### H3 Heading
+#### H4 Heading
+##### H5 Heading
+###### H6 Heading</code></pre>
+                </section>
+                <section class="content-section">
+                    <h2 id="emphasis">Emphasis</h2>
+                    <pre><code>**Bold text**
+*Italic text*
+***Bold and italic***
+~~Strikethrough~~</code></pre>
+                </section>
+                <section class="content-section">
+                    <h2 id="lists">Lists</h2>
+                    <h3>Unordered Lists</h3>
+                    <pre><code>- Item 1
+- Item 2
+  - Nested item
+  - Another nested item</code></pre>
+                    <h3>Ordered Lists</h3>
+                    <pre><code>1. First item
+2. Second item
+3. Third item</code></pre>
+                </section>
+                <section class="content-section">
+                    <h2 id="links">Links</h2>
+                    <pre><code>[Link text](https://example.com)
+[Link with title](https://example.com "Title")</code></pre>
+                </section>
+                <section class="content-section">
+                    <h2 id="images">Images</h2>
+                    <pre><code>![Alt text](image.jpg)
+![Image with title](image.jpg "Title")</code></pre>
+                </section>
+                <section class="content-section">
+                    <h2 id="code">Code</h2>
+                    <h3>Inline Code</h3>
+                    <pre><code>`inline code`</code></pre>
+                    <h3>Code Blocks</h3>
+                    <pre><code>```javascript
+function hello() {
+  console.log("Hello!");
+}
+```</code></pre>
+                </section>
+                <section class="content-section">
+                    <h2 id="blockquotes">Blockquotes</h2>
+                    <pre><code>> This is a blockquote
+> Multiple lines
+>> Nested blockquote</code></pre>
+                </section>
+                <section class="content-section">
+                    <h2 id="tables">Tables</h2>
+                    <pre><code>| Header 1 | Header 2 |
+|----------|----------|
+| Cell 1   | Cell 2   |
+| Cell 3   | Cell 4   |</code></pre>
+                </section>
+                <section class="content-section">
+                    <h2 id="next-steps">Related Topics</h2>
+                    <div class="quick-links">
+                        <a href="editor.html" class="quick-link-card"><h3>Editor</h3><p>Editing features</p></a>
+                        <a href="validation.html" class="quick-link-card"><h3>Validation</h3><p>Check syntax</p></a>
+                        <a href="tips.html" class="quick-link-card"><h3>Best Practices</h3><p>Writing tips</p></a>
+                    </div>
+                </section>
+            </article>
+        </main>
+        <aside class="docs-index"><div class="index-header">On This Page</div><nav class="page-index"></nav></aside>
+    </div>
+    <script src="docs.js"></script>
+</body>
+</html>

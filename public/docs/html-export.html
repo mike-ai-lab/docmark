@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HTML Export - DocMark Documentation</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="docs-layout">
+        <aside class="docs-sidebar">
+            <div class="docs-header"><h1>DocMark</h1><p class="docs-subtitle">Documentation</p></div>
+            <nav class="docs-toc">
+                <div class="toc-section"><button class="toc-parent"><span class="toc-icon">+</span><span class="toc-label">Getting Started</span></button><div class="toc-children"><a href="index.html" class="toc-item">Introduction</a><a href="quick-start.html" class="toc-item">Quick Start</a><a href="interface.html" class="toc-item">Interface Overview</a></div></div>
+                <div class="toc-section"><button class="toc-parent"><span class="toc-icon">+</span><span class="toc-label">Core Features</span></button><div class="toc-children"><a href="editor.html" class="toc-item">Editor</a><a href="live-preview.html" class="toc-item">Live Preview</a><a href="synchronization.html" class="toc-item">Synchronization</a><a href="themes.html" class="toc-item">Themes & Styles</a></div></div>
+                <div class="toc-section"><button class="toc-parent"><span class="toc-icon">+</span><span class="toc-label">Advanced Features</span></button><div class="toc-children"><a href="validation.html" class="toc-item">Markdown Validation</a><a href="beautify.html" class="toc-item">Beautify & Format</a><a href="media.html" class="toc-item">Media Handling</a><a href="toc.html" class="toc-item">Table of Contents</a></div></div>
+                <div class="toc-section"><button class="toc-parent"><span class="toc-icon">-</span><span class="toc-label">Export & Sharing</span></button><div class="toc-children active"><a href="pdf-export.html" class="toc-item">PDF Export</a><a href="html-export.html" class="toc-item active">HTML Export</a><a href="markdown-export.html" class="toc-item">Markdown Export</a></div></div>
+                <div class="toc-section"><button class="toc-parent"><span class="toc-icon">+</span><span class="toc-label">Reference</span></button><div class="toc-children"><a href="markdown-syntax.html" class="toc-item">Markdown Syntax</a><a href="keyboard-shortcuts.html" class="toc-item">Keyboard Shortcuts</a><a href="tips.html" class="toc-item">Tips & Best Practices</a></div></div>
+            </nav>
+        </aside>
+        <main class="docs-content">
+            <div class="ask-more-container"><button class="ask-more-button" id="ask-more-btn">Ask More</button><div class="ask-more-dropdown"><button id="copy-markdown-btn">Copy as Markdown</button><a href="#" id="ask-chatgpt-btn" target="_blank">Ask ChatGPT</a></div></div>
+            <article class="docs-article">
+                <h1 id="html-export">HTML Export</h1>
+                <p class="lead">Export your document as a standalone HTML file with embedded styles.</p>
+                <section class="content-section">
+                    <h2 id="what-you-get">What You Get</h2>
+                    <p>HTML export creates a single, self-contained file with:</p>
+                    <ul>
+                        <li>Complete HTML5 document structure</li>
+                        <li>Embedded CSS styles from your chosen theme</li>
+                        <li>All formatting preserved</li>
+                        <li>No external dependencies</li>
+                    </ul>
+                </section>
+                <section class="content-section">
+                    <h2 id="use-cases">Use Cases</h2>
+                    <ul>
+                        <li><strong>Web Publishing</strong> - Upload directly to your website</li>
+                        <li><strong>Email</strong> - Send formatted documents via email</li>
+                        <li><strong>Archiving</strong> - Save documents with formatting intact</li>
+                        <li><strong>Further Editing</strong> - Open in HTML editors</li>
+                    </ul>
+                </section>
+                <section class="content-section">
+                    <h2 id="how-to-export">How to Export</h2>
+                    <p>Click Export → Export HTML. The file downloads with your document title as the filename.</p>
+                </section>
+                <section class="content-section">
+                    <h2 id="next-steps">Related Topics</h2>
+                    <div class="quick-links">
+                        <a href="pdf-export.html" class="quick-link-card"><h3>PDF Export</h3><p>Export as PDF</p></a>
+                        <a href="markdown-export.html" class="quick-link-card"><h3>Markdown Export</h3><p>Export source</p></a>
+                        <a href="themes.html" class="quick-link-card"><h3>Themes</h3><p>Choose export style</p></a>
+                    </div>
+                </section>
+            </article>
+        </main>
+        <aside class="docs-index"><div class="index-header">On This Page</div><nav class="page-index"></nav></aside>
+    </div>
+    <script src="docs.js"></script>
+</body>
+</html>

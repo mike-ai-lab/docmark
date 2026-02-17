@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Markdown Validation - DocMark Documentation</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="docs-layout">
+        <aside class="docs-sidebar">
+            <div class="docs-header"><h1>DocMark</h1><p class="docs-subtitle">Documentation</p></div>
+            <nav class="docs-toc">
+                <div class="toc-section"><button class="toc-parent"><span class="toc-icon">+</span><span class="toc-label">Getting Started</span></button><div class="toc-children"><a href="index.html" class="toc-item">Introduction</a><a href="quick-start.html" class="toc-item">Quick Start</a><a href="interface.html" class="toc-item">Interface Overview</a></div></div>
+                <div class="toc-section"><button class="toc-parent"><span class="toc-icon">+</span><span class="toc-label">Core Features</span></button><div class="toc-children"><a href="editor.html" class="toc-item">Editor</a><a href="live-preview.html" class="toc-item">Live Preview</a><a href="synchronization.html" class="toc-item">Synchronization</a><a href="themes.html" class="toc-item">Themes & Styles</a></div></div>
+                <div class="toc-section"><button class="toc-parent"><span class="toc-icon">-</span><span class="toc-label">Advanced Features</span></button><div class="toc-children active"><a href="validation.html" class="toc-item active">Markdown Validation</a><a href="beautify.html" class="toc-item">Beautify & Format</a><a href="media.html" class="toc-item">Media Handling</a><a href="toc.html" class="toc-item">Table of Contents</a></div></div>
+                <div class="toc-section"><button class="toc-parent"><span class="toc-icon">+</span><span class="toc-label">Export & Sharing</span></button><div class="toc-children"><a href="pdf-export.html" class="toc-item">PDF Export</a><a href="html-export.html" class="toc-item">HTML Export</a><a href="markdown-export.html" class="toc-item">Markdown Export</a></div></div>
+                <div class="toc-section"><button class="toc-parent"><span class="toc-icon">+</span><span class="toc-label">Reference</span></button><div class="toc-children"><a href="markdown-syntax.html" class="toc-item">Markdown Syntax</a><a href="keyboard-shortcuts.html" class="toc-item">Keyboard Shortcuts</a><a href="tips.html" class="toc-item">Tips & Best Practices</a></div></div>
+            </nav>
+        </aside>
+        <main class="docs-content">
+            <div class="ask-more-container"><button class="ask-more-button" id="ask-more-btn">Ask More</button><div class="ask-more-dropdown"><button id="copy-markdown-btn">Copy as Markdown</button><a href="#" id="ask-chatgpt-btn" target="_blank">Ask ChatGPT</a></div></div>
+            <article class="docs-article">
+                <h1 id="validation">Markdown Validation</h1>
+                <p class="lead">Catch markdown errors before export with DocMark's validation wizard.</p>
+                <section class="content-section">
+                    <h2 id="what-it-checks">What It Checks</h2>
+                    <p>The validation tool scans your document for common issues:</p>
+                    <ul>
+                        <li><strong>Broken Links</strong> - Invalid URLs or missing anchors</li>
+                        <li><strong>Missing Images</strong> - Image references that don't resolve</li>
+                        <li><strong>Syntax Errors</strong> - Malformed markdown syntax</li>
+                        <li><strong>Heading Structure</strong> - Skipped heading levels</li>
+                        <li><strong>List Formatting</strong> - Inconsistent list markers</li>
+                    </ul>
+                </section>
+                <section class="content-section">
+                    <h2 id="how-to-use">How to Use</h2>
+                    <ol class="step-list">
+                        <li><strong>Click Validate</strong><p>Find the Validate button in the toolbar</p></li>
+                        <li><strong>Review Issues</strong><p>See a list of all detected problems</p></li>
+                        <li><strong>Fix Errors</strong><p>Click any issue to jump to its location</p></li>
+                        <li><strong>Re-validate</strong><p>Run validation again to confirm fixes</p></li>
+                    </ol>
+                </section>
+                <section class="content-section">
+                    <h2 id="next-steps">Related Topics</h2>
+                    <div class="quick-links">
+                        <a href="beautify.html" class="quick-link-card"><h3>Beautify</h3><p>Auto-format markdown</p></a>
+                        <a href="markdown-syntax.html" class="quick-link-card"><h3>Syntax Guide</h3><p>Learn proper markdown</p></a>
+                        <a href="tips.html" class="quick-link-card"><h3>Best Practices</h3><p>Writing tips</p></a>
+                    </div>
+                </section>
+            </article>
+        </main>
+        <aside class="docs-index"><div class="index-header">On This Page</div><nav class="page-index"></nav></aside>
+    </div>
+    <script src="docs.js"></script>
+</body>
+</html>
