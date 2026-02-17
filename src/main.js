@@ -840,11 +840,13 @@ This web site is using ${"`"}markedjs/marked${"`"}.
         if (htmlPreviewMode || isFullHtmlDocument) {
             // HTML Preview Mode: Render full HTML in iframe
             renderFullHtmlPreview(markdown);
+            updateInspectorVisibility(); // Show inspector button in HTML mode
             return;
         }
         
         // Restore normal markdown preview mode (in case we were in HTML mode)
         restoreMarkdownPreview();
+        updateInspectorVisibility(); // Hide inspector button in markdown mode
         
         // Parse metadata first
         const { metadata, content } = parseMetadata(markdown);
@@ -3740,6 +3742,76 @@ ${fontLinkTags}
         }
     };
     
+    // Setup HTML Inspector
+    let inspectorEnabled = false;
+    let selectedInspectorElement = null;
+    
+    let setupInspectorToggle = () => {
+        const inspectorToggleBtn = document.querySelector('#inspector-toggle-button');
+        const inspectorPanel = document.querySelector('#inspector-panel');
+        const inspectorDivider = document.querySelector('#inspector-divider');
+        const inspectorCloseBtn = document.querySelector('#inspector-close-btn');
+        
+        if (!inspectorToggleBtn || !inspectorPanel) return;
+        
+        // Toggle inspector panel
+        inspectorToggleBtn.addEventListener('click', () => {
+            inspectorEnabled = !inspectorEnabled;
+            
+            if (inspectorEnabled) {
+                // Show panel (NO divider, NO resizing)
+                inspectorPanel.classList.remove('hidden');
+                inspectorToggleBtn.classList.add('active');
+                
+                // Fixed width 300px
+                inspectorPanel.style.flexBasis = '300px';
+                inspectorPanel.style.width = '300px';
+                inspectorPanel.style.minWidth = '300px';
+                inspectorPanel.style.maxWidth = '300px';
+                
+                showToast('Inspector enabled', 'success');
+            } else {
+                // Hide panel
+                inspectorPanel.classList.add('hidden');
+                inspectorToggleBtn.classList.remove('active');
+                selectedInspectorElement = null;
+            }
+        });
+        
+        // Close button
+        if (inspectorCloseBtn) {
+            inspectorCloseBtn.addEventListener('click', () => {
+                inspectorEnabled = false;
+                inspectorPanel.classList.add('hidden');
+                inspectorToggleBtn.classList.remove('active');
+                selectedInspectorElement = null;
+            });
+        }
+    };
+    
+    // Show/hide inspector toggle button based on HTML mode
+    let updateInspectorVisibility = () => {
+        const inspectorToggleBtn = document.querySelector('#inspector-toggle-button');
+        if (!inspectorToggleBtn) return;
+        
+        const content = editor ? editor.getValue() : '';
+        const isFullHtmlDocument = content.trim().match(/^<!DOCTYPE\s+html>/i) || 
+                                   content.trim().match(/^<html[\s>]/i);
+        
+        if (htmlPreviewMode || isFullHtmlDocument) {
+            inspectorToggleBtn.style.display = 'flex';
+        } else {
+            inspectorToggleBtn.style.display = 'none';
+            // Hide inspector panel if switching out of HTML mode
+            const inspectorPanel = document.querySelector('#inspector-panel');
+            if (inspectorPanel && inspectorEnabled) {
+                inspectorPanel.classList.add('hidden');
+                inspectorToggleBtn.classList.remove('active');
+                inspectorEnabled = false;
+            }
+        }
+    };
+    
     let setupPdfSettingsButton = () => {
         let pdfSettingsLink = document.querySelector('#pdf-settings-link');
         if (pdfSettingsLink) {
@@ -4724,15 +4796,26 @@ ${fontLinkTags}
         const panel = document.querySelector('#cheatsheet-panel');
         const divider = document.querySelector('#cheatsheet-divider');
         const container = document.querySelector('#container');
+        const inspectorBtn = document.querySelector('#inspector-toggle-button');
         
         if (cheatSheetVisible) {
             panel.classList.remove('hidden');
             divider.classList.remove('hidden');
             container.classList.add('cheatsheet-visible');
+            
+            // Hide inspector button when syntax guide is open
+            if (inspectorBtn) {
+                inspectorBtn.style.visibility = 'hidden';
+            }
         } else {
             panel.classList.add('hidden');
             divider.classList.add('hidden');
             container.classList.remove('cheatsheet-visible');
+            
+            // Show inspector button when syntax guide is closed
+            if (inspectorBtn) {
+                inspectorBtn.style.visibility = 'visible';
+            }
         }
         
         // Trigger Monaco editor resize
@@ -5842,6 +5925,7 @@ ${fontLinkTags}
     setupImportMarkdownButton(editor);
     setupImportHtmlButton(editor);
     setupImportCssButton(editor);
+    setupInspectorToggle();
     setupPdfSettingsButton();
     setupInsertHeaderButton();
     setupInsertFooterButton();
