@@ -2795,12 +2795,27 @@ let performBeautify = (content) => {
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">`;
         }
         
-        // CRITICAL FIX: Prepend Inter font to all font-family declarations in markdown CSS
+        // CRITICAL FIX: Prepend Inter font to ALL font-family declarations
         // This ensures Inter is used instead of system fonts
         markdownCss = markdownCss.replace(
-            /font-family:\s*-apple-system/g,
-            "font-family: 'Inter', -apple-system"
+            /font-family:\s*([^;]+);/g,
+            (match, fontStack) => {
+                // If Inter is not already first, prepend it
+                if (!fontStack.trim().startsWith("'Inter'") && !fontStack.trim().startsWith('"Inter"')) {
+                    return `font-family: 'Inter', ${fontStack};`;
+                }
+                return match;
+            }
         );
+        
+        // Also add a global font-family rule to ensure Inter is used everywhere
+        const globalFontRule = `
+        * {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif !important;
+        }
+        `;
+        
+        inlineCss = globalFontRule + inlineCss;
 
         // Build complete HTML document with all CSS inlined
         const htmlContent = `
