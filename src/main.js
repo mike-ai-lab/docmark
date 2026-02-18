@@ -7,6 +7,8 @@ import { setupValidationWizard } from './validation-wizard.js';
 import AIManager from './ai/ai-manager.js';
 import AIPanelUI from './ai/ai-panel-ui.js';
 import AIChatUI from './ai/ai-chat-ui.js';
+// PDF Import
+import PDFImportUI from './pdf-import/pdf-import-ui.js';
 // DISABLED FOR DEPLOYMENT - Inspector and HTML Editor features not finished
 // import { initializeInspector, getInspector, getCurrentDoc } from './inspector-integration.js';
 // import { initInspectorPanel, showInspectorToggle, hideInspectorToggle } from './inspector-panel-ui.js';
@@ -367,6 +369,11 @@ This web site is using ${"`"}markedjs/marked${"`"}.
             // Don't convert if we're updating from preview edit
             if (!isUpdating) {
                 convert(value);
+                
+                // Re-paginate if in paper layout mode
+                if (typeof paperLayoutActive !== 'undefined' && paperLayoutActive && typeof handleContentChangeInPaperLayout !== 'undefined') {
+                    handleContentChangeInPaperLayout();
+                }
             }
             
             saveLastContent(value);
@@ -378,11 +385,6 @@ This web site is using ${"`"}markedjs/marked${"`"}.
             
             // Update status bar
             updateStatusBar();
-            
-            // Re-paginate if in paper layout mode (but not during edit mode updates)
-            if (!isUpdating && typeof paperLayoutActive !== 'undefined' && paperLayoutActive && typeof handleContentChangeInPaperLayout !== 'undefined') {
-                setTimeout(handleContentChangeInPaperLayout, 100);
-            }
         });
 
         // Scroll sync is now handled in the consolidated section at the bottom
@@ -5720,6 +5722,10 @@ ${fontLinkTags}
             });
         }
         
+        // Initialize PDF Import UI
+        const pdfImportUI = new PDFImportUI(editor);
+        console.log('✅ PDF Import UI initialized');
+        
         // Keyboard shortcut: Ctrl+K to toggle AI panel
         document.addEventListener('keydown', (e) => {
             if (e.ctrlKey && e.key === 'k') {
@@ -7455,14 +7461,21 @@ ${fontLinkTags}
     };
     
     // Render content in paper layout
+    let lastPaginatedContent = '';
+    let lastPageCount = 0;
     const renderPaperLayout = () => {
         const outputDiv = document.querySelector('#output');
         const previewWrapper = document.querySelector('#preview-wrapper');
         
         if (!outputDiv || !previewWrapper) return;
         
-        // Get the rendered HTML content
+        // Get the current rendered HTML content (don't re-render, just re-paginate)
         const htmlContent = outputDiv.innerHTML;
+        
+        // Skip if content hasn't changed
+        if (htmlContent === lastPaginatedContent) {
+            return;
+        }
         
         // Create a temporary container to measure actual rendered heights
         const tempContainer = document.createElement('div');
@@ -7522,6 +7535,14 @@ ${fontLinkTags}
         document.body.removeChild(tempContainer);
         
         console.log(`📄 Paginated into ${pages.length} pages`);
+        
+        // Only update DOM if page count changed (prevents flashing)
+        if (pages.length === lastPageCount && outputDiv.classList.contains('paper-layout-active')) {
+            lastPaginatedContent = htmlContent;
+            return;
+        }
+        lastPageCount = pages.length;
+        lastPaginatedContent = htmlContent;
         
         // Clear output and render pages
         outputDiv.innerHTML = '';
@@ -8008,9 +8029,33 @@ ${fontLinkTags}
     };
     
     // Re-paginate when content changes in paper layout mode
+    let paperLayoutDebounceTimer = null;
+    let lastPaginationTime = 0;
+    const MIN_PAGINATION_INTERVAL = 100; // Minimum time between paginations
+    
     const handleContentChangeInPaperLayout = () => {
-        if (paperLayoutActive) {
+        if (!paperLayoutActive) return;
+        
+        // Clear any pending re-pagination
+        if (paperLayoutDebounceTimer) {
+            clearTimeout(paperLayoutDebounceTimer);
+        }
+        
+        // Check if enough time has passed since last pagination
+        const now = Date.now();
+        const timeSinceLastPagination = now - lastPaginationTime;
+        
+        if (timeSinceLastPagination < MIN_PAGINATION_INTERVAL) {
+            // Schedule for later
+            paperLayoutDebounceTimer = setTimeout(() => {
+                renderPaperLayout();
+                lastPaginationTime = Date.now();
+                paperLayoutDebounceTimer = null;
+            }, MIN_PAGINATION_INTERVAL - timeSinceLastPagination);
+        } else {
+            // Paginate immediately
             renderPaperLayout();
+            lastPaginationTime = now;
         }
     };
     

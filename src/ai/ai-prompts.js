@@ -56,6 +56,40 @@ TEXT:
 ${text}
 `.trim(),
 
+  fixCode: (text) => `
+Review the code below and fix any bugs, errors, or issues.
+Improve code quality, readability, and best practices.
+Return only the corrected code. No explanations or markdown formatting.
+Preserve the original programming language and structure.
+
+CODE:
+${text}
+`.trim(),
+
+  improveCode: (text) => `
+Optimize and improve the code below for:
+- Performance
+- Readability
+- Best practices
+- Maintainability
+
+Return only the improved code. No explanations or markdown formatting.
+Preserve the original programming language and structure.
+
+CODE:
+${text}
+`.trim(),
+
+  documentCode: (text) => `
+Add comprehensive comments and documentation to the code below.
+Include function descriptions, parameter explanations, and usage examples where appropriate.
+Return only the documented code. No explanations or markdown formatting.
+Preserve the original programming language and structure.
+
+CODE:
+${text}
+`.trim(),
+
   generate: (prompt) => `
 Generate markdown content strictly based on the request below.
 Output valid markdown only. No explanations.

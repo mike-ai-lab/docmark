@@ -42,6 +42,13 @@ class AIPanelUI {
                 <button class="ai-action-btn" data-action="grammar">Fix Grammar</button>
                 <button class="ai-action-btn" data-action="expand">Expand</button>
                 <button class="ai-action-btn" data-action="summarize">Summarize</button>
+                
+                <div class="ai-section-title" style="margin-top: 16px;">Code Actions</div>
+                <button class="ai-action-btn" data-action="fixCode">Fix Code</button>
+                <button class="ai-action-btn" data-action="improveCode">Improve Code</button>
+                <button class="ai-action-btn" data-action="documentCode">Document Code</button>
+                
+                <div class="ai-section-title" style="margin-top: 16px;">Generate</div>
                 <button class="ai-action-btn" data-action="generate">Generate Content</button>
 
                 <div class="ai-divider"></div>
@@ -155,14 +162,14 @@ class AIPanelUI {
                     }
                 });
                 
-                // Replace selected text with result
-                this.aiManager.replaceSelectedText(fullResponse);
-                this.showSuccess('Text updated successfully');
+                // Show preview before applying
+                this.showPreview(selectedText, fullResponse, action);
             } else {
                 // Non-streaming mode
                 const result = await this.aiManager.executeAction(action, selectedText);
-                this.aiManager.replaceSelectedText(result);
-                this.showSuccess('Text updated successfully');
+                
+                // Show preview before applying
+                this.showPreview(selectedText, result, action);
             }
         } catch (error) {
             this.showError(error.message);
@@ -171,6 +178,46 @@ class AIPanelUI {
             this.currentAction = null;
             this.hideStatusToast();
         }
+    }
+
+    showPreview(originalText, previewText, action) {
+        // Get or create preview system
+        if (!this.previewSystem) {
+            const previewPane = document.querySelector('#output');
+            import('./ai-preview-system.js').then(module => {
+                const AIPreviewSystem = module.default;
+                this.previewSystem = new AIPreviewSystem(this.aiManager.editor, previewPane);
+                this.displayPreview(originalText, previewText, action);
+            });
+            return;
+        }
+        
+        this.displayPreview(originalText, previewText, action);
+    }
+
+    displayPreview(originalText, previewText, action) {
+        // Show preview with confirm/regenerate handlers
+        this.previewSystem.show(
+            originalText,
+            previewText,
+            (confirmedText) => {
+                // Apply confirmed text
+                this.aiManager.replaceSelectedText(confirmedText);
+                this.showSuccess('Changes applied successfully');
+            },
+            async () => {
+                // Regenerate - call action again
+                this.setLoading(true);
+                try {
+                    const result = await this.aiManager.executeAction(action, originalText);
+                    this.displayPreview(originalText, result, action);
+                } catch (error) {
+                    this.showError('Regeneration failed: ' + error.message);
+                } finally {
+                    this.setLoading(false);
+                }
+            }
+        );
     }
 
     promptForGenerate() {

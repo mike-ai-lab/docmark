@@ -3429,7 +3429,7 @@ footer {
 }
 
 [data-theme="dark"] .version-title-input:focus {
-    background: #374151;
+    background: #1a1a1a;
     border-color: #6b7280;
 }
 
@@ -3504,7 +3504,7 @@ footer {
 }
 
 [data-theme="dark"] .version-preview {
-    background: #374151;
+    background: #1a1a1a;
     color: #d1d5db;
 }
 
