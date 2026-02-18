@@ -2797,13 +2797,13 @@ footer {
     margin-bottom: 28px;
 }
 
-/* Added 40px bottom padding to clear status bar */
+.preview-pane.paper-layout {
     display: flex;
     justify-content: center;
     align-items: flex-start;
-    overflow-x: auto; /* Show scrollbar only when content overflows */
+    overflow-x: auto;
     overflow-y: auto;
-    min-width: 0; /* Allow flex item to shrink */
+    min-width: 0;
 }
 
 .preview-pane.paper-layout #preview-wrapper .markdown-body {
@@ -2964,10 +2964,11 @@ footer {
     color: #666;
 }
 
-/* Below main header */
+.paper-controls-floating {
+    position: fixed;
+    top: 80px;
     right: 20px;
     display: flex;
-
     flex-direction: row;
     align-items: center;
     gap: 8px;
@@ -5555,7 +5556,6 @@ footer {
 .paper-stack.pagination-mode .paper-page.active-page {
   display: block;
   margin: auto;
-}
 }
 
 /* Page number at bottom */

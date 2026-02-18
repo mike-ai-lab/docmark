@@ -21,15 +21,15 @@
           var useDark = raw === 'dark';
           document.documentElement.setAttribute('data-theme', useDark ? 'dark' : 'light');
 
-          var PREVIEW_CSS_LIGHT = 'css/github-markdown-light.css?v=1.12.0';
-          var PREVIEW_CSS_DARK = 'css/github-markdown-dark_dimmed.css?v=1.12.0';
-          var PREVIEW_CSS_GITBOOK = 'css/gitbook-style.css?v=1.12.0';
-          var PREVIEW_CSS_VSCODE = 'css/vscode-style.css?v=1.12.0';
-          var PREVIEW_CSS_NOTION = 'css/notion-style.css?v=1.12.0';
-          var PREVIEW_CSS_MEDIUM = 'css/medium-style.css?v=1.12.0';
-          var PREVIEW_CSS_LATEX = 'css/latex-style.css?v=1.12.0';
-          var PREVIEW_CSS_MINIMAL = 'css/minimal-style.css?v=1.12.0';
-          var PREVIEW_CSS_TYPEWRITER = 'css/typewriter-style.css?v=1.12.0';
+          var PREVIEW_CSS_LIGHT = './public/css/github-markdown-light.css?v=1.12.0';
+          var PREVIEW_CSS_DARK = './public/css/github-markdown-dark_dimmed.css?v=1.12.0';
+          var PREVIEW_CSS_GITBOOK = './public/css/gitbook-style.css?v=1.12.0';
+          var PREVIEW_CSS_VSCODE = './public/css/vscode-style.css?v=1.12.0';
+          var PREVIEW_CSS_NOTION = './public/css/notion-style.css?v=1.12.0';
+          var PREVIEW_CSS_MEDIUM = './public/css/medium-style.css?v=1.12.0';
+          var PREVIEW_CSS_LATEX = './public/css/latex-style.css?v=1.12.0';
+          var PREVIEW_CSS_MINIMAL = './public/css/minimal-style.css?v=1.12.0';
+          var PREVIEW_CSS_TYPEWRITER = './public/css/typewriter-style.css?v=1.12.0';
           
           var styleRaw = localStorage.getItem(BOOT_STYLE_KEY);
           var style = styleRaw || 'github';
@@ -73,23 +73,20 @@
           // ignore — app will correct theme after load
         }
       })();
-    </script>
-    <link rel="stylesheet" type="text/css" href="css/style.css?v=1.12.0">
-    <link rel="stylesheet" type="text/css" href="css/inspector.css">
+    </script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css" id="hljs-light-theme">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css" id="hljs-dark-theme" disabled>
-    <link rel="icon" type="image/png" href="favicon.png">
+    <link rel="icon" type="image/png" href="./favicon.png">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/turndown@7.1.2/dist/turndown.min.js"></script>
     <script>
       // Make hljs and TurndownService available globally for the module
       window.hljs = hljs;
       window.TurndownService = TurndownService;
-    </script>
-    <script src="/pagination-engine.js"></script>
+    </script>
     <title>Markdown Live Preview</title>
-    <script type="module" crossorigin src="/assets/index-Cg1vux59.js"></script>
-    <link rel="stylesheet" crossorigin href="/assets/index-D6kYW_CN.css">
+    <script type="module" crossorigin src="/assets/index-4VG6BXzE.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-Dhw4FG1D.css">
   </head>
 
   <body>
@@ -805,57 +802,3 @@
                             <span>Style Info Tooltips</span>
                         </label>
                         <a href="#" id="pdf-settings-link" class="settings-link">PDF Settings</a>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Media Context Menu -->
-    <div class="media-context-menu" id="media-context-menu">
-        <div class="media-context-menu-item" id="media-move-up">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <polyline points="18 15 12 9 6 15"></polyline>
-            </svg>
-            <span>Move Up</span>
-        </div>
-        <div class="media-context-menu-item" id="media-move-down">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <polyline points="6 9 12 15 18 9"></polyline>
-            </svg>
-            <span>Move Down</span>
-        </div>
-        <div class="media-context-menu-separator"></div>
-        <div class="media-context-menu-item" id="media-move-top">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <polyline points="18 15 12 9 6 15"></polyline>
-                <polyline points="18 11 12 5 6 11"></polyline>
-            </svg>
-            <span>Move to Top</span>
-        </div>
-        <div class="media-context-menu-item" id="media-move-bottom">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <polyline points="6 9 12 15 18 9"></polyline>
-                <polyline points="6 13 12 19 18 13"></polyline>
-            </svg>
-            <span>Move to Bottom</span>
-        </div>
-        <div class="media-context-menu-separator"></div>
-        <div class="media-context-menu-item" id="media-jump-to-code">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <polyline points="16 18 22 12 16 6"></polyline>
-                <polyline points="8 6 2 12 8 18"></polyline>
-            </svg>
-            <span>Jump to Code</span>
-        </div>
-        <div class="media-context-menu-item" id="media-delete">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <polyline points="3 6 5 6 21 6"></polyline>
-                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-            </svg>
-            <span>Delete Media</span>
-        </div>
-    </div>
-
-  </body>
-</html>

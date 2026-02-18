@@ -349,15 +349,17 @@ This web site is using ${"`"}markedjs/marked${"`"}.
         // Manually trigger suggestions on content change
         let lastTriggerTime = 0;
         editor.onDidChangeModelContent(() => {
-            // Skip if we're updating from preview edit mode
-            if (isUpdating) return;
-            
             let changed = editor.getValue() != defaultInput;
             if (changed) {
                 hasEdited = true;
             }
             let value = editor.getValue();
-            convert(value);
+            
+            // Don't convert if we're updating from preview edit
+            if (!isUpdating) {
+                convert(value);
+            }
+            
             saveLastContent(value);
             
             // Update TOC if visible
@@ -368,8 +370,8 @@ This web site is using ${"`"}markedjs/marked${"`"}.
             // Update status bar
             updateStatusBar();
             
-            // Re-paginate if in paper layout mode
-            if (typeof paperLayoutActive !== 'undefined' && paperLayoutActive && typeof handleContentChangeInPaperLayout !== 'undefined') {
+            // Re-paginate if in paper layout mode (but not during edit mode updates)
+            if (!isUpdating && typeof paperLayoutActive !== 'undefined' && paperLayoutActive && typeof handleContentChangeInPaperLayout !== 'undefined') {
                 setTimeout(handleContentChangeInPaperLayout, 100);
             }
         });
@@ -5084,43 +5086,51 @@ ${fontLinkTags}
     }
     
     // Handle contenteditable input and sync to editor
+    // Debounced handler for contenteditable input
+    let editDebounceTimer = null;
     const handleContentEditableInput = (element) => {
         if (!turndownService || !editor) return;
         
-        // Prevent infinite loop
-        if (isUpdating) return;
-        isUpdating = true;
-        
-        try {
-            // Get all the preview HTML
-            const output = document.querySelector('#output');
-            if (!output) return;
-            
-            // Convert entire preview back to markdown
-            const fullMarkdown = turndownService.turndown(output.innerHTML);
-            
-            // Update the entire editor content
-            const model = editor.getModel();
-            if (!model) return;
-            
-            // Get current cursor position to restore it
-            const currentPosition = editor.getPosition();
-            
-            // Update the full content
-            model.setValue(fullMarkdown);
-            
-            // Restore cursor position
-            if (currentPosition) {
-                editor.setPosition(currentPosition);
-            }
-            
-            console.log('Bidirectional edit: Updated editor from preview');
-        } finally {
-            // Reset flag after a short delay to allow render to complete
-            setTimeout(() => {
-                isUpdating = false;
-            }, 100);
+        // Clear previous timer
+        if (editDebounceTimer) {
+            clearTimeout(editDebounceTimer);
         }
+        
+        // Debounce to avoid too many updates
+        editDebounceTimer = setTimeout(() => {
+            // Set flag to prevent re-applying edit mode
+            isUpdating = true;
+            
+            try {
+                // Get all the preview HTML
+                const output = document.querySelector('#output');
+                if (!output) return;
+                
+                // Convert entire preview back to markdown
+                const fullMarkdown = turndownService.turndown(output.innerHTML);
+                
+                // Update the editor content
+                const model = editor.getModel();
+                if (!model) return;
+                
+                // Update without triggering change event
+                model.pushEditOperations(
+                    [],
+                    [{
+                        range: model.getFullModelRange(),
+                        text: fullMarkdown
+                    }],
+                    () => null
+                );
+                
+                console.log('✓ Bidirectional edit: Updated editor from preview');
+            } finally {
+                // Reset flag after render completes
+                setTimeout(() => {
+                    isUpdating = false;
+                }, 50);
+            }
+        }, 150); // 150ms debounce
     };
     
     // Apply edit mode to preview elements
@@ -5130,11 +5140,14 @@ ${fontLinkTags}
         
         // Make block elements contenteditable
         const elements = output.querySelectorAll('h1, h2, h3, h4, h5, h6, p, li, blockquote');
+        console.log(`✓ Edit mode: Making ${elements.length} elements editable`);
+        
         elements.forEach(el => {
             el.setAttribute('contenteditable', 'true');
             
             // Store handler reference for later removal
             const inputHandler = (e) => {
+                console.log('✓ Edit mode: Input detected on', e.target.tagName);
                 handleContentEditableInput(e.target);
             };
             el._editModeInputHandler = inputHandler;
