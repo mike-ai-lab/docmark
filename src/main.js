@@ -6830,6 +6830,9 @@ ${fontLinkTags}
                 activeResizer.lastLeftRatio = newLeftWidth / (totalWidth - dividerWidth);
             }
         }
+        
+        // Update paper layout scale after resize
+        updatePaperScale();
     });
 
     document.addEventListener('mouseup', () => {
@@ -7389,6 +7392,28 @@ ${fontLinkTags}
         }
     };
     
+    // Update paper scale based on preview pane width
+    const updatePaperScale = () => {
+        const paperScaler = document.getElementById('paper-scaler');
+        const previewWrapper = document.getElementById('preview-wrapper');
+        const previewPane = document.getElementById('preview');
+        
+        if (!paperScaler || !previewPane) return;
+        
+        // Only apply auto-scaling if paper layout is active
+        if (!previewWrapper || !previewWrapper.classList.contains('paper-layout-active')) return;
+        
+        const A4_WIDTH = 794;  // Fixed paper width in pixels
+        const PADDING = 80;    // 40px each side
+        
+        const availableWidth = previewPane.clientWidth - PADDING;
+        const scale = availableWidth / A4_WIDTH;
+        const finalScale = Math.max(0.2, Math.min(scale, currentZoom));  // Min 20%, max currentZoom
+        
+        paperScaler.style.transform = `scale(${finalScale})`;
+        paperScaler.style.transformOrigin = 'top center';
+    };
+    
     // Zoom in
     const zoomIn = () => {
         currentZoom = Math.min(MAX_ZOOM, currentZoom + ZOOM_STEP);
@@ -7623,6 +7648,120 @@ ${fontLinkTags}
             statusLayoutMode.addEventListener('click', togglePaperLayout);
         }
         
+        // Make paper controls draggable (robust implementation)
+        if (paperControls) {
+            let isDragging = false;
+            let currentX = 0;
+            let currentY = 0;
+            let initialX = 0;
+            let initialY = 0;
+            let xOffset = 0;
+            let yOffset = 0;
+            
+            const dragStart = (e) => {
+                // Don't drag if clicking on buttons or inputs
+                if (e.target.closest('button') || e.target.closest('input')) return;
+                
+                if (e.type === 'touchstart') {
+                    initialX = e.touches[0].clientX - xOffset;
+                    initialY = e.touches[0].clientY - yOffset;
+                } else {
+                    initialX = e.clientX - xOffset;
+                    initialY = e.clientY - yOffset;
+                }
+                
+                isDragging = true;
+                paperControls.style.cursor = 'grabbing';
+            };
+            
+            const clampToBounds = (x, y) => {
+                const rect = paperControls.getBoundingClientRect();
+                const viewportWidth = window.innerWidth;
+                const viewportHeight = window.innerHeight;
+                
+                // Calculate the toolbar's dimensions
+                const toolbarWidth = rect.width;
+                const toolbarHeight = rect.height;
+                
+                // Safe margins and UI element heights
+                const margin = 10;
+                const headerHeight = 60; // Header bar at top
+                const statusBarHeight = 28; // Status bar at bottom
+                
+                // Calculate min/max bounds for X offset
+                // The toolbar starts at 50% (center), so we need to account for that
+                const minX = -(viewportWidth / 2) + (toolbarWidth / 2) + margin;
+                const maxX = (viewportWidth / 2) - (toolbarWidth / 2) - margin;
+                
+                // Calculate min/max bounds for Y offset
+                // The toolbar starts at top: 120px, so Y offset is relative to that
+                // minY: Can't go above header (60px) + margin
+                const minY = headerHeight - 120 + margin;
+                // maxY: Can't go below viewport bottom minus status bar
+                const maxY = viewportHeight - statusBarHeight - 120 - toolbarHeight - margin;
+                
+                return {
+                    x: Math.max(minX, Math.min(maxX, x)),
+                    y: Math.max(minY, Math.min(maxY, y))
+                };
+            };
+            
+            const dragEnd = (e) => {
+                if (!isDragging) return;
+                
+                // Clamp to bounds on release
+                const clamped = clampToBounds(currentX, currentY);
+                currentX = clamped.x;
+                currentY = clamped.y;
+                xOffset = currentX;
+                yOffset = currentY;
+                
+                paperControls.style.transform = `translate(calc(-50% + ${currentX}px), ${currentY}px)`;
+                
+                initialX = currentX;
+                initialY = currentY;
+                isDragging = false;
+                paperControls.style.cursor = 'move';
+            };
+            
+            const drag = (e) => {
+                if (!isDragging) return;
+                
+                e.preventDefault();
+                
+                let rawX, rawY;
+                
+                if (e.type === 'touchmove') {
+                    rawX = e.touches[0].clientX - initialX;
+                    rawY = e.touches[0].clientY - initialY;
+                } else {
+                    rawX = e.clientX - initialX;
+                    rawY = e.clientY - initialY;
+                }
+                
+                // Clamp to bounds on every frame
+                const clamped = clampToBounds(rawX, rawY);
+                currentX = clamped.x;
+                currentY = clamped.y;
+                xOffset = currentX;
+                yOffset = currentY;
+                
+                paperControls.style.transform = `translate(calc(-50% + ${currentX}px), ${currentY}px)`;
+            };
+            
+            // Attach mousedown to the toolbar
+            paperControls.addEventListener('mousedown', dragStart);
+            
+            // Attach mousemove and mouseup to document for robust dragging
+            document.addEventListener('mousemove', drag);
+            document.addEventListener('mouseup', dragEnd);
+            
+            // Touch events
+            paperControls.addEventListener('touchstart', dragStart, { passive: false });
+            document.addEventListener('touchmove', drag, { passive: false });
+            document.addEventListener('touchend', dragEnd);
+        }
+        
         // Load saved settings
         const settings = loadPaperLayoutSettings();
         if (settings.active) {
@@ -7651,3 +7790,9 @@ window.addEventListener("load", () => {
     init();
 });
 
+
+
+// Window resize handler for paper layout scaling
+window.addEventListener('resize', () => {
+    updatePaperScale();
+});
