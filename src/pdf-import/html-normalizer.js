@@ -16,49 +16,34 @@ class HTMLNormalizer {
    * @returns {string} - Clean semantic HTML
    */
   normalize(rawHTML) {
-    console.log('🔧 Starting HTML normalization...');
-    console.log(`   Input HTML length: ${rawHTML.length}`);
-    
     const dom = new JSDOM(rawHTML);
     const document = dom.window.document;
     const body = document.body;
 
-    console.log(`   Initial tables: ${body.querySelectorAll('table').length}`);
-
     // Step 1: Remove inline styles and transforms
     this._stripStyles(body);
-    console.log(`   After stripStyles - tables: ${body.querySelectorAll('table').length}`);
 
     // Step 2: Detect and remove headers/footers
     this._detectHeadersFooters(body);
     this._removeHeadersFooters(body);
-    console.log(`   After removeHeaders - tables: ${body.querySelectorAll('table').length}`);
 
     // Step 3: Convert div/span soup to semantic tags
     this._convertToSemantic(body);
-    console.log(`   After convertToSemantic - tables: ${body.querySelectorAll('table').length}`);
 
     // Step 4: Merge fragmented text nodes
     this._mergeTextNodes(body);
-    console.log(`   After mergeTextNodes - tables: ${body.querySelectorAll('table').length}`);
 
     // Step 5: Detect and convert tables
     this._detectTables(body);
-    console.log(`   After detectTables - tables: ${body.querySelectorAll('table').length}`);
 
     // Step 6: Linearize multi-column layouts
     this._linearizeColumns(body);
-    console.log(`   After linearizeColumns - tables: ${body.querySelectorAll('table').length}`);
 
     // Step 7: Normalize whitespace
     this._normalizeWhitespace(body);
-    console.log(`   After normalizeWhitespace - tables: ${body.querySelectorAll('table').length}`);
 
     // Step 8: Clean up empty elements
     this._removeEmptyElements(body);
-    console.log(`   After removeEmptyElements - tables: ${body.querySelectorAll('table').length}`);
-
-    console.log(`✅ Normalization complete - Output HTML length: ${body.innerHTML.length}`);
     
     return body.innerHTML;
   }
@@ -303,6 +288,7 @@ class HTMLNormalizer {
 
   /**
    * Linearize multi-column layouts
+   * IMPORTANT: Skip tables and preserve their structure!
    */
   _linearizeColumns(body) {
     // Detect side-by-side divs and linearize them
@@ -313,12 +299,28 @@ class HTMLNormalizer {
       
       // Simple heuristic: if multiple divs at same level, linearize
       children.forEach(child => {
+        // Skip tables completely!
+        if (child.tagName === 'TABLE') {
+          return;
+        }
+        
+        // Skip elements containing tables
+        if (child.querySelector('table')) {
+          return;
+        }
+        
         if (child.children.length > 1) {
           const subChildren = Array.from(child.children);
           subChildren.forEach(sub => {
-            page.appendChild(sub);
+            // Don't move tables
+            if (sub.tagName !== 'TABLE') {
+              page.appendChild(sub);
+            }
           });
-          child.remove();
+          // Only remove child if it's now empty and not a table
+          if (child.children.length === 0) {
+            child.remove();
+          }
         }
       });
     });

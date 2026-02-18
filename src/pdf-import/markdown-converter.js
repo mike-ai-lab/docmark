@@ -24,21 +24,11 @@ class MarkdownConverter {
 
     const dom = new JSDOM(html);
     const body = dom.window.document.body;
-
-    console.log('🔄 Converting HTML to Markdown...');
-    console.log(`   Input HTML length: ${html.length}`);
-    console.log(`   Input HTML preview: ${html.substring(0, 200)}`);
-    console.log(`   Body children: ${body.children.length}`);
-    console.log(`   Tables in body: ${body.querySelectorAll('table').length}`);
     
     let markdown = '';
     
     // Process each child element
     Array.from(body.children).forEach((child, index) => {
-      console.log(`   Processing child ${index}: ${child.tagName} (${child.children.length} children)`);
-      if (child.tagName === 'DIV') {
-        console.log(`      DIV has ${child.querySelectorAll('table').length} tables inside`);
-      }
       markdown += this._processElement(child, 0);
     });
 
@@ -47,8 +37,6 @@ class MarkdownConverter {
     
     // Validate heading hierarchy
     markdown = this._fixHeadingHierarchy(markdown);
-
-    console.log(`✅ Markdown conversion complete: ${markdown.length} characters`);
     
     return markdown.trim();
   }
@@ -82,9 +70,7 @@ class MarkdownConverter {
         break;
       
       case 'table':
-        console.log('   📊 Converting table...');
         result = this._convertTable(element);
-        console.log(`   ✅ Table converted: ${result.split('\n').length} lines`);
         break;
       
       case 'img':
@@ -135,6 +121,22 @@ class MarkdownConverter {
    * Convert paragraph
    */
   _convertParagraph(element) {
+    // Check if paragraph contains block-level elements (invalid HTML that JSDOM might create)
+    const blockElements = element.querySelectorAll('table, div, ul, ol, h1, h2, h3, h4, h5, h6');
+    
+    if (blockElements.length > 0) {
+      // Process block elements separately
+      let result = '';
+      Array.from(element.childNodes).forEach(node => {
+        if (node.nodeType === 1) { // Element node
+          result += this._processElement(node, 0);
+        } else if (node.nodeType === 3 && node.textContent.trim()) { // Text node
+          result += node.textContent.trim() + '\n\n';
+        }
+      });
+      return result;
+    }
+    
     const formatted = this._getInlineFormatting(element);
     if (!formatted.trim()) return '';
     

@@ -127,9 +127,6 @@ class PDFJSExtractor {
       lines.push(this._mergeLine(currentLine));
     }
     
-    console.log(`📝 Grouped ${items.length} items into ${lines.length} lines`);
-    console.log(`   Lines with 3+ items: ${lines.filter(l => l.items.length >= 3).length}`);
-    
     return lines;
   }
 
@@ -164,7 +161,6 @@ class PDFJSExtractor {
     
     // First pass: detect table regions
     const tableRegions = this._detectTableRegions(lines);
-    console.log(`📊 Detected ${tableRegions.length} table regions`);
     
     let i = 0;
     while (i < lines.length) {
@@ -265,33 +261,23 @@ class PDFJSExtractor {
     const regions = [];
     let i = 0;
     
-    console.log(`🔍 Analyzing ${lines.length} lines for tables...`);
-    
     while (i < lines.length) {
       const line = lines[i];
       
-      console.log(`Line ${i}: ${line.items.length} items - "${line.text.substring(0, 50)}"`);
-      
-      // Check if this line has multiple columns (items with similar Y but different X)
-      if (line.items.length >= 3) {
-        console.log(`  ✓ Potential table row (${line.items.length} items)`);
-        // Potential table row - check if next few lines also have similar structure
+      // Check if this line has multiple columns
+      if (line.items.length >= 2) {
         const tableCandidate = this._analyzeTableCandidate(lines, i);
         
         if (tableCandidate && tableCandidate.rows.length >= 2) {
-          console.log(`  ✅ Table detected! ${tableCandidate.rows.length} rows, ${tableCandidate.columnCount} columns`);
           regions.push(tableCandidate);
           i = tableCandidate.endIndex + 1;
           continue;
-        } else {
-          console.log(`  ✗ Not a valid table`);
         }
       }
       
       i++;
     }
     
-    console.log(`📊 Total tables found: ${regions.length}`);
     return regions;
   }
 
@@ -300,13 +286,29 @@ class PDFJSExtractor {
    */
   _analyzeTableCandidate(lines, startIndex) {
     const firstLine = lines[startIndex];
-    const columnPositions = firstLine.items.map(item => item.x);
     
-    // Need at least 2 columns
-    if (columnPositions.length < 2) return null;
+    // Use clustering to find actual column positions across multiple rows
+    const allItems = [];
+    let currentIndex = startIndex;
+    let rowCount = 0;
+    
+    // Collect items from first few rows to determine column structure
+    while (currentIndex < lines.length && rowCount < 5) {
+      const line = lines[currentIndex];
+      if (line.items.length >= 2) {
+        allItems.push(...line.items);
+        rowCount++;
+      } else {
+        break;
+      }
+      currentIndex++;
+    }
+    
+    // Cluster items by X position to find columns
+    const columnPositions = this._clusterColumnPositions(allItems);
     
     const rows = [];
-    let currentIndex = startIndex;
+    currentIndex = startIndex;
     let consecutiveNonMatches = 0;
     
     // Try to find rows with similar column structure
@@ -343,14 +345,61 @@ class PDFJSExtractor {
   }
 
   /**
+   * Cluster items by X position to find column positions
+   */
+  _clusterColumnPositions(items) {
+    if (items.length === 0) return [];
+    
+    // Sort items by X position first
+    const sortedItems = [...items].sort((a, b) => a.x - b.x);
+    
+    const clusters = [];
+    const minColumnWidth = 30; // Minimum pixels between columns
+    
+    sortedItems.forEach(item => {
+      // Find if this item belongs to an existing cluster
+      let foundCluster = false;
+      
+      for (let cluster of clusters) {
+        const avgX = cluster.items.reduce((sum, i) => sum + i.x, 0) / cluster.items.length;
+        const distance = Math.abs(item.x - avgX);
+        
+        // Items within minColumnWidth belong to same column
+        if (distance < minColumnWidth) {
+          cluster.items.push(item);
+          foundCluster = true;
+          break;
+        }
+      }
+      
+      if (!foundCluster) {
+        clusters.push({
+          items: [item]
+        });
+      }
+    });
+    
+    // Calculate average X position for each cluster
+    const positions = clusters.map(cluster => {
+      return cluster.items.reduce((sum, i) => sum + i.x, 0) / cluster.items.length;
+    });
+    
+    // Sort positions
+    positions.sort((a, b) => a - b);
+    
+    return positions;
+  }
+
+  /**
    * Check if items match expected column positions
    */
   _matchesColumnStructure(items, columnPositions) {
-    if (items.length < 2) return false;
+    if (items.length < 1) return false;
     
-    // Check if at least 50% of items are near expected column positions
+    // Check if at least 40% of items are near expected column positions
+    // OR if we have at least 2 items matching
     let matches = 0;
-    const tolerance = 30; // pixels
+    const tolerance = 40; // Increased tolerance
     
     items.forEach(item => {
       const nearColumn = columnPositions.some(colX => 
@@ -359,7 +408,10 @@ class PDFJSExtractor {
       if (nearColumn) matches++;
     });
     
-    return matches >= Math.min(2, columnPositions.length * 0.5);
+    const matchRatio = matches / columnPositions.length;
+    const hasMinMatches = matches >= Math.min(2, columnPositions.length);
+    
+    return matchRatio >= 0.4 || hasMinMatches;
   }
 
   /**
@@ -367,27 +419,49 @@ class PDFJSExtractor {
    */
   _extractTableCells(items, columnPositions) {
     const cells = [];
-    const tolerance = 30;
+    const tolerance = 50; // Increased tolerance for better grouping
     
     // Sort items by X position
     const sortedItems = [...items].sort((a, b) => a.x - b.x);
     
-    // Group items by column
-    columnPositions.forEach((colX, colIndex) => {
-      const cellItems = sortedItems.filter(item => {
-        if (colIndex === columnPositions.length - 1) {
-          // Last column - take everything after this position
-          return item.x >= colX - tolerance;
-        } else {
-          // Middle columns - take items between this and next column
-          const nextColX = columnPositions[colIndex + 1];
-          return item.x >= colX - tolerance && item.x < nextColX - tolerance;
+    // Group items by column - use clustering approach
+    const clusters = [];
+    sortedItems.forEach(item => {
+      // Find closest cluster
+      let closestCluster = null;
+      let minDistance = Infinity;
+      
+      clusters.forEach(cluster => {
+        const distance = Math.abs(item.x - cluster.x);
+        if (distance < minDistance && distance < tolerance) {
+          minDistance = distance;
+          closestCluster = cluster;
         }
       });
       
-      const cellText = cellItems.map(item => item.text).join(' ').trim();
+      if (closestCluster) {
+        closestCluster.items.push(item);
+      } else {
+        clusters.push({
+          x: item.x,
+          items: [item]
+        });
+      }
+    });
+    
+    // Sort clusters by X position
+    clusters.sort((a, b) => a.x - b.x);
+    
+    // Extract text from each cluster
+    clusters.forEach(cluster => {
+      const cellText = cluster.items.map(item => item.text).join(' ').trim();
       cells.push(cellText || ' ');
     });
+    
+    // Pad to match expected column count
+    while (cells.length < columnPositions.length) {
+      cells.push(' ');
+    }
     
     return cells;
   }
@@ -470,12 +544,7 @@ class PDFJSExtractor {
         html += `<div class="pdf-page" data-page="${page.pageNum}">\n`;
       }
       
-      console.log(`📄 Building HTML for page ${page.pageNum}:`);
-      console.log(`   Content items: ${page.content.length}`);
-      
       page.content.forEach((item, idx) => {
-        console.log(`   Item ${idx}: ${item.type}`);
-        
         switch (item.type) {
           case 'heading':
             html += `<h${item.level}>${this._escapeHTML(item.text)}</h${item.level}>\n`;
@@ -484,11 +553,9 @@ class PDFJSExtractor {
             html += `<p>${this._escapeHTML(item.text)}</p>\n`;
             break;
           case 'list-item':
-            // Note: This creates individual list items, normalizer will group them
             html += `<li>${this._escapeHTML(item.text)}</li>\n`;
             break;
           case 'table':
-            console.log(`   📊 Building table: ${item.rows.length} rows`);
             html += this._buildTableHTML(item.rows);
             break;
         }
@@ -500,7 +567,6 @@ class PDFJSExtractor {
     });
     
     html += '</div>';
-    console.log(`✅ HTML built: ${html.length} characters`);
     return html;
   }
 
