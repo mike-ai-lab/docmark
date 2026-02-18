@@ -76,6 +76,7 @@
     </script>
     <link rel="stylesheet" type="text/css" href="./public/css/style.css?v=1.12.0">
     <link rel="stylesheet" type="text/css" href="./public/css/inspector.css">
+    <link rel="stylesheet" type="text/css" href="./public/css/ai-assistant.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css" id="hljs-light-theme">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css" id="hljs-dark-theme" disabled>
     <link rel="icon" type="image/png" href="./favicon.png">
@@ -212,6 +213,12 @@
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"></path>
                         <circle cx="12" cy="12" r="3"></circle>
+                    </svg>
+                </button>
+                <button class="icon-button" id="ai-assistant-button" title="AI Assistant">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7h1a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v1a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-1H2a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h1a7 7 0 0 1 7-7h1V5.73c-.6-.34-1-.99-1-1.73a2 2 0 0 1 2-2Z"/>
+                        <path d="M14 22v-4a2 2 0 0 0-2-2h-0a2 2 0 0 0-2 2v4"/>
                     </svg>
                 </button>
                 <button class="icon-button" id="settings-button" title="Settings">
@@ -710,6 +717,14 @@
                     </svg>
                     <span>Advanced</span>
                 </button>
+                <button class="settings-tab" data-tab="ai">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
+                        <path d="M2 17l10 5 10-5"></path>
+                        <path d="M2 12l10 5 10-5"></path>
+                    </svg>
+                    <span>AI Assistant</span>
+                </button>
             </div>
             
             <div class="settings-content">
@@ -804,3 +819,147 @@
                             <span>Style Info Tooltips</span>
                         </label>
                         <a href="#" id="pdf-settings-link" class="settings-link">PDF Settings</a>
+                    </div>
+                </div>
+                
+                <!-- AI Assistant Tab -->
+                <div class="settings-tab-content" data-tab-content="ai">
+                    <div class="settings-section">
+                        <h4>Default Provider</h4>
+                        <div class="settings-item">
+                            <label>
+                                <span>Provider:</span>
+                                <select id="ai-default-provider">
+                                    <option value="openai">OpenAI</option>
+                                    <option value="claude">Anthropic Claude</option>
+                                    <option value="cerebras">Cerebras</option>
+                                    <option value="groq">Groq</option>
+                                    <option value="mistral">Mistral AI</option>
+                                    <option value="openrouter">OpenRouter</option>
+                                    <option value="google">Google AI Studio</option>
+                                    <option value="cohere">Cohere</option>
+                                    <option value="huggingface">Hugging Face</option>
+                                </select>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="settings-section">
+                        <h4>API Keys</h4>
+                        <div class="ai-api-key-item">
+                            <label>OpenAI:</label>
+                            <div class="ai-api-key-input-group">
+                                <input type="password" id="ai-key-openai" placeholder="sk-...">
+                                <button class="ai-test-key-btn" data-provider="openai">Test</button>
+                            </div>
+                        </div>
+                        <div class="ai-api-key-item">
+                            <label>Anthropic Claude:</label>
+                            <div class="ai-api-key-input-group">
+                                <input type="password" id="ai-key-claude" placeholder="sk-ant-...">
+                                <button class="ai-test-key-btn" data-provider="claude">Test</button>
+                            </div>
+                        </div>
+                        <div class="ai-api-key-item">
+                            <label>Cerebras:</label>
+                            <div class="ai-api-key-input-group">
+                                <input type="password" id="ai-key-cerebras" placeholder="csk-...">
+                                <button class="ai-test-key-btn" data-provider="cerebras">Test</button>
+                            </div>
+                        </div>
+                        <div class="ai-api-key-item">
+                            <label>Groq:</label>
+                            <div class="ai-api-key-input-group">
+                                <input type="password" id="ai-key-groq" placeholder="gsk_...">
+                                <button class="ai-test-key-btn" data-provider="groq">Test</button>
+                            </div>
+                        </div>
+                        <div class="ai-api-key-item">
+                            <label>Mistral AI:</label>
+                            <div class="ai-api-key-input-group">
+                                <input type="password" id="ai-key-mistral" placeholder="...">
+                                <button class="ai-test-key-btn" data-provider="mistral">Test</button>
+                            </div>
+                        </div>
+                        <div class="ai-api-key-item">
+                            <label>OpenRouter:</label>
+                            <div class="ai-api-key-input-group">
+                                <input type="password" id="ai-key-openrouter" placeholder="sk-or-...">
+                                <button class="ai-test-key-btn" data-provider="openrouter">Test</button>
+                            </div>
+                        </div>
+                        <div class="ai-api-key-item">
+                            <label>Google AI Studio:</label>
+                            <div class="ai-api-key-input-group">
+                                <input type="password" id="ai-key-google" placeholder="...">
+                                <button class="ai-test-key-btn" data-provider="google">Test</button>
+                            </div>
+                        </div>
+                        <div class="ai-api-key-item">
+                            <label>Cohere:</label>
+                            <div class="ai-api-key-input-group">
+                                <input type="password" id="ai-key-cohere" placeholder="...">
+                                <button class="ai-test-key-btn" data-provider="cohere">Test</button>
+                            </div>
+                        </div>
+                        <div class="ai-api-key-item">
+                            <label>Hugging Face:</label>
+                            <div class="ai-api-key-input-group">
+                                <input type="password" id="ai-key-huggingface" placeholder="hf_...">
+                                <button class="ai-test-key-btn" data-provider="huggingface">Test</button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="settings-section">
+                        <h4>Options</h4>
+                        <label class="settings-item">
+                            <input type="checkbox" id="ai-streaming-checkbox" checked>
+                            <span>Enable Streaming</span>
+                        </label>
+                        <label class="settings-item">
+                            <input type="checkbox" id="ai-autosave-checkbox" checked>
+                            <span>Auto-save Settings</span>
+                        </label>
+                        <label class="settings-item">
+                            <input type="checkbox" id="ai-token-usage-checkbox">
+                            <span>Show Token Usage</span>
+                        </label>
+                        <label class="settings-item">
+                            <input type="checkbox" id="ai-chat-history-checkbox" checked>
+                            <span>Save Chat History</span>
+                        </label>
+                    </div>
+                    
+                    <div class="settings-section">
+                        <h4>Keyboard Shortcuts</h4>
+                        <div class="ai-shortcuts-list">
+                            <div class="ai-shortcut-item">
+                                <span class="ai-shortcut-key">Ctrl+K</span>
+                                <span class="ai-shortcut-desc">Open AI Panel</span>
+                            </div>
+                            <div class="ai-shortcut-item">
+                                <span class="ai-shortcut-key">Ctrl+Shift+K</span>
+                                <span class="ai-shortcut-desc">Open AI Chat</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="settings-panel-footer">
+                <button class="settings-close-btn" id="settings-close-btn">Close</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- AI Status Toast (bottom center) -->
+    <div class="ai-status-toast" id="ai-status-toast">
+        <div class="ai-status-content">
+            <div class="ai-status-spinner"></div>
+            <span class="ai-status-text">Processing...</span>
+        </div>
+    </div>
+
+  </body>
+</html>

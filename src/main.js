@@ -3,6 +3,10 @@ import * as monaco from 'monaco-editor';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
 import { setupValidationWizard } from './validation-wizard.js';
+// AI Assistant imports
+import AIManager from './ai/ai-manager.js';
+import AIPanelUI from './ai/ai-panel-ui.js';
+import AIChatUI from './ai/ai-chat-ui.js';
 // DISABLED FOR DEPLOYMENT - Inspector and HTML Editor features not finished
 // import { initializeInspector, getInspector, getCurrentDoc } from './inspector-integration.js';
 // import { initInspectorPanel, showInspectorToggle, hideInspectorToggle } from './inspector-panel-ui.js';
@@ -31,6 +35,11 @@ const init = () => {
     let undoHistoryIndex = -1;
     const MAX_UNDO_STEPS = 50;
     let isPerformingUndoRedo = false; // Flag to prevent saving during undo/redo
+    
+    // AI Assistant instances (will be initialized after editor)
+    let aiManager = null;
+    let aiPanelUI = null;
+    let aiChatUI = null;
 
     const localStorageNamespace = 'com.markdownlivepreview';
     const localStorageKey = 'last_state';
@@ -5697,6 +5706,38 @@ ${fontLinkTags}
     // Expose editor globally for testing
     window.editor = editor;
     
+    // Initialize AI Assistant
+    try {
+        aiManager = new AIManager(editor);
+        aiPanelUI = new AIPanelUI(aiManager);
+        aiChatUI = new AIChatUI(aiManager);
+        
+        // Setup AI Assistant button
+        const aiButton = document.getElementById('ai-assistant-button');
+        if (aiButton) {
+            aiButton.addEventListener('click', () => {
+                aiPanelUI.toggle();
+            });
+        }
+        
+        // Keyboard shortcut: Ctrl+K to toggle AI panel
+        document.addEventListener('keydown', (e) => {
+            if (e.ctrlKey && e.key === 'k') {
+                e.preventDefault();
+                aiPanelUI.toggle();
+            }
+            // Ctrl+Shift+K to toggle chat
+            if (e.ctrlKey && e.shiftKey && e.key === 'K') {
+                e.preventDefault();
+                aiChatUI.toggle();
+            }
+        });
+        
+        console.log('✅ AI Assistant initialized');
+    } catch (error) {
+        console.error('Failed to initialize AI Assistant:', error);
+    }
+    
     if (lastContent) {
         presetValue(lastContent);
     } else {
@@ -7201,6 +7242,164 @@ ${fontLinkTags}
             });
         });
     });
+    
+    // Close button
+    const settingsCloseBtn = document.getElementById('settings-close-btn');
+    if (settingsCloseBtn) {
+        settingsCloseBtn.addEventListener('click', closeSettingsPanel);
+    }
+    
+    // ============================================================================
+    // AI SETTINGS INTEGRATION
+    // ============================================================================
+    
+    if (aiManager) {
+        const storage = aiManager.getStorage();
+        
+        // Load AI settings into UI
+        const loadAISettings = () => {
+            const settings = storage.getSettings();
+            
+            // Default provider
+            const defaultProviderSelect = document.getElementById('ai-default-provider');
+            if (defaultProviderSelect && settings.defaultProvider) {
+                defaultProviderSelect.value = settings.defaultProvider;
+            }
+            
+            // API keys
+            const providers = ['openai', 'claude', 'cerebras', 'groq', 'mistral', 'openrouter', 'google', 'cohere', 'huggingface'];
+            providers.forEach(provider => {
+                const input = document.getElementById(`ai-key-${provider}`);
+                const apiKey = storage.getApiKey(provider);
+                if (input && apiKey) {
+                    input.value = apiKey;
+                }
+            });
+            
+            // Options
+            const streamingCheckbox = document.getElementById('ai-streaming-checkbox');
+            if (streamingCheckbox) streamingCheckbox.checked = settings.streaming !== false;
+            
+            const autosaveCheckbox = document.getElementById('ai-autosave-checkbox');
+            if (autosaveCheckbox) autosaveCheckbox.checked = settings.autoSave !== false;
+            
+            const tokenUsageCheckbox = document.getElementById('ai-token-usage-checkbox');
+            if (tokenUsageCheckbox) tokenUsageCheckbox.checked = settings.showTokenUsage === true;
+            
+            const chatHistoryCheckbox = document.getElementById('ai-chat-history-checkbox');
+            if (chatHistoryCheckbox) chatHistoryCheckbox.checked = settings.saveChatHistory !== false;
+        };
+        
+        // Save default provider
+        const defaultProviderSelect = document.getElementById('ai-default-provider');
+        if (defaultProviderSelect) {
+            defaultProviderSelect.addEventListener('change', (e) => {
+                storage.updateSettings({ defaultProvider: e.target.value });
+                try {
+                    aiManager.setProvider(e.target.value);
+                } catch (error) {
+                    console.error('Error setting provider:', error);
+                }
+            });
+        }
+        
+        // Save API keys on input
+        const providers = ['openai', 'claude', 'cerebras', 'groq', 'mistral', 'openrouter', 'google', 'cohere', 'huggingface'];
+        providers.forEach(provider => {
+            const input = document.getElementById(`ai-key-${provider}`);
+            if (input) {
+                input.addEventListener('change', (e) => {
+                    const key = e.target.value.trim();
+                    if (key) {
+                        storage.saveApiKey(provider, key);
+                    } else {
+                        storage.removeApiKey(provider);
+                    }
+                });
+            }
+        });
+        
+        // Test API key buttons
+        const testButtons = document.querySelectorAll('.ai-test-key-btn');
+        testButtons.forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const provider = btn.dataset.provider;
+                const input = document.getElementById(`ai-key-${provider}`);
+                const apiKey = input ? input.value.trim() : null;
+                
+                if (!apiKey) {
+                    btn.textContent = 'No Key';
+                    btn.classList.add('error');
+                    setTimeout(() => {
+                        btn.textContent = 'Test';
+                        btn.classList.remove('error');
+                    }, 2000);
+                    return;
+                }
+                
+                btn.textContent = 'Testing...';
+                btn.classList.add('testing');
+                btn.disabled = true;
+                
+                try {
+                    const result = await aiManager.testProvider(provider, apiKey);
+                    
+                    if (result.success) {
+                        btn.textContent = 'Valid';
+                        btn.classList.remove('testing');
+                        btn.classList.add('success');
+                        storage.saveApiKey(provider, apiKey);
+                    } else {
+                        btn.textContent = 'Invalid';
+                        btn.classList.remove('testing');
+                        btn.classList.add('error');
+                    }
+                } catch (error) {
+                    btn.textContent = 'Error';
+                    btn.classList.remove('testing');
+                    btn.classList.add('error');
+                }
+                
+                setTimeout(() => {
+                    btn.textContent = 'Test';
+                    btn.classList.remove('testing', 'success', 'error');
+                    btn.disabled = false;
+                }, 2000);
+            });
+        });
+        
+        // Save options
+        const streamingCheckbox = document.getElementById('ai-streaming-checkbox');
+        if (streamingCheckbox) {
+            streamingCheckbox.addEventListener('change', (e) => {
+                storage.updateSettings({ streaming: e.target.checked });
+            });
+        }
+        
+        const autosaveCheckbox = document.getElementById('ai-autosave-checkbox');
+        if (autosaveCheckbox) {
+            autosaveCheckbox.addEventListener('change', (e) => {
+                storage.updateSettings({ autoSave: e.target.checked });
+            });
+        }
+        
+        const tokenUsageCheckbox = document.getElementById('ai-token-usage-checkbox');
+        if (tokenUsageCheckbox) {
+            tokenUsageCheckbox.addEventListener('change', (e) => {
+                storage.updateSettings({ showTokenUsage: e.target.checked });
+            });
+        }
+        
+        const chatHistoryCheckbox = document.getElementById('ai-chat-history-checkbox');
+        if (chatHistoryCheckbox) {
+            chatHistoryCheckbox.addEventListener('change', (e) => {
+                storage.updateSettings({ saveChatHistory: e.target.checked });
+            });
+        }
+        
+        // Load settings on init
+        loadAISettings();
+    }
     
     // ============================================================================
     // HELP DOCUMENTATION

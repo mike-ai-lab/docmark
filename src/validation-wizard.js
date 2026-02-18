@@ -72,6 +72,46 @@ const validateMarkdown = () => {
                     }
                 }
                 
+                // Check for HTML code wrapped in code blocks (should be rendered, not displayed as code)
+                if (trimmed === '```html' || trimmed === '```HTML') {
+                    // Check if the content inside is full HTML document
+                    let htmlContent = [];
+                    let closingLineIndex = -1;
+                    
+                    // Collect content until closing ```
+                    for (let i = index + 1; i < lines.length; i++) {
+                        if (lines[i].trim() === '```') {
+                            closingLineIndex = i;
+                            break;
+                        }
+                        htmlContent.push(lines[i]);
+                    }
+                    
+                    if (closingLineIndex !== -1 && htmlContent.length > 0) {
+                        const fullContent = htmlContent.join('\n').trim();
+                        
+                        // Check if it's a full HTML document (has <!DOCTYPE or <html> or starts with <div>, <section>, etc.)
+                        const isFullHTML = /^<!DOCTYPE/i.test(fullContent) || 
+                                         /^<html/i.test(fullContent) ||
+                                         /^<(!DOCTYPE|html|head|body|div|section|article|main|header|footer|nav)/i.test(fullContent);
+                        
+                        // Also check if it's a substantial HTML block (more than just a snippet)
+                        const hasMultipleTopLevelTags = (fullContent.match(/<(div|section|article|main|header|footer|nav|aside|form|table)[^>]*>/gi) || []).length >= 2;
+                        
+                        if (isFullHTML || hasMultipleTopLevelTags) {
+                            markers.push({
+                                severity: monaco.MarkerSeverity.Info,
+                                startLineNumber: lineNumber,
+                                startColumn: 1,
+                                endLineNumber: lineNumber,
+                                endColumn: line.length + 1,
+                                message: 'HTML code in code block: Remove code block syntax to render HTML directly',
+                                source: 'markdown-validator'
+                            });
+                        }
+                    }
+                }
+                
                 // Skip validation inside code blocks
                 if (inCodeBlock && !trimmed.startsWith('```')) return;
                 
@@ -95,22 +135,23 @@ const validateMarkdown = () => {
                     }
                 }
                 
-                // Check for missing blank line after heading
-                if (index > 0) {
-                    const prevLine = lines[index - 1].trim();
-                    const isHeading = /^#{1,6}\s/.test(prevLine);
-                    if (isHeading && trimmed && !trimmed.startsWith('#') && !isHorizontalRule) {
-                        markers.push({
-                            severity: monaco.MarkerSeverity.Info,
-                            startLineNumber: lineNumber,
-                            startColumn: 1,
-                            endLineNumber: lineNumber,
-                            endColumn: 1,
-                            message: 'Missing blank line after heading: Add blank line for better readability',
-                            source: 'markdown-validator'
-                        });
-                    }
-                }
+                // DISABLED: Check for missing blank line after heading
+                // Reason: Causes copy-paste issues between editors (some use 2 spaces + enter for line breaks)
+                // if (index > 0) {
+                //     const prevLine = lines[index - 1].trim();
+                //     const isHeading = /^#{1,6}\s/.test(prevLine);
+                //     if (isHeading && trimmed && !trimmed.startsWith('#') && !isHorizontalRule) {
+                //         markers.push({
+                //             severity: monaco.MarkerSeverity.Info,
+                //             startLineNumber: lineNumber,
+                //             startColumn: 1,
+                //             endLineNumber: lineNumber,
+                //             endColumn: 1,
+                //             message: 'Missing blank line after heading: Add blank line for better readability',
+                //             source: 'markdown-validator'
+                //         });
+                //     }
+                // }
                 
                 // Check for list-table conflict
                 if (index > 0 && trimmed.includes('|')) {
@@ -459,87 +500,77 @@ const validateMarkdown = () => {
                     tableHeaderCols = 0;
                 }
                 
-                // Check for unclosed HTML tags
-                const htmlTags = line.match(/<(\w+)(?:\s[^>]*)?>(?!.*<\/\1>)/g);
-                if (htmlTags) {
-                    htmlTags.forEach(tag => {
-                        const tagName = tag.match(/<(\w+)/)[1];
-                        // Exclude self-closing tags AND SVG self-closing elements
-                        const selfClosingTags = ['img', 'br', 'hr', 'input', 'meta', 'link'];
-                        const svgSelfClosing = ['rect', 'circle', 'ellipse', 'line', 'polyline', 'polygon', 'path', 'use', 'stop'];
+                // Check for unclosed HTML tags (IMPROVED)
+                // Skip validation if line is inside a code block
+                if (!inCodeBlock) {
+                    // Self-closing tags that don't need closing tags
+                    const selfClosingTags = ['img', 'br', 'hr', 'input', 'meta', 'link', 'area', 'base', 'col', 'embed', 'source', 'track', 'wbr'];
+                    const svgSelfClosing = ['rect', 'circle', 'ellipse', 'line', 'polyline', 'polygon', 'path', 'use', 'stop', 'animate', 'animateTransform'];
+                    const svgContainers = ['svg', 'g', 'text', 'defs', 'clipPath', 'mask', 'pattern', 'linearGradient', 'radialGradient', 'symbol', 'marker', 'filter'];
+                    const commonTags = ['div', 'span', 'p', 'a', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'ul', 'ol', 'li', 'table', 'tr', 'td', 'th', 'thead', 'tbody', 'strong', 'em', 'code', 'pre', 'blockquote'];
+                    
+                    // Find all opening tags in the line
+                    const openingTagRegex = /<(\w+)(?:\s[^>]*)?>/g;
+                    let match;
+                    
+                    while ((match = openingTagRegex.exec(line)) !== null) {
+                        const fullTag = match[0];
+                        const tagName = match[1].toLowerCase();
+                        const tagStart = match.index;
                         
-                        // For SVG container elements (svg, g, text, defs, etc.), check if closing tag exists in subsequent lines
-                        const svgContainers = ['svg', 'g', 'text', 'defs', 'clipPath', 'mask', 'pattern', 'linearGradient', 'radialGradient', 'symbol'];
+                        // Skip if self-closing tag
+                        if (selfClosingTags.includes(tagName) || svgSelfClosing.includes(tagName)) {
+                            continue;
+                        }
                         
-                        if (svgContainers.includes(tagName.toLowerCase())) {
-                            // Check if closing tag exists in the same line or subsequent lines
-                            const closingTagPattern = new RegExp(`<\/${tagName}>`, 'i');
-                            let hasClosingTag = line.includes(`</${tagName}>`);
+                        // Skip if tag has self-closing syntax: <tag />
+                        if (fullTag.endsWith('/>')) {
+                            continue;
+                        }
+                        
+                        // Check if closing tag exists on the same line
+                        const closingTagPattern = new RegExp(`<\\/${tagName}>`, 'i');
+                        const restOfLine = line.substring(match.index + fullTag.length);
+                        
+                        if (closingTagPattern.test(restOfLine)) {
+                            continue; // Closing tag found on same line
+                        }
+                        
+                        // For common HTML tags and SVG containers, check subsequent lines (multi-line HTML/SVG)
+                        if (commonTags.includes(tagName) || svgContainers.includes(tagName)) {
+                            let hasClosingTag = false;
                             
-                            if (!hasClosingTag) {
-                                // Check next 100 lines for closing tag
-                                for (let i = index + 1; i < Math.min(index + 100, lines.length); i++) {
-                                    if (closingTagPattern.test(lines[i])) {
-                                        hasClosingTag = true;
-                                        break;
-                                    }
+                            // Check next 50 lines for closing tag (reasonable limit for multi-line HTML)
+                            for (let i = index + 1; i < Math.min(index + 50, lines.length); i++) {
+                                if (closingTagPattern.test(lines[i])) {
+                                    hasClosingTag = true;
+                                    break;
                                 }
                             }
                             
-                            // Don't flag if closing tag was found
                             if (hasClosingTag) {
-                                return;
+                                continue; // Closing tag found in subsequent lines
                             }
-                        }
-                        
-                        if (!selfClosingTags.includes(tagName.toLowerCase()) && !svgSelfClosing.includes(tagName.toLowerCase())) {
-                            const tagStart = line.indexOf(tag);
+                            
+                            // Only flag if it's a tag we care about
                             markers.push({
                                 severity: monaco.MarkerSeverity.Warning,
                                 startLineNumber: lineNumber,
                                 startColumn: tagStart + 1,
                                 endLineNumber: lineNumber,
-                                endColumn: tagStart + tag.length + 1,
+                                endColumn: tagStart + fullTag.length + 1,
                                 message: `Unclosed HTML tag: <${tagName}> (add </${tagName}>)`,
                                 source: 'markdown-validator'
                             });
                         }
-                    });
+                    }
                 }
                 
-                // Check for multi-line SVG without proper spacing - NEW!
-                if (trimmed.startsWith('<svg') && !trimmed.includes('</svg>')) {
-                    // This is a multi-line SVG opening tag
-                    // Check if there's a blank line before it
-                    const hasPrevBlankLine = index === 0 || lines[index - 1].trim() === '';
-                    
-                    // Find the closing </svg> tag
-                    let closingLine = -1;
-                    for (let i = index + 1; i < lines.length; i++) {
-                        if (lines[i].trim().includes('</svg>')) {
-                            closingLine = i;
-                            break;
-                        }
-                    }
-                    
-                    if (closingLine !== -1) {
-                        // Check if there's a blank line after closing tag
-                        const hasNextBlankLine = closingLine === lines.length - 1 || lines[closingLine + 1].trim() === '';
-                        
-                        // If missing blank lines, suggest converting to single-line
-                        if (!hasPrevBlankLine || !hasNextBlankLine) {
-                            markers.push({
-                                severity: monaco.MarkerSeverity.Info,
-                                startLineNumber: lineNumber,
-                                startColumn: 1,
-                                endLineNumber: lineNumber,
-                                endColumn: line.length + 1,
-                                message: 'Multi-line SVG needs blank lines or single-line format: Convert to single line for better compatibility',
-                                source: 'markdown-validator'
-                            });
-                        }
-                    }
-                }
+                // Check for multi-line SVG without proper spacing - DISABLED
+                // Reason: Too aggressive, causes issues with valid multi-line SVG
+                // if (trimmed.startsWith('<svg') && !trimmed.includes('</svg>')) {
+                //     // Multi-line SVG detection code...
+                // }
             });
             
             // Check for unclosed code blocks (global check)
@@ -865,6 +896,11 @@ const validateMarkdown = () => {
                 suggestedFix = '__INSERT_BLANK_LINE__';
                 fixDescription = 'Insert blank line above';
             }
+            // HTML code in code block - REMOVE CODE BLOCK SYNTAX
+            else if (marker.message.includes('HTML code in code block')) {
+                suggestedFix = '__UNWRAP_HTML_CODE_BLOCK__';
+                fixDescription = 'Remove code block syntax to render HTML';
+            }
             // Unclosed code block
             else if (marker.message.includes('Unclosed code block')) {
                 // Add closing ``` on a new line after the current line
@@ -1142,6 +1178,51 @@ const validateMarkdown = () => {
             }, 100);
         };
         
+        // Unwrap HTML code from code block (remove ```html and closing ```)
+        const unwrapHTMLCodeBlock = (lineNumber) => {
+            console.log('[unwrapHTMLCodeBlock] Called for line ' + lineNumber);
+            const model = editor.getModel();
+            const lines = model.getLinesContent();
+            
+            // Find the opening ```html line
+            if (lineNumber > lines.length || !lines[lineNumber - 1].trim().match(/^```html$/i)) {
+                console.error('[unwrapHTMLCodeBlock] Line ' + lineNumber + ' is not ```html');
+                return;
+            }
+            
+            // Find the closing ``` line
+            let closingLine = -1;
+            for (let i = lineNumber; i < lines.length; i++) {
+                if (lines[i].trim() === '```') {
+                    closingLine = i + 1; // Convert to 1-based line number
+                    break;
+                }
+            }
+            
+            if (closingLine === -1) {
+                console.error('[unwrapHTMLCodeBlock] No closing ``` found');
+                return;
+            }
+            
+            console.log('[unwrapHTMLCodeBlock] Opening line: ' + lineNumber + ', Closing line: ' + closingLine);
+            
+            // Remove the closing ``` line first (to avoid line number shifts)
+            const closingRange = new monaco.Range(closingLine, 1, closingLine + 1, 1);
+            editor.executeEdits('unwrap-html-closing', [{
+                range: closingRange,
+                text: ''
+            }]);
+            
+            // Then remove the opening ```html line
+            const openingRange = new monaco.Range(lineNumber, 1, lineNumber + 1, 1);
+            editor.executeEdits('unwrap-html-opening', [{
+                range: openingRange,
+                text: ''
+            }]);
+            
+            console.log('[unwrapHTMLCodeBlock] HTML code block unwrapped successfully');
+        };
+        
         const positionInlineBar = (lineNumber) => {
             if (!currentSuggestionBar || wizardMode !== 'inline') return;
             
@@ -1222,7 +1303,6 @@ const validateMarkdown = () => {
             
             currentFixIndex = index;
             const issue = validationIssues[index];
-            const model = editor.getModel();
             
             // Navigate to issue
             editor.revealLineInCenter(issue.marker.startLineNumber);
@@ -1310,10 +1390,33 @@ const validateMarkdown = () => {
             const lineNumber = issue.marker.startLineNumber;
             const line = model.getLineContent(lineNumber);
             
+            // PROTECTION: Skip fixes on lines with HTML tags (except blank line insertion and HTML unwrap)
+            const hasHTML = /<[^>]+>/.test(line);
+            if (hasHTML && issue.suggestedFix !== '__INSERT_BLANK_LINE__' && issue.suggestedFix !== '__UNWRAP_HTML_CODE_BLOCK__') {
+                console.warn('[applyCurrentFix] Skipping fix for line with HTML to prevent breaking code:', line);
+                issue.state = 'skipped';
+                updateLineDecoration(lineNumber, 'skipped');
+                
+                // Move to next pending issue
+                const nextPendingIndex = validationIssues.findIndex((iss, idx) => idx > currentFixIndex && iss.state === 'pending');
+                if (nextPendingIndex !== -1) {
+                    showSuggestionForIssue(nextPendingIndex);
+                } else {
+                    closeSuggestionBar();
+                    showMofuHelper('Validation complete! Some fixes were skipped to protect HTML content.');
+                }
+                return;
+            }
+            
             // Check if this is a blank line insertion fix
             if (issue.suggestedFix === '__INSERT_BLANK_LINE__') {
                 console.log('[applyCurrentFix] Blank line insertion detected for line', lineNumber);
                 insertBlankLineAbove(lineNumber);
+            }
+            // Check if this is an HTML code block unwrap fix
+            else if (issue.suggestedFix === '__UNWRAP_HTML_CODE_BLOCK__') {
+                console.log('[applyCurrentFix] HTML code block unwrap detected for line', lineNumber);
+                unwrapHTMLCodeBlock(lineNumber);
             } else {
                 // Regular content fix
                 const range = new monaco.Range(lineNumber, 1, lineNumber, line.length + 1);
@@ -1349,7 +1452,7 @@ const validateMarkdown = () => {
                     if (skippedCount > 0) {
                         summaryMessage += `, skipped ${skippedCount}`;
                     }
-                    summaryMessage += ' Ô£ö';
+                    summaryMessage += ' ✅';
                     
                     showMofuHelper(summaryMessage);
                 } else {
@@ -1360,7 +1463,6 @@ const validateMarkdown = () => {
         };
         
         const applyAllFixes = () => {
-            const model = editor.getModel();
             let totalFixedCount = 0;
             let iterationCount = 0;
             const maxIterations = 10;
