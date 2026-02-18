@@ -7815,17 +7815,15 @@ ${fontLinkTags}
         }
     };
     
+    // Window resize handler for paper layout scaling
+    window.addEventListener('resize', () => {
+        updatePaperScale();
+    });
+    
     // Initialize paper layout system
     setupPaperLayoutControls();
 };
 
 window.addEventListener("load", () => {
     init();
-});
-
-
-
-// Window resize handler for paper layout scaling
-window.addEventListener('resize', () => {
-    updatePaperScale();
 });
