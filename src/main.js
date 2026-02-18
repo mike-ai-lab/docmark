@@ -11,6 +11,7 @@ const init = () => {
     let hasEdited = false;
     let scrollBarSync = false;
     let cursorSync = false;
+    let isUpdating = false; // Flag to prevent infinite update loop in edit mode
     let tocEnabled = false;
     let htmlPreviewMode = false; // Toggle for full HTML preview mode
     
@@ -348,6 +349,9 @@ This web site is using ${"`"}markedjs/marked${"`"}.
         // Manually trigger suggestions on content change
         let lastTriggerTime = 0;
         editor.onDidChangeModelContent(() => {
+            // Skip if we're updating from preview edit mode
+            if (isUpdating) return;
+            
             let changed = editor.getValue() != defaultInput;
             if (changed) {
                 hasEdited = true;
@@ -5083,44 +5087,40 @@ ${fontLinkTags}
     const handleContentEditableInput = (element) => {
         if (!turndownService || !editor) return;
         
-        // Get the source line number from data attribute
-        const sourceLine = element.getAttribute('data-source-line');
-        if (!sourceLine) return;
+        // Prevent infinite loop
+        if (isUpdating) return;
+        isUpdating = true;
         
-        const lineNumber = parseInt(sourceLine, 10);
-        if (isNaN(lineNumber)) return;
-        
-        // Convert edited HTML back to Markdown
-        const htmlContent = element.innerHTML;
-        let markdownContent = turndownService.turndown(htmlContent);
-        
-        // Handle heading levels
-        const tagName = element.tagName.toLowerCase();
-        if (tagName.match(/^h[1-6]$/)) {
-            const level = parseInt(tagName[1], 10);
-            const prefix = '#'.repeat(level);
-            // Ensure heading has proper prefix
-            if (!markdownContent.startsWith(prefix)) {
-                markdownContent = `${prefix} ${markdownContent}`;
+        try {
+            // Get all the preview HTML
+            const output = document.querySelector('#output');
+            if (!output) return;
+            
+            // Convert entire preview back to markdown
+            const fullMarkdown = turndownService.turndown(output.innerHTML);
+            
+            // Update the entire editor content
+            const model = editor.getModel();
+            if (!model) return;
+            
+            // Get current cursor position to restore it
+            const currentPosition = editor.getPosition();
+            
+            // Update the full content
+            model.setValue(fullMarkdown);
+            
+            // Restore cursor position
+            if (currentPosition) {
+                editor.setPosition(currentPosition);
             }
+            
+            console.log('Bidirectional edit: Updated editor from preview');
+        } finally {
+            // Reset flag after a short delay to allow render to complete
+            setTimeout(() => {
+                isUpdating = false;
+            }, 100);
         }
-        
-        // Handle blockquotes
-        if (tagName === 'blockquote') {
-            const lines = markdownContent.split('\n');
-            markdownContent = lines.map(line => line.startsWith('>') ? line : `> ${line}`).join('\n');
-        }
-        
-        // Update the editor at the specific line
-        const model = editor.getModel();
-        if (!model) return;
-        
-        const lineContent = model.getLineContent(lineNumber);
-        const range = new monaco.Range(lineNumber, 1, lineNumber, lineContent.length + 1);
-        
-        // Apply edit without triggering cursor sync
-        const edit = { range, text: markdownContent };
-        model.pushEditOperations([], [edit], () => null);
     };
     
     // Apply edit mode to preview elements
@@ -7539,10 +7539,27 @@ ${fontLinkTags}
             
             updatePageInfo();
             
-            // Scroll to top
+            // Update scale to fit the page
+            updatePaperScale();
+            
+            // Center and scroll to the active page
+            const activePage = pages[currentPageIndex];
             const previewWrapper = document.querySelector('#preview-wrapper');
-            if (previewWrapper) {
-                previewWrapper.scrollTop = 0;
+            
+            if (activePage && previewWrapper) {
+                // Wait for layout to settle
+                setTimeout(() => {
+                    const pageRect = activePage.getBoundingClientRect();
+                    const wrapperRect = previewWrapper.getBoundingClientRect();
+                    
+                    // Calculate scroll position to center the page
+                    const scrollTop = activePage.offsetTop - (wrapperRect.height - pageRect.height) / 2;
+                    
+                    previewWrapper.scrollTo({
+                        top: Math.max(0, scrollTop),
+                        behavior: 'smooth'
+                    });
+                }, 50);
             }
         };
         
@@ -7580,6 +7597,9 @@ ${fontLinkTags}
                 // Show all pages
                 const pages = paperStack.querySelectorAll('.paper-page');
                 pages.forEach(page => page.classList.remove('active-page'));
+                
+                // Update scale for flow mode
+                updatePaperScale();
                 
                 // Hide navigation buttons
                 if (prevPageBtn) prevPageBtn.style.display = 'none';
