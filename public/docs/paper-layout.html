@@ -3,12 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Interface Overview - DocMark Documentation</title>
+    <title>Paper Layout - DocMark Documentation</title>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
     <div class="docs-layout">
-        <!-- Left Sidebar - TOC Tree -->
         <aside class="docs-sidebar">
             <div class="docs-header">
                 <h1>DocMark</h1>
@@ -18,13 +17,13 @@
             <nav class="docs-toc">
                 <div class="toc-section">
                     <button class="toc-parent" data-section="getting-started">
-                        <span class="toc-icon">-</span>
+                        <span class="toc-icon">+</span>
                         <span class="toc-label">Getting Started</span>
                     </button>
-                    <div class="toc-children active">
+                    <div class="toc-children">
                         <a href="index.html" class="toc-item">Introduction</a>
                         <a href="quick-start.html" class="toc-item">Quick Start</a>
-                        <a href="interface.html" class="toc-item active">Interface Overview</a>
+                        <a href="interface.html" class="toc-item">Interface Overview</a>
                     </div>
                 </div>
                 
@@ -43,13 +42,13 @@
                 
                 <div class="toc-section">
                     <button class="toc-parent" data-section="advanced">
-                        <span class="toc-icon">+</span>
+                        <span class="toc-icon">-</span>
                         <span class="toc-label">Advanced Features</span>
                     </button>
-                    <div class="toc-children">
+                    <div class="toc-children active">
                         <a href="ai-assistant.html" class="toc-item">AI Assistant</a>
                         <a href="html-preview.html" class="toc-item">HTML Preview & CSS</a>
-                        <a href="paper-layout.html" class="toc-item">Paper Layout</a>
+                        <a href="paper-layout.html" class="toc-item active">Paper Layout</a>
                         <a href="validation.html" class="toc-item">Markdown Validation</a>
                         <a href="beautify.html" class="toc-item">Beautify & Format</a>
                         <a href="media.html" class="toc-item">Media Handling</a>
@@ -83,9 +82,7 @@
             </nav>
         </aside>
         
-        <!-- Main Content -->
         <main class="docs-content">
-            <!-- Ask More Button -->
             <div class="ask-more-container">
                 <button class="ask-more-button" id="ask-more-btn">Ask More</button>
                 <div class="ask-more-dropdown">
@@ -95,92 +92,86 @@
             </div>
             
             <article class="docs-article">
-                <h1 id="interface-overview">Interface Overview</h1>
+                <h1 id="paper-layout">Paper Layout</h1>
                 
-                <p class="lead">DocMark's interface is designed for maximum productivity with a clean, distraction-free layout.</p>
+                <p class="lead">Preview your document in a realistic paper format with pagination, perfect for preparing documents for print or PDF export.</p>
                 
                 <section class="content-section">
-                    <h2 id="main-components">Main Components</h2>
-                    
-                    <h3 id="header-toolbar">Header Toolbar</h3>
-                    <p>The top toolbar contains all essential controls:</p>
+                    <h2 id="what-is-paper-layout">What is Paper Layout?</h2>
+                    <p>Paper Layout displays your markdown as it would appear on printed pages. This helps you:</p>
                     <ul>
-                        <li><strong>File Operations</strong> - New, Open, Save, Import</li>
-                        <li><strong>Export Options</strong> - PDF, HTML, Markdown</li>
-                        <li><strong>View Controls</strong> - Layout, Theme, Style selector</li>
-                        <li><strong>Tools</strong> - Validation, Beautify, TOC, Help</li>
-                    </ul>
-                    
-                    <h3 id="editor-pane">Editor Pane</h3>
-                    <p>The left pane features Monaco Editor with:</p>
-                    <ul>
-                        <li>Syntax highlighting for markdown</li>
-                        <li>Line numbers and code folding</li>
-                        <li>Auto-completion and snippets</li>
-                        <li>Find and replace functionality</li>
-                    </ul>
-                    
-                    <h3 id="preview-pane">Preview Pane</h3>
-                    <p>The right pane shows your rendered document with:</p>
-                    <ul>
-                        <li>Real-time updates as you type</li>
-                        <li>Multiple style themes</li>
-                        <li>Click-to-navigate to source</li>
-                        <li>Scroll synchronization</li>
+                        <li>See exactly how content will break across pages</li>
+                        <li>Adjust formatting before PDF export</li>
+                        <li>Ensure proper page breaks and spacing</li>
+                        <li>Preview professional document layout</li>
                     </ul>
                 </section>
                 
                 <section class="content-section">
-                    <h2 id="layout-options">Layout Options</h2>
-                    <p>DocMark supports multiple layout configurations:</p>
+                    <h2 id="enabling-paper-layout">Enabling Paper Layout</h2>
+                    <p>Click the Paper Layout toggle button in the toolbar to switch between web and paper view.</p>
                     
+                    <h3 id="paper-layout-features">Features</h3>
                     <ul>
-                        <li><strong>Side-by-Side</strong> - Editor on left, preview on right (default)</li>
-                        <li><strong>Stacked</strong> - Editor on top, preview on bottom</li>
-                        <li><strong>Editor Only</strong> - Full-width editor for focused writing</li>
-                        <li><strong>Preview Only</strong> - Full-width preview for presentation</li>
+                        <li><strong>Realistic Pages</strong> - Standard letter or A4 size pages</li>
+                        <li><strong>Pagination</strong> - Automatic page breaks</li>
+                        <li><strong>Page Navigation</strong> - Jump between pages</li>
+                        <li><strong>Zoom Control</strong> - Adjust zoom level for better viewing</li>
+                        <li><strong>Live Updates</strong> - Changes update in real-time</li>
                     </ul>
-                    
-                    <p>Resize panes by dragging the divider between them.</p>
                 </section>
                 
                 <section class="content-section">
-                    <h2 id="side-panels">Side Panels</h2>
-                    
-                    <h3 id="cheatsheet-panel">Markdown Cheatsheet</h3>
-                    <p>Quick reference for markdown syntax, accessible from the toolbar.</p>
-                    
-                    <h3 id="toc-panel">Table of Contents</h3>
-                    <p>Auto-generated navigation based on your document headings.</p>
+                    <h2 id="page-navigation">Page Navigation</h2>
+                    <p>When in Paper Layout mode, use the page navigation controls:</p>
+                    <ul>
+                        <li><strong>Previous/Next</strong> - Navigate between pages</li>
+                        <li><strong>Page Counter</strong> - Shows current page and total pages</li>
+                        <li><strong>Jump to Page</strong> - Enter page number to jump directly</li>
+                    </ul>
                 </section>
                 
                 <section class="content-section">
-                    <h2 id="next-steps">Explore Features</h2>
+                    <h2 id="zoom-control">Zoom Control</h2>
+                    <p>Adjust the zoom level to see more or less of the page:</p>
+                    <ul>
+                        <li><strong>Zoom In</strong> - See more detail</li>
+                        <li><strong>Zoom Out</strong> - See full page</li>
+                        <li><strong>Fit to Width</strong> - Adjust to window width</li>
+                        <li><strong>Fit to Page</strong> - Show entire page</li>
+                    </ul>
+                </section>
+                
+                <section class="content-section">
+                    <h2 id="best-practices">Best Practices</h2>
+                    <ul>
+                        <li>Use Paper Layout before exporting to PDF to check formatting</li>
+                        <li>Adjust content if pages break awkwardly</li>
+                        <li>Use page breaks in markdown to control pagination</li>
+                        <li>Check all pages before final export</li>
+                    </ul>
+                </section>
+                
+                <section class="content-section">
+                    <h2 id="next-steps">Related Topics</h2>
                     
                     <div class="quick-links">
-                        <a href="editor.html" class="quick-link-card">
-                            <h3>Editor Features</h3>
-                            <p>Learn about editing tools</p>
-                        </a>
-                        <a href="live-preview.html" class="quick-link-card">
-                            <h3>Live Preview</h3>
-                            <p>Real-time rendering explained</p>
+                        <a href="pdf-export.html" class="quick-link-card">
+                            <h3>PDF Export</h3>
+                            <p>Export to PDF</p>
                         </a>
                         <a href="themes.html" class="quick-link-card">
                             <h3>Themes & Styles</h3>
-                            <p>Customize your preview</p>
+                            <p>Customize appearance</p>
                         </a>
                     </div>
                 </section>
             </article>
         </main>
         
-        <!-- Right Sidebar - Page Index -->
         <aside class="docs-index">
             <div class="index-header">On This Page</div>
-            <nav class="page-index">
-                <!-- Auto-generated by JavaScript -->
-            </nav>
+            <nav class="page-index"></nav>
         </aside>
     </div>
     

@@ -3,12 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Interface Overview - DocMark Documentation</title>
+    <title>AI Assistant - DocMark Documentation</title>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
     <div class="docs-layout">
-        <!-- Left Sidebar - TOC Tree -->
         <aside class="docs-sidebar">
             <div class="docs-header">
                 <h1>DocMark</h1>
@@ -18,13 +17,13 @@
             <nav class="docs-toc">
                 <div class="toc-section">
                     <button class="toc-parent" data-section="getting-started">
-                        <span class="toc-icon">-</span>
+                        <span class="toc-icon">+</span>
                         <span class="toc-label">Getting Started</span>
                     </button>
-                    <div class="toc-children active">
+                    <div class="toc-children">
                         <a href="index.html" class="toc-item">Introduction</a>
                         <a href="quick-start.html" class="toc-item">Quick Start</a>
-                        <a href="interface.html" class="toc-item active">Interface Overview</a>
+                        <a href="interface.html" class="toc-item">Interface Overview</a>
                     </div>
                 </div>
                 
@@ -43,11 +42,11 @@
                 
                 <div class="toc-section">
                     <button class="toc-parent" data-section="advanced">
-                        <span class="toc-icon">+</span>
+                        <span class="toc-icon">-</span>
                         <span class="toc-label">Advanced Features</span>
                     </button>
-                    <div class="toc-children">
-                        <a href="ai-assistant.html" class="toc-item">AI Assistant</a>
+                    <div class="toc-children active">
+                        <a href="ai-assistant.html" class="toc-item active">AI Assistant</a>
                         <a href="html-preview.html" class="toc-item">HTML Preview & CSS</a>
                         <a href="paper-layout.html" class="toc-item">Paper Layout</a>
                         <a href="validation.html" class="toc-item">Markdown Validation</a>
@@ -83,9 +82,7 @@
             </nav>
         </aside>
         
-        <!-- Main Content -->
         <main class="docs-content">
-            <!-- Ask More Button -->
             <div class="ask-more-container">
                 <button class="ask-more-button" id="ask-more-btn">Ask More</button>
                 <div class="ask-more-dropdown">
@@ -95,92 +92,113 @@
             </div>
             
             <article class="docs-article">
-                <h1 id="interface-overview">Interface Overview</h1>
+                <h1 id="ai-assistant">AI Assistant</h1>
                 
-                <p class="lead">DocMark's interface is designed for maximum productivity with a clean, distraction-free layout.</p>
+                <p class="lead">Integrate with AI models like ChatGPT, Claude, and Gemini to enhance your writing and content creation directly within DocMark.</p>
                 
                 <section class="content-section">
-                    <h2 id="main-components">Main Components</h2>
+                    <h2 id="getting-started">Getting Started</h2>
+                    <p>The AI Assistant panel is accessible from the toolbar. To use it, you'll need to configure an AI provider with your API key.</p>
                     
-                    <h3 id="header-toolbar">Header Toolbar</h3>
-                    <p>The top toolbar contains all essential controls:</p>
-                    <ul>
-                        <li><strong>File Operations</strong> - New, Open, Save, Import</li>
-                        <li><strong>Export Options</strong> - PDF, HTML, Markdown</li>
-                        <li><strong>View Controls</strong> - Layout, Theme, Style selector</li>
-                        <li><strong>Tools</strong> - Validation, Beautify, TOC, Help</li>
-                    </ul>
+                    <h3 id="setup-api-key">Setup Your API Key</h3>
+                    <ol class="step-list">
+                        <li>
+                            <strong>Open AI Settings</strong>
+                            <p>Click the AI Assistant icon in the toolbar to open the panel</p>
+                        </li>
+                        <li>
+                            <strong>Add API Key</strong>
+                            <p>Go to Settings and enter your API key for your chosen provider (OpenAI, Anthropic, Google, etc.)</p>
+                        </li>
+                        <li>
+                            <strong>Test Connection</strong>
+                            <p>Click "Test API Key" to verify your credentials are valid</p>
+                        </li>
+                    </ol>
                     
-                    <h3 id="editor-pane">Editor Pane</h3>
-                    <p>The left pane features Monaco Editor with:</p>
-                    <ul>
-                        <li>Syntax highlighting for markdown</li>
-                        <li>Line numbers and code folding</li>
-                        <li>Auto-completion and snippets</li>
-                        <li>Find and replace functionality</li>
-                    </ul>
+                    <div class="note-box">
+                        <strong>Security Note</strong>
+                        <p>Your API keys are stored locally in your browser and never sent to our servers. All communication is direct with the AI provider.</p>
+                    </div>
+                </section>
+                
+                <section class="content-section">
+                    <h2 id="quick-actions">Quick Actions</h2>
+                    <p>Use quick action buttons to instantly improve your content:</p>
                     
-                    <h3 id="preview-pane">Preview Pane</h3>
-                    <p>The right pane shows your rendered document with:</p>
                     <ul>
-                        <li>Real-time updates as you type</li>
-                        <li>Multiple style themes</li>
-                        <li>Click-to-navigate to source</li>
-                        <li>Scroll synchronization</li>
+                        <li><strong>Improve Writing</strong> - Enhance clarity and readability</li>
+                        <li><strong>Fix Grammar</strong> - Correct spelling and grammar errors</li>
+                        <li><strong>Make Shorter</strong> - Condense content while preserving meaning</li>
+                        <li><strong>Make Longer</strong> - Expand content with more detail</li>
+                        <li><strong>Simplify</strong> - Use simpler language and shorter sentences</li>
+                        <li><strong>Professional Tone</strong> - Adjust tone for business context</li>
+                        <li><strong>Casual Tone</strong> - Make content more conversational</li>
                     </ul>
                 </section>
                 
                 <section class="content-section">
-                    <h2 id="layout-options">Layout Options</h2>
-                    <p>DocMark supports multiple layout configurations:</p>
+                    <h2 id="chat-interface">Chat Interface</h2>
+                    <p>For more complex requests, use the chat interface to have a conversation with the AI:</p>
                     
+                    <ol class="step-list">
+                        <li>
+                            <strong>Select Text (Optional)</strong>
+                            <p>Highlight text in the editor to include it in your prompt</p>
+                        </li>
+                        <li>
+                            <strong>Type Your Request</strong>
+                            <p>Ask the AI to help with writing, editing, brainstorming, or any other task</p>
+                        </li>
+                        <li>
+                            <strong>Insert Response</strong>
+                            <p>Click "Insert" to add the AI's response to your document</p>
+                        </li>
+                    </ol>
+                </section>
+                
+                <section class="content-section">
+                    <h2 id="supported-providers">Supported AI Providers</h2>
                     <ul>
-                        <li><strong>Side-by-Side</strong> - Editor on left, preview on right (default)</li>
-                        <li><strong>Stacked</strong> - Editor on top, preview on bottom</li>
-                        <li><strong>Editor Only</strong> - Full-width editor for focused writing</li>
-                        <li><strong>Preview Only</strong> - Full-width preview for presentation</li>
+                        <li><strong>OpenAI</strong> - ChatGPT (GPT-4, GPT-3.5)</li>
+                        <li><strong>Anthropic</strong> - Claude</li>
+                        <li><strong>Google</strong> - Gemini</li>
                     </ul>
                     
-                    <p>Resize panes by dragging the divider between them.</p>
+                    <p>Each provider requires its own API key, which you can obtain from their respective websites.</p>
                 </section>
                 
                 <section class="content-section">
-                    <h2 id="side-panels">Side Panels</h2>
-                    
-                    <h3 id="cheatsheet-panel">Markdown Cheatsheet</h3>
-                    <p>Quick reference for markdown syntax, accessible from the toolbar.</p>
-                    
-                    <h3 id="toc-panel">Table of Contents</h3>
-                    <p>Auto-generated navigation based on your document headings.</p>
+                    <h2 id="best-practices">Best Practices</h2>
+                    <ul>
+                        <li>Be specific in your requests for better results</li>
+                        <li>Use quick actions for common tasks to save time</li>
+                        <li>Review AI-generated content before finalizing</li>
+                        <li>Combine AI assistance with your own editing for best results</li>
+                        <li>Use the chat interface for complex or creative tasks</li>
+                    </ul>
                 </section>
                 
                 <section class="content-section">
-                    <h2 id="next-steps">Explore Features</h2>
+                    <h2 id="next-steps">Related Topics</h2>
                     
                     <div class="quick-links">
                         <a href="editor.html" class="quick-link-card">
                             <h3>Editor Features</h3>
                             <p>Learn about editing tools</p>
                         </a>
-                        <a href="live-preview.html" class="quick-link-card">
-                            <h3>Live Preview</h3>
-                            <p>Real-time rendering explained</p>
-                        </a>
-                        <a href="themes.html" class="quick-link-card">
-                            <h3>Themes & Styles</h3>
-                            <p>Customize your preview</p>
+                        <a href="tips.html" class="quick-link-card">
+                            <h3>Tips & Best Practices</h3>
+                            <p>Writing tips and workflows</p>
                         </a>
                     </div>
                 </section>
             </article>
         </main>
         
-        <!-- Right Sidebar - Page Index -->
         <aside class="docs-index">
             <div class="index-header">On This Page</div>
-            <nav class="page-index">
-                <!-- Auto-generated by JavaScript -->
-            </nav>
+            <nav class="page-index"></nav>
         </aside>
     </div>
     

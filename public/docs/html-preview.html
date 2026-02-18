@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HTML Preview & CSS - DocMark Documentation</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="docs-layout">
+        <aside class="docs-sidebar">
+            <div class="docs-header">
+                <h1>DocMark</h1>
+                <p class="docs-subtitle">Documentation</p>
+            </div>
+            
+            <nav class="docs-toc">
+                <div class="toc-section">
+                    <button class="toc-parent" data-section="getting-started">
+                        <span class="toc-icon">+</span>
+                        <span class="toc-label">Getting Started</span>
+                    </button>
+                    <div class="toc-children">
+                        <a href="index.html" class="toc-item">Introduction</a>
+                        <a href="quick-start.html" class="toc-item">Quick Start</a>
+                        <a href="interface.html" class="toc-item">Interface Overview</a>
+                    </div>
+                </div>
+                
+                <div class="toc-section">
+                    <button class="toc-parent" data-section="core-features">
+                        <span class="toc-icon">+</span>
+                        <span class="toc-label">Core Features</span>
+                    </button>
+                    <div class="toc-children">
+                        <a href="editor.html" class="toc-item">Editor</a>
+                        <a href="live-preview.html" class="toc-item">Live Preview</a>
+                        <a href="synchronization.html" class="toc-item">Synchronization</a>
+                        <a href="themes.html" class="toc-item">Themes & Styles</a>
+                    </div>
+                </div>
+                
+                <div class="toc-section">
+                    <button class="toc-parent" data-section="advanced">
+                        <span class="toc-icon">-</span>
+                        <span class="toc-label">Advanced Features</span>
+                    </button>
+                    <div class="toc-children active">
+                        <a href="ai-assistant.html" class="toc-item">AI Assistant</a>
+                        <a href="html-preview.html" class="toc-item active">HTML Preview & CSS</a>
+                        <a href="paper-layout.html" class="toc-item">Paper Layout</a>
+                        <a href="validation.html" class="toc-item">Markdown Validation</a>
+                        <a href="beautify.html" class="toc-item">Beautify & Format</a>
+                        <a href="media.html" class="toc-item">Media Handling</a>
+                        <a href="toc.html" class="toc-item">Table of Contents</a>
+                    </div>
+                </div>
+                
+                <div class="toc-section">
+                    <button class="toc-parent" data-section="export">
+                        <span class="toc-icon">+</span>
+                        <span class="toc-label">Export & Sharing</span>
+                    </button>
+                    <div class="toc-children">
+                        <a href="pdf-export.html" class="toc-item">PDF Export</a>
+                        <a href="html-export.html" class="toc-item">HTML Export</a>
+                        <a href="markdown-export.html" class="toc-item">Markdown Export</a>
+                    </div>
+                </div>
+                
+                <div class="toc-section">
+                    <button class="toc-parent" data-section="reference">
+                        <span class="toc-icon">+</span>
+                        <span class="toc-label">Reference</span>
+                    </button>
+                    <div class="toc-children">
+                        <a href="markdown-syntax.html" class="toc-item">Markdown Syntax</a>
+                        <a href="keyboard-shortcuts.html" class="toc-item">Keyboard Shortcuts</a>
+                        <a href="tips.html" class="toc-item">Tips & Best Practices</a>
+                    </div>
+                </div>
+            </nav>
+        </aside>
+        
+        <main class="docs-content">
+            <div class="ask-more-container">
+                <button class="ask-more-button" id="ask-more-btn">Ask More</button>
+                <div class="ask-more-dropdown">
+                    <button id="copy-markdown-btn">Copy as Markdown</button>
+                    <a href="#" id="ask-chatgpt-btn" target="_blank">Ask ChatGPT</a>
+                </div>
+            </div>
+            
+            <article class="docs-article">
+                <h1 id="html-preview">HTML Preview & CSS Support</h1>
+                
+                <p class="lead">DocMark supports full HTML documents with custom CSS styling, perfect for web designers and developers.</p>
+                
+                <section class="content-section">
+                    <h2 id="html-preview-mode">HTML Preview Mode</h2>
+                    <p>DocMark automatically detects full HTML documents and renders them in a dedicated preview mode:</p>
+                    
+                    <ul>
+                        <li>Paste or import complete HTML documents</li>
+                        <li>Full-screen preview with live rendering</li>
+                        <li>Support for JavaScript and interactive elements</li>
+                        <li>Automatic CSS injection and linking</li>
+                    </ul>
+                    
+                    <h3 id="detecting-html">How HTML is Detected</h3>
+                    <p>DocMark recognizes HTML documents by checking for:</p>
+                    <ul>
+                        <li><code>&lt;!DOCTYPE html&gt;</code> declaration</li>
+                        <li><code>&lt;html&gt;</code> tag at the start of content</li>
+                    </ul>
+                    
+                    <p>When detected, the preview automatically switches to HTML mode.</p>
+                </section>
+                
+                <section class="content-section">
+                    <h2 id="css-support">CSS Support</h2>
+                    <p>DocMark provides multiple ways to include CSS with your HTML:</p>
+                    
+                    <h3 id="css-upload">Upload CSS Files</h3>
+                    <p>Use the CSS upload button (blue icon) in the toolbar to upload external CSS files. The CSS will be automatically injected into your HTML preview.</p>
+                    
+                    <h3 id="css-comments">CSS via Comments</h3>
+                    <p>Reference CSS files using HTML comments in your document:</p>
+                    <pre><code>&lt;!-- CSS: path/to/styles.css --&gt;</code></pre>
+                    <p>DocMark will automatically link these CSS files to your HTML.</p>
+                    
+                    <h3 id="inline-css">Inline CSS</h3>
+                    <p>Include <code>&lt;style&gt;</code> tags directly in your HTML:</p>
+                    <pre><code>&lt;style&gt;
+  body { font-family: Arial, sans-serif; }
+  h1 { color: #333; }
+&lt;/style&gt;</code></pre>
+                </section>
+                
+                <section class="content-section">
+                    <h2 id="html-import">Importing HTML Files</h2>
+                    <p>You can import HTML files directly:</p>
+                    
+                    <ol class="step-list">
+                        <li>
+                            <strong>Click Import</strong>
+                            <p>Use the Import button in the toolbar</p>
+                        </li>
+                        <li>
+                            <strong>Select HTML File</strong>
+                            <p>Choose your HTML file from your computer</p>
+                        </li>
+                        <li>
+                            <strong>Upload CSS (if needed)</strong>
+                            <p>If your HTML references external CSS, use the CSS upload button</p>
+                        </li>
+                    </ol>
+                    
+                    <div class="note-box">
+                        <strong>Tip</strong>
+                        <p>If your HTML file references a CSS file, DocMark will notify you to upload it for proper styling.</p>
+                    </div>
+                </section>
+                
+                <section class="content-section">
+                    <h2 id="html-features">Supported HTML Features</h2>
+                    <ul>
+                        <li>All standard HTML5 elements</li>
+                        <li>CSS styling and animations</li>
+                        <li>JavaScript execution (sandboxed for security)</li>
+                        <li>Forms and interactive elements</li>
+                        <li>Media elements (images, video, audio)</li>
+                        <li>Embedded content (iframes, etc.)</li>
+                    </ul>
+                </section>
+                
+                <section class="content-section">
+                    <h2 id="security">Security</h2>
+                    <p>HTML preview runs in a sandboxed iframe with restricted permissions:</p>
+                    <ul>
+                        <li>Scripts run in isolated context</li>
+                        <li>No access to your local files</li>
+                        <li>No access to other websites' data</li>
+                        <li>Dangerous content is sanitized</li>
+                    </ul>
+                </section>
+                
+                <section class="content-section">
+                    <h2 id="use-cases">Use Cases</h2>
+                    <ul>
+                        <li><strong>Web Design</strong> - Preview and refine web designs</li>
+                        <li><strong>Email Templates</strong> - Design and test email HTML</li>
+                        <li><strong>Documentation</strong> - Create interactive documentation</li>
+                        <li><strong>Prototyping</strong> - Quick prototyping with HTML/CSS/JS</li>
+                    </ul>
+                </section>
+                
+                <section class="content-section">
+                    <h2 id="next-steps">Related Topics</h2>
+                    
+                    <div class="quick-links">
+                        <a href="html-export.html" class="quick-link-card">
+                            <h3>HTML Export</h3>
+                            <p>Export as HTML file</p>
+                        </a>
+                        <a href="media.html" class="quick-link-card">
+                            <h3>Media Handling</h3>
+                            <p>Working with images and media</p>
+                        </a>
+                    </div>
+                </section>
+            </article>
+        </main>
+        
+        <aside class="docs-index">
+            <div class="index-header">On This Page</div>
+            <nav class="page-index"></nav>
+        </aside>
+    </div>
+    
+    <script src="docs.js"></script>
+</body>
+</html>
