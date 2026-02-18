@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF Import - DocMark Documentation</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="doc-container">
+        <nav class="doc-nav">
+            <a href="index.html">← Back to Documentation</a>
+        </nav>
+
+        <main class="doc-content">
+            <h1>📄 PDF Import</h1>
+            <p class="lead">Import and convert PDF documents to editable Markdown with automatic table detection.</p>
+
+            <section class="doc-section">
+                <h2>Overview</h2>
+                <p>The PDF Import feature allows you to extract content from PDF files and convert it to Markdown format. It intelligently detects document structure including headings, paragraphs, lists, and tables.</p>
+                
+                <div class="info-box">
+                    <strong>✨ Key Features:</strong>
+                    <ul>
+                        <li>Automatic table detection and conversion</li>
+                        <li>Structure preservation (headings, lists, paragraphs)</li>
+                        <li>Multi-page PDF support</li>
+                        <li>Preview before insertion</li>
+                        <li>No file size limits</li>
+                    </ul>
+                </div>
+            </section>
+
+            <section class="doc-section">
+                <h2>How to Import a PDF</h2>
+                
+                <h3>Step 1: Open PDF Import</h3>
+                <p>Click the <strong>PDF icon (📄)</strong> button in the top-right header toolbar.</p>
+                
+                <h3>Step 2: Select PDF File</h3>
+                <p>Choose a PDF file from your computer. Supported formats:</p>
+                <ul>
+                    <li>Text-based PDFs (preferred)</li>
+                    <li>PDFs with tables and structured content</li>
+                    <li>Multi-page documents</li>
+                </ul>
+                
+                <h3>Step 3: Preview Content</h3>
+                <p>The extracted content will be displayed in a preview modal. Review the conversion quality before inserting.</p>
+                
+                <h3>Step 4: Insert into Editor</h3>
+                <p>Click <strong>"Insert"</strong> to add the converted Markdown to your document at the current cursor position.</p>
+            </section>
+
+            <section class="doc-section">
+                <h2>What Gets Converted</h2>
+                
+                <h3>✅ Supported Elements</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Element</th>
+                            <th>Conversion</th>
+                            <th>Quality</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Headings</td>
+                            <td><code># Heading</code></td>
+                            <td>Excellent</td>
+                        </tr>
+                        <tr>
+                            <td>Paragraphs</td>
+                            <td>Plain text</td>
+                            <td>Excellent</td>
+                        </tr>
+                        <tr>
+                            <td>Lists</td>
+                            <td><code>- Item</code> or <code>1. Item</code></td>
+                            <td>Excellent</td>
+                        </tr>
+                        <tr>
+                            <td>Tables</td>
+                            <td>Markdown tables</td>
+                            <td>Good</td>
+                        </tr>
+                        <tr>
+                            <td>Bold/Italic</td>
+                            <td><code>**bold**</code> <code>*italic*</code></td>
+                            <td>Good</td>
+                        </tr>
+                        <tr>
+                            <td>Links</td>
+                            <td><code>[text](url)</code></td>
+                            <td>Good</td>
+                        </tr>
+                    </tbody>
+                </table>
+                
+                <h3>⚠️ Limitations</h3>
+                <ul>
+                    <li><strong>Images:</strong> Not yet supported (coming soon)</li>
+                    <li><strong>Complex tables:</strong> Merged cells may not convert perfectly</li>
+                    <li><strong>Multi-column layouts:</strong> Converted to single column</li>
+                    <li><strong>Scanned PDFs:</strong> Text extraction may be limited</li>
+                </ul>
+            </section>
+
+            <section class="doc-section">
+                <h2>Table Detection</h2>
+                <p>The PDF import feature uses intelligent spatial analysis to detect tables in your PDF:</p>
+                
+                <h3>How It Works</h3>
+                <ol>
+                    <li><strong>Text Position Analysis:</strong> Analyzes X/Y coordinates of text</li>
+                    <li><strong>Column Detection:</strong> Groups text into columns based on alignment</li>
+                    <li><strong>Row Grouping:</strong> Identifies rows by vertical position</li>
+                    <li><strong>Markdown Conversion:</strong> Generates proper Markdown table syntax</li>
+                </ol>
+                
+                <h3>Best Results</h3>
+                <p>For optimal table detection:</p>
+                <ul>
+                    <li>Use PDFs with clear column spacing</li>
+                    <li>Avoid PDFs with heavily merged cells</li>
+                    <li>Simple table layouts work best</li>
+                </ul>
+                
+                <div class="example-box">
+                    <h4>Example Output:</h4>
+                    <pre><code>| Column 1 | Column 2 | Column 3 |
+| :--- | :--- | :--- |
+| Data 1 | Data 2 | Data 3 |
+| Data 4 | Data 5 | Data 6 |</code></pre>
+                </div>
+            </section>
+
+            <section class="doc-section">
+                <h2>Tips for Best Results</h2>
+                
+                <h3>📋 Before Importing</h3>
+                <ul>
+                    <li>Use text-based PDFs (not scanned images)</li>
+                    <li>Ensure PDF has selectable text</li>
+                    <li>Simple layouts convert better than complex ones</li>
+                </ul>
+                
+                <h3>✏️ After Importing</h3>
+                <ul>
+                    <li>Review the converted content in preview</li>
+                    <li>Check table alignment and adjust if needed</li>
+                    <li>Verify heading hierarchy</li>
+                    <li>Add missing formatting manually</li>
+                </ul>
+                
+                <h3>🔧 Troubleshooting</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Issue</th>
+                            <th>Solution</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>No text extracted</td>
+                            <td>PDF may be scanned/image-based. Try OCR software first.</td>
+                        </tr>
+                        <tr>
+                            <td>Tables not detected</td>
+                            <td>Columns may be too close. Manually format as table.</td>
+                        </tr>
+                        <tr>
+                            <td>Misaligned cells</td>
+                            <td>Multi-line cells may split. Manually merge rows.</td>
+                        </tr>
+                        <tr>
+                            <td>Missing formatting</td>
+                            <td>Add bold/italic manually using Markdown syntax.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </section>
+
+            <section class="doc-section">
+                <h2>Technical Details</h2>
+                
+                <h3>Conversion Pipeline</h3>
+                <pre><code>PDF → Text Extraction → Structure Detection → HTML → Markdown</code></pre>
+                
+                <h3>Technologies Used</h3>
+                <ul>
+                    <li><strong>PDF.js:</strong> Mozilla's PDF rendering library</li>
+                    <li><strong>Spatial Analysis:</strong> Custom column detection algorithm</li>
+                    <li><strong>Markdown Conversion:</strong> Semantic HTML to Markdown</li>
+                </ul>
+                
+                <h3>Privacy & Security</h3>
+                <ul>
+                    <li>PDFs are processed locally on your machine</li>
+                    <li>No data is sent to external servers</li>
+                    <li>Files are not stored permanently</li>
+                    <li>Temporary files are cleaned up automatically</li>
+                </ul>
+            </section>
+
+            <section class="doc-section">
+                <h2>Keyboard Shortcuts</h2>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Action</th>
+                            <th>Shortcut</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Open PDF Import</td>
+                            <td>Click PDF icon in header</td>
+                        </tr>
+                        <tr>
+                            <td>Close Preview</td>
+                            <td><code>Esc</code> or click Cancel</td>
+                        </tr>
+                        <tr>
+                            <td>Insert Content</td>
+                            <td>Click Insert button</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </section>
+
+            <section class="doc-section">
+                <h2>Related Features</h2>
+                <ul>
+                    <li><a href="markdown-export.html">Markdown Export</a> - Export your document as Markdown</li>
+                    <li><a href="html-export.html">HTML Export</a> - Export as HTML</li>
+                    <li><a href="pdf-export.html">PDF Export</a> - Export as PDF</li>
+                    <li><a href="media.html">Media Handling</a> - Working with images and files</li>
+                </ul>
+            </section>
+
+            <section class="doc-section">
+                <h2>FAQ</h2>
+                
+                <h3>Can I import scanned PDFs?</h3>
+                <p>Scanned PDFs (images) have limited support. For best results, use OCR software to convert scanned PDFs to text-based PDFs first.</p>
+                
+                <h3>Why are my tables misaligned?</h3>
+                <p>Tables with multi-line cells or wrapped text may not align perfectly. The feature detects tables by text position, not visual borders. You can manually adjust the Markdown table after import.</p>
+                
+                <h3>Can I import images from PDFs?</h3>
+                <p>Image extraction is not yet supported but is planned for a future update.</p>
+                
+                <h3>Is there a file size limit?</h3>
+                <p>No hard limit, but very large PDFs (100+ pages) may take longer to process.</p>
+                
+                <h3>Can I import password-protected PDFs?</h3>
+                <p>Not currently supported. Remove password protection before importing.</p>
+            </section>
+        </main>
+    </div>
+
+    <script src="docs.js"></script>
+</body>
+</html>

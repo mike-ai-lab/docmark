@@ -46,6 +46,14 @@ Each style works everywhere—in the preview, in PDF exports, and in HTML export
 
 ### 📤 Export Like a Pro
 
+#### PDF Import & Conversion
+- Import PDF documents and convert to editable Markdown
+- Automatic table detection and conversion
+- Structure preservation (headings, lists, paragraphs)
+- Multi-page PDF support
+- Preview before insertion
+- Intelligent spatial analysis for table extraction
+
 #### PDF Export with Intelligence
 - Two export methods: quick jsPDF export or pixel-perfect browser print
 - Automatic headers and footers from YAML metadata
@@ -193,7 +201,9 @@ npm run build
 ```
 
 ### Deploy
-The app is configured for Netlify deployment. Simply connect your repository to Netlify and it will automatically build and deploy from the `dist/` directory.
+The app is configured for production deployment. Build the app and upload the `dist/` directory to your web server.
+
+For detailed deployment instructions to **mimevents.com**, see [DEPLOY-TO-MIMEVENTS.md](DEPLOY-TO-MIMEVENTS.md).
 
 ---
 
@@ -242,6 +252,7 @@ No backend, no sign-up, no complexity. Just open DocMark and start writing.
 ## 🎯 Key Features Summary
 
 ✅ Real-time preview with bidirectional sync  
+✅ PDF import with table detection  
 ✅ Markdown validation with auto-fix  
 ✅ One-click beautify & formatting  
 ✅ Drag & drop media embedding  
@@ -258,4 +269,4 @@ No backend, no sign-up, no complexity. Just open DocMark and start writing.
 
 ---
 
-**Try it now:** [DocMark Live Demo](https://docmark.netlify.app)
+**Live at:** [https://mimevents.com](https://mimevents.com)
