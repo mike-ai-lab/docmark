@@ -70,6 +70,7 @@ class AIChatUI {
                         </button>
                     </div>
                 </div>
+                <div class="ai-chat-resizer" id="ai-chat-resizer"></div>
             `;
             
             // Insert before TOC panel or at end of container
@@ -136,6 +137,77 @@ class AIChatUI {
         
         // Expose globally for context button
         window.aiChatUI = this;
+
+        // Setup independent resize behavior for the chat panel
+        this.setupResizeHandle();
+    }
+
+    setupResizeHandle() {
+        if (!this.panel) return;
+
+        const resizer = this.panel.querySelector('#ai-chat-resizer');
+        if (!resizer) return;
+
+        let isDragging = false;
+        let startX = 0;
+        let startWidth = 0;
+
+        const MIN_WIDTH = 280;
+        const MAX_WIDTH = 800;
+
+        const onPointerMove = (event) => {
+            if (!isDragging) return;
+
+            const dx = event.clientX - startX;
+            // Dragging to the left should INCREASE chat width
+            let newWidth = startWidth - dx;
+            newWidth = Math.max(MIN_WIDTH, Math.min(MAX_WIDTH, newWidth));
+
+            this.panel.style.width = `${newWidth}px`;
+        };
+
+        const stopDragging = () => {
+            if (!isDragging) return;
+            isDragging = false;
+
+            resizer.classList.remove('dragging');
+
+            document.body.classList.remove('dragging');
+            document.body.style.cursor = '';
+            document.body.style.userSelect = '';
+
+            window.removeEventListener('pointermove', onPointerMove);
+            window.removeEventListener('pointerup', stopDragging);
+            window.removeEventListener('pointercancel', stopDragging);
+        };
+
+        resizer.addEventListener('pointerdown', (event) => {
+            if (!this.panel) return;
+
+            event.preventDefault();
+            event.stopPropagation();
+
+            isDragging = true;
+            startX = event.clientX;
+            startWidth = this.panel.getBoundingClientRect().width;
+
+            resizer.classList.add('dragging');
+
+            // Improve UX during drag
+            document.body.classList.add('dragging');
+            document.body.style.cursor = 'col-resize';
+            document.body.style.userSelect = 'none';
+
+            try {
+                resizer.setPointerCapture(event.pointerId);
+            } catch {
+                // Pointer capture not critical; safe to ignore errors
+            }
+
+            window.addEventListener('pointermove', onPointerMove);
+            window.addEventListener('pointerup', stopDragging);
+            window.addEventListener('pointercancel', stopDragging);
+        });
     }
 
     async sendMessage() {
