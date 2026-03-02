@@ -2,7 +2,7 @@
   "name": "docmark",
   "version": "1.0.0",
   "description": "A powerful markdown editor with live preview, syntax highlighting, and advanced features.",
-  "main": "index.js",
+  "main": "electron-main.js",
   "scripts": {
     "test": "node test-html-rendering-node.js",
     "test:browser": "echo 'Open test-html-rendering-runner.html in your browser'",
@@ -33,6 +33,7 @@
   "devDependencies": {
     "@playwright/test": "^1.58.2",
     "concurrently": "^9.2.1",
+    "electron": "^40.6.1",
     "electron-builder": "^26.8.1",
     "http-server": "^14.1.1",
     "vite": "^6.4.1"
@@ -40,6 +41,7 @@
   "dependencies": {
     "cors": "^2.8.6",
     "dompurify": "^3.2.5",
+    "electron-is-dev": "^3.0.1",
     "express": "^5.2.1",
     "github-markdown-css": "^5.8.1",
     "jsdom": "^25.0.1",

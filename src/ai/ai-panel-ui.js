@@ -40,6 +40,7 @@ class AIPanelUI {
                 <div class="ai-section-title">Quick Actions</div>
                 <button class="ai-action-btn" data-action="improve">Improve Text</button>
                 <button class="ai-action-btn" data-action="grammar">Fix Grammar</button>
+                <button class="ai-action-btn" data-action="fixMarkdown">Fix & Improve Markdown</button>
                 <button class="ai-action-btn" data-action="expand">Expand</button>
                 <button class="ai-action-btn" data-action="summarize">Summarize</button>
                 

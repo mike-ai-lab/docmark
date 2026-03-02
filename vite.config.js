@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite';
 
 export default defineConfig({
+  base: './',
   server: {
     proxy: {
       // Proxy /api requests to the PDF server on port 3000

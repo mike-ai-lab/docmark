@@ -1,6 +1,5 @@
 const { app, BrowserWindow, Menu } = require('electron');
 const path = require('path');
-const isDev = require('electron-is-dev');
 
 let mainWindow;
 
@@ -16,15 +15,9 @@ function createWindow() {
     }
   });
 
-  const startUrl = isDev
-    ? 'http://localhost:5173'
-    : `file://${path.join(__dirname, '../dist/index.html')}`;
-
-  mainWindow.loadURL(startUrl);
-
-  if (isDev) {
-    mainWindow.webContents.openDevTools();
-  }
+  // In production, load from dist folder
+  const startUrl = path.join(__dirname, 'dist', 'index.html');
+  mainWindow.loadFile(startUrl);
 
   mainWindow.on('closed', () => {
     mainWindow = null;

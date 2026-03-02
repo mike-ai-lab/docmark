@@ -194,6 +194,11 @@ CRITICAL MARKDOWN RULES:
         return await this.executeAction('summarize', text, options);
     }
 
+    // Fix and improve markdown
+    async fixMarkdown(text, options = {}) {
+        return await this.executeAction('fixMarkdown', text, options);
+    }
+
     // Generate content
     async generateContent(prompt, options = {}) {
         return await this.executeAction('generate', prompt, options);

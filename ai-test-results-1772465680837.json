@@ -1,0 +1,74 @@
+[
+  {
+    "action": "improve",
+    "title": "Improve Text",
+    "input": "this is a test document with some issues. it has bad grammar and poor structure\n                \n- item one\n- item two\n- item three\n\nthe text needs improvement",
+    "output": "This document requires revision to address several issues with grammar and structure.\n\n- Item One\n- Item Two\n- Item Three\n\nThe text needs refinement to enhance clarity and overall professionalism.",
+    "status": "SUCCESS",
+    "expectedBehavior": "Should rewrite text to be clearer, more professional, and better structured while preserving meaning"
+  },
+  {
+    "action": "grammar",
+    "title": "Fix Grammar",
+    "input": "Their going to the store tommorow. Its important that they brings there bags with them. The store dont have any bags available.",
+    "output": "They're going to the store tomorrow. It's important that they bring their bags with them. The store doesn't have any bags available.",
+    "status": "SUCCESS",
+    "expectedBehavior": "Should correct grammar, spelling, and punctuation errors while preserving style"
+  },
+  {
+    "action": "expand",
+    "title": "Expand Text",
+    "input": "AI is useful. It helps with tasks.",
+    "output": "AI is useful - it can process large amounts of data, recognize patterns, and learn from experience. It helps with tasks such as content creation, customer service, and data analysis. AI systems can also automate repetitive and mundane tasks, freeing up human time for more strategic and creative work.",
+    "status": "SUCCESS",
+    "expectedBehavior": "Should add clarity, context, and detail without changing intent or tone"
+  },
+  {
+    "action": "summarize",
+    "title": "Summarize",
+    "input": "Artificial Intelligence (AI) has revolutionized numerous industries by automating complex tasks, analyzing vast amounts of data, and providing insights that were previously impossible to obtain. Machine learning, a subset of AI, enables systems to learn from data and improve their performance over time without explicit programming. Deep learning, which uses neural networks with multiple layers, has achieved remarkable success in areas such as image recognition, natural language processing, and autonomous vehicles. The impact of AI continues to grow as computational power increases and algorithms become more sophisticated.",
+    "output": "Artificial Intelligence has revolutionized industries by automating tasks, analyzing data, and providing new insights. Machine learning enables systems to learn and improve from data without explicit programming. Deep learning, using neural networks, has achieved success in image recognition, natural language processing, and autonomous vehicles. The AI impact continues to grow with increased computational power and more sophisticated algorithms.",
+    "status": "SUCCESS",
+    "expectedBehavior": "Should produce a concise summary retaining key ideas and essential information"
+  },
+  {
+    "action": "fixCode",
+    "title": "Fix Code",
+    "input": "function calculateTotal(items) {\n    let total = 0\n    for (let i = 0; i <= items.length; i++) {\n        total += items[i].price\n    }\n    return total\n}",
+    "output": "function calculateTotal(items) {\n    let total = 0\n    for (let i = 0; i < items.length; i++) {\n        if (items[i] !== null && items[i] !== undefined) {\n            total += items[i].price\n        }\n    }\n    return total\n}",
+    "status": "SUCCESS",
+    "expectedBehavior": "Should fix bugs (off-by-one error), add missing semicolons, improve code quality"
+  },
+  {
+    "action": "improveCode",
+    "title": "Improve Code",
+    "input": "function getData(url) {\n    var xhr = new XMLHttpRequest();\n    xhr.open('GET', url, false);\n    xhr.send();\n    return JSON.parse(xhr.responseText);\n}",
+    "output": "function fetchData(url) {\n    try {\n        const response = await fetch(url);\n        if (!response.ok) {\n            throw new Error(`HTTP error: ${response.status}`);\n        }\n        return response.json();\n    } catch (error) {\n        console.error('Error:', error.message);\n        throw error;\n    }\n}",
+    "status": "SUCCESS",
+    "expectedBehavior": "Should modernize code (use fetch/async), improve readability and best practices"
+  },
+  {
+    "action": "documentCode",
+    "title": "Document Code",
+    "input": "function fibonacci(n) {\n    if (n <= 1) return n;\n    return fibonacci(n - 1) + fibonacci(n - 2);\n}",
+    "output": "/**\n * Calculates the nth number in the Fibonacci sequence.\n * \n * @param {number} n The position of the number in the Fibonacci sequence.\n * @returns {number} The nth number in the Fibonacci sequence.\n * @throws {Error} If n is not a non-negative integer.\n */\nfunction fibonacci(n) {\n    // Base case: If n is less than or equal to 1, return n immediately.\n    if (n <= 1) return n;\n    \n    // Recursive case: Calculate the nth number as the sum of the two preceding numbers.\n    // This is where the magic of the Fibonacci sequence happens!\n    return fibonacci(n - 1) + fibonacci(n - 2);\n}",
+    "status": "SUCCESS",
+    "expectedBehavior": "Should add comprehensive comments, function descriptions, and parameter explanations"
+  },
+  {
+    "action": "generate",
+    "title": "Generate Content",
+    "input": "Write a brief introduction to Markdown syntax with 3 key features",
+    "output": "#  Markdown Syntax \n Markdown is a lightweight markup language used for formatting text. It's easy to read and write, making it a popular choice for writing online content.\n\n### Key Features\n\n- **Easy to Read**: Markdown text is easy to read and understand, even without formatting knowledge.\n- **Simple to Write**: Markdown syntax is straightforward and simple to learn, making it easy to use.\n- **Flexible Formatting**: Markdown supports a wide range of formatting options, including headers, bold and italic text, and links.\n\n### Basic Syntax\n\n- Headers: `# Heading` for h1, `## Heading` for h2, and so on.\n- Bold: `**text**`\n- Italic: `*text*`\n- Links: `[text](url)`",
+    "status": "SUCCESS",
+    "expectedBehavior": "Should generate valid markdown content with dash (-) for lists, proper headings with spaces"
+  },
+  {
+    "action": "fixMarkdown",
+    "title": "Fix & Improve Markdown",
+    "input": "#My Document\n* item one\n* item two\n  *nested item\n\n##Section Two\nSome text here\n\n###Subsection\nMore content",
+    "output": "# My Document\n- item one\n- item two\n  - nested item\n\n\n## Section Two\n\nSome text here\n\n\n### Subsection\n\nMore content",
+    "status": "SUCCESS",
+    "expectedBehavior": "Should fix formatting (dash for lists, heading spaces) without changing any content"
+  }
+]
