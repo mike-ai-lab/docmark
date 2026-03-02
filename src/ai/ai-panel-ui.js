@@ -1,6 +1,8 @@
 // AI Panel UI - Floating panel with quick actions
 // Manages the AI assistant panel interface
 
+import { enhanceSelect, refreshEnhancedSelect } from '../ui/custom-select.js';
+
 class AIPanelUI {
     constructor(aiManager) {
         this.aiManager = aiManager;
@@ -156,6 +158,12 @@ class AIPanelUI {
         if (previewPane) {
             previewPane.appendChild(panel);
             this.panel = panel;
+
+            // Enhance provider select with custom dropdown
+            const providerSelect = this.panel.querySelector('#ai-provider-select');
+            if (providerSelect) {
+                enhanceSelect(providerSelect);
+            }
         } else {
             console.error('Preview pane not found');
         }
@@ -517,6 +525,7 @@ class AIPanelUI {
         const providerSelect = this.panel?.querySelector('#ai-provider-select');
         if (providerSelect) {
             providerSelect.innerHTML = this.renderProviderOptions();
+            refreshEnhancedSelect(providerSelect);
         }
     }
 

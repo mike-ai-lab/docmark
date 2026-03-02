@@ -9,6 +9,7 @@ import AIPanelUI from './ai/ai-panel-ui.js';
 import AIChatUI from './ai/ai-chat-ui.js';
 // PDF Import
 import PDFImportUI from './pdf-import/pdf-import-ui.js';
+import { enhanceSelect, refreshEnhancedSelect } from './ui/custom-select.js';
 // DISABLED FOR DEPLOYMENT - Inspector and HTML Editor features not finished
 // import { initializeInspector, getInspector, getCurrentDoc } from './inspector-integration.js';
 // import { initInspectorPanel, showInspectorToggle, hideInspectorToggle } from './inspector-panel-ui.js';
@@ -2086,10 +2087,13 @@ let performBeautify = (content) => {
     let initStyleSelector = (settings) => {
         let selector = document.querySelector('#style-selector');
         if (!selector) return;
-        
+
         currentStyle = settings || 'github';
         selector.value = currentStyle;
-        
+
+        // Enhance with custom dropdown UI
+        enhanceSelect(selector);
+
         // Style information for tooltips
         const styleInfo = {
             github: {
@@ -6874,9 +6878,6 @@ ${fontLinkTags}
                 activeResizer.lastLeftRatio = newLeftWidth / (totalWidth - dividerWidth);
             }
         }
-        
-        // Update paper layout scale after resize
-        updatePaperScale();
     });
 
     document.addEventListener('mouseup', () => {
@@ -6893,6 +6894,9 @@ ${fontLinkTags}
                 htmlIframe.style.pointerEvents = 'auto';
             }
             
+            // Update paper layout scale once at the end of the drag
+            updatePaperScale();
+
             activeResizer = null;
         }
     });
@@ -7255,6 +7259,10 @@ ${fontLinkTags}
             if (defaultProviderSelect && settings.defaultProvider) {
                 defaultProviderSelect.value = settings.defaultProvider;
             }
+            // Ensure custom dropdown reflects the stored value
+            if (defaultProviderSelect) {
+                refreshEnhancedSelect(defaultProviderSelect);
+            }
             
             // API keys
             const providers = ['openai', 'claude', 'cerebras', 'groq', 'mistral', 'openrouter', 'google', 'cohere', 'huggingface'];
@@ -7283,6 +7291,9 @@ ${fontLinkTags}
         // Save default provider
         const defaultProviderSelect = document.getElementById('ai-default-provider');
         if (defaultProviderSelect) {
+            // Enhance with custom dropdown UI
+            enhanceSelect(defaultProviderSelect);
+
             defaultProviderSelect.addEventListener('change', (e) => {
                 storage.updateSettings({ defaultProvider: e.target.value });
                 try {

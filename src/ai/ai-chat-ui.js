@@ -1,6 +1,8 @@
 // AI Chat UI - Side panel chat interface
 // Manages chat conversations with AI
 
+import { enhanceSelect } from '../ui/custom-select.js';
+
 class AIChatUI {
     constructor(aiManager) {
         this.aiManager = aiManager;
@@ -30,17 +32,22 @@ class AIChatUI {
             chatPanel.className = 'column ai-chat-pane hidden';
             chatPanel.innerHTML = `
                 <div class="ai-chat-header">
-                    <h3>AI Chat</h3>
-                    <div class="ai-chat-controls">
-                        <select id="ai-chat-provider-select">
+                    <div class="ai-chat-header-left">
+                        <select id="ai-chat-provider-select" class="ai-chat-provider-select">
                             ${this.renderProviderOptions()}
                         </select>
-                        <button class="ai-chat-control-btn" id="ai-chat-clear" title="Clear Chat">
+                    </div>
+                    <div class="ai-chat-controls">
+                        <button class="ai-chat-control-btn" id="ai-chat-new-chat" title="New chat">
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M3 6h18M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
+                                <path d="M12 5v14M5 12h14"/>
                             </svg>
                         </button>
-                        <button class="ai-chat-control-btn" id="ai-chat-close" title="Close">×</button>
+                        <button class="ai-chat-control-btn" id="ai-chat-collapse" title="Collapse chat panel">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="15 18 9 12 15 6"/>
+                            </svg>
+                        </button>
                     </div>
                 </div>
                 
@@ -84,6 +91,12 @@ class AIChatUI {
         }
         
         this.panel = chatPanel;
+        
+        // Enhance provider select with custom dropdown
+        const providerSelect = this.panel.querySelector('#ai-chat-provider-select');
+        if (providerSelect) {
+            enhanceSelect(providerSelect);
+        }
     }
 
     renderProviderOptions() {
@@ -98,12 +111,12 @@ class AIChatUI {
 
     attachEventListeners() {
         if (!this.panel) return;
-        const closeBtn = this.panel.querySelector('#ai-chat-close');
+        const closeBtn = this.panel.querySelector('#ai-chat-collapse');
         closeBtn?.addEventListener('click', () => this.hide());
 
-        // Clear button
-        const clearBtn = this.panel.querySelector('#ai-chat-clear');
-        clearBtn?.addEventListener('click', () => this.clearChat());
+        // New chat button (behaves like clear + new session)
+        const newChatBtn = this.panel.querySelector('#ai-chat-new-chat');
+        newChatBtn?.addEventListener('click', () => this.clearChat());
 
         // Provider selector
         const providerSelect = this.panel.querySelector('#ai-chat-provider-select');
