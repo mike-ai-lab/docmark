@@ -145,6 +145,67 @@ DO NOT:
 MARKDOWN:
 ${text}
 `.trim(),
+
+  paraphrase: (text) => `
+Rewrite the text in different wording while keeping the same meaning.
+Keep the original tone, format, and structure.
+Do NOT add content, headers, or lists unless already present.
+Return ONLY the paraphrased text.
+
+TEXT:
+${text}
+`.trim(),
+
+  simplify: (text) => `
+Simplify the text for easier understanding.
+Use plain language, short sentences, and clear wording.
+Do NOT change meaning or remove important details.
+Preserve existing lists and formatting.
+Return ONLY the simplified text.
+
+TEXT:
+${text}
+`.trim(),
+
+  formalize: (text) => `
+Convert the text into a professional or formal tone.
+Keep the original meaning and structure.
+Do NOT add new sections, content, or examples.
+Return ONLY the formalized text.
+
+TEXT:
+${text}
+`.trim(),
+
+  explainCode: (text) => `
+Provide a clear, plain-language explanation of what this code does.
+Include purpose, input/output, and any important logic.
+Do NOT modify the code itself.
+Return ONLY the explanation as text.
+
+CODE:
+${text}
+`.trim(),
+
+  optimizeCode: (text) => `
+Optimize this code for performance and efficiency.
+Preserve functionality and output.
+Do NOT change language or add unnecessary comments.
+Return ONLY the optimized code.
+
+CODE:
+${text}
+`.trim(),
+
+  testCode: (text) => `
+Generate unit tests or test cases for this code.
+Use standard testing framework for the language.
+Do NOT modify the original code.
+Return ONLY the test code.
+
+CODE:
+${text}
+`.trim(),
 };
 
 export function getPrompt(action, text) {

@@ -138,15 +138,18 @@ class AIManager {
             throw new Error('No message provided');
         }
 
-        // Build conversation context with markdown instruction
-        let prompt = `You are a helpful AI writing assistant for a Markdown editor. Always format your responses in valid Markdown.
+        // Build conversation context with strict instruction
+        let prompt = `You are a helpful AI assistant for a Markdown editor.
 
-CRITICAL MARKDOWN RULES:
-- Use dash (-) for unordered lists, NEVER asterisk (*) or plus (+)
+CRITICAL INSTRUCTIONS:
+- When the user provides a task or instruction, EXECUTE it directly
+- Do NOT explain what you're going to do
+- Do NOT add commentary or meta-text
+- Return ONLY the requested output
+- If the user asks to fix/modify text, return ONLY the fixed text
+- If the user asks a question, answer it directly
+- Always use dash (-) for lists, never asterisk (*)
 - Add space after # in headings
-- Use proper markdown formatting for code blocks, links, images, etc.
-- If generating HTML, output it directly without wrapping in code blocks
-- Structure your response clearly with headings, lists, and formatting
 
 `;
 
@@ -197,6 +200,36 @@ CRITICAL MARKDOWN RULES:
     // Fix and improve markdown
     async fixMarkdown(text, options = {}) {
         return await this.executeAction('fixMarkdown', text, options);
+    }
+
+    // Paraphrase text
+    async paraphraseText(text, options = {}) {
+        return await this.executeAction('paraphrase', text, options);
+    }
+
+    // Simplify text
+    async simplifyText(text, options = {}) {
+        return await this.executeAction('simplify', text, options);
+    }
+
+    // Formalize text
+    async formalizeText(text, options = {}) {
+        return await this.executeAction('formalize', text, options);
+    }
+
+    // Explain code
+    async explainCode(text, options = {}) {
+        return await this.executeAction('explainCode', text, options);
+    }
+
+    // Optimize code
+    async optimizeCode(text, options = {}) {
+        return await this.executeAction('optimizeCode', text, options);
+    }
+
+    // Generate tests
+    async generateTests(text, options = {}) {
+        return await this.executeAction('testCode', text, options);
     }
 
     // Generate content

@@ -8,6 +8,7 @@ class AIChatUI {
         this.isVisible = false;
         this.messages = [];
         this.currentSessionId = null;
+        this.contextText = null; // Store context
         
         this.init();
     }
@@ -29,16 +30,17 @@ class AIChatUI {
             chatPanel.className = 'column ai-chat-pane hidden';
             chatPanel.innerHTML = `
                 <div class="ai-chat-header">
+                    <h3>AI Chat</h3>
                     <div class="ai-chat-controls">
                         <select id="ai-chat-provider-select">
                             ${this.renderProviderOptions()}
                         </select>
                         <button class="ai-chat-control-btn" id="ai-chat-clear" title="Clear Chat">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <path d="M3 6h18M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
                             </svg>
                         </button>
-                        <button class="ai-chat-control-btn" id="ai-chat-close">×</button>
+                        <button class="ai-chat-control-btn" id="ai-chat-close" title="Close">×</button>
                     </div>
                 </div>
                 
@@ -50,8 +52,23 @@ class AIChatUI {
                 </div>
                 
                 <div class="ai-chat-input-area">
-                    <textarea class="ai-chat-input" id="ai-chat-input" placeholder="Type your message..." rows="2"></textarea>
-                    <button class="ai-chat-send-btn" id="ai-chat-send">Send</button>
+                    <div id="ai-chat-context" class="ai-chat-context hidden"></div>
+                    <div class="ai-chat-input-row">
+                        <button class="ai-chat-context-btn" id="ai-chat-add-context" title="Add selected text as context">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                <polyline points="7 10 12 15 17 10"/>
+                                <line x1="12" y1="15" x2="12" y2="3"/>
+                            </svg>
+                        </button>
+                        <textarea class="ai-chat-input" id="ai-chat-input" placeholder="Type your message..." rows="2"></textarea>
+                        <button class="ai-chat-send-btn" id="ai-chat-send" title="Send message">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="22" y1="2" x2="11" y2="13"/>
+                                <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+                            </svg>
+                        </button>
+                    </div>
                 </div>
             `;
             
@@ -80,8 +97,6 @@ class AIChatUI {
 
     attachEventListeners() {
         if (!this.panel) return;
-
-        // Close button
         const closeBtn = this.panel.querySelector('#ai-chat-close');
         closeBtn?.addEventListener('click', () => this.hide());
 
@@ -103,6 +118,10 @@ class AIChatUI {
         const sendBtn = this.panel.querySelector('#ai-chat-send');
         sendBtn?.addEventListener('click', () => this.sendMessage());
 
+        // Add context button
+        const addContextBtn = this.panel.querySelector('#ai-chat-add-context');
+        addContextBtn?.addEventListener('click', () => this.addContext());
+
         // Input enter key
         const input = this.panel.querySelector('#ai-chat-input');
         input?.addEventListener('keydown', (e) => {
@@ -114,6 +133,9 @@ class AIChatUI {
 
         // Listen for open chat event from AI panel
         document.addEventListener('ai-open-chat', () => this.show());
+        
+        // Expose globally for context button
+        window.aiChatUI = this;
     }
 
     async sendMessage() {
@@ -129,9 +151,30 @@ class AIChatUI {
             return;
         }
 
-        // Add user message
-        this.addMessage('user', message);
+        // Build full message with context if present
+        let fullMessage = message;
+        if (this.contextText) {
+            // Make it clear this is a task to perform on the context
+            fullMessage = `Task: ${message}
+
+Apply this task to the following text:
+
+\`\`\`
+${this.contextText}
+\`\`\`
+
+IMPORTANT: Return ONLY the result text. Do NOT wrap in code blocks. No explanations.`;
+        }
+
+        // Add user message (show with context indicator if present)
+        if (this.contextText) {
+            this.addMessageWithContext('user', message, this.contextText);
+        } else {
+            this.addMessage('user', message);
+        }
+        
         input.value = '';
+        this.clearContext(); // Clear context after sending
         
         // Show loading
         const loadingId = this.addMessage('assistant', '', true);
@@ -142,7 +185,7 @@ class AIChatUI {
             if (settings.streaming) {
                 // Streaming mode
                 let fullResponse = '';
-                await this.aiManager.chat(message, this.messages, {
+                await this.aiManager.chat(fullMessage, this.messages, {
                     onStream: (chunk, full) => {
                         fullResponse = full;
                         this.updateMessage(loadingId, full);
@@ -153,7 +196,7 @@ class AIChatUI {
                 this.messages.push({ role: 'assistant', content: fullResponse });
             } else {
                 // Non-streaming mode
-                const response = await this.aiManager.chat(message, this.messages);
+                const response = await this.aiManager.chat(fullMessage, this.messages);
                 this.updateMessage(loadingId, response);
                 this.messages.push({ role: 'assistant', content: response });
             }
@@ -163,6 +206,92 @@ class AIChatUI {
         } catch (error) {
             this.updateMessage(loadingId, `Error: ${error.message}`, true);
         }
+    }
+
+    addContext() {
+        const selectedText = this.aiManager.getSelectedText();
+        
+        if (!selectedText) {
+            alert('Please select text in the editor first');
+            return;
+        }
+
+        this.contextText = selectedText;
+        this.showContextPreview();
+    }
+
+    showContextPreview() {
+        const contextDiv = this.panel.querySelector('#ai-chat-context');
+        if (!this.contextText) {
+            contextDiv.classList.add('hidden');
+            return;
+        }
+
+        const lineCount = this.contextText.split('\n').length;
+        const preview = this.contextText.length > 100 
+            ? this.contextText.substring(0, 100) + '...' 
+            : this.contextText;
+
+        contextDiv.innerHTML = `
+            <div class="context-preview">
+                <div class="context-header">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/>
+                        <polyline points="13 2 13 9 20 9"/>
+                    </svg>
+                    <span>Context added (${lineCount} ${lineCount === 1 ? 'line' : 'lines'})</span>
+                    <button class="context-remove" onclick="window.aiChatUI.clearContext()">×</button>
+                </div>
+                <div class="context-text">${this.escapeHtml(preview)}</div>
+            </div>
+        `;
+        contextDiv.classList.remove('hidden');
+    }
+
+    clearContext() {
+        this.contextText = null;
+        const contextDiv = this.panel.querySelector('#ai-chat-context');
+        contextDiv.classList.add('hidden');
+        contextDiv.innerHTML = '';
+    }
+
+    addMessageWithContext(role, message, context) {
+        const messagesDiv = this.panel.querySelector('#ai-chat-messages');
+        const messageId = `msg-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+        
+        // Remove welcome message if exists
+        const welcome = messagesDiv.querySelector('.ai-chat-welcome');
+        if (welcome) welcome.remove();
+        
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `chat-message ${role}`;
+        messageDiv.id = messageId;
+        
+        const lineCount = context.split('\n').length;
+        
+        messageDiv.innerHTML = `
+            <span class="message-label">You</span>
+            <div class="message-bubble user-message">
+                <details class="message-context">
+                    <summary>
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/>
+                            <polyline points="13 2 13 9 20 9"/>
+                        </svg>
+                        Context (${lineCount} ${lineCount === 1 ? 'line' : 'lines'})
+                    </summary>
+                    <pre class="context-content">${this.escapeHtml(context)}</pre>
+                </details>
+                <div class="message-text">${this.escapeHtml(message)}</div>
+            </div>
+        `;
+        
+        messagesDiv.appendChild(messageDiv);
+        this.messages.push({ role: 'user', content: message });
+        
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        
+        return messageId;
     }
 
     addMessage(role, content, isLoading = false) {
@@ -192,13 +321,20 @@ class AIChatUI {
                 </div>
                 ${!isLoading && content ? `
                 <div class="message-actions">
-                    <button class="message-action-btn" data-action="insert" data-content="${this.escapeAttribute(content)}" title="Insert to Editor">
+                    <button class="message-action-btn" data-action="replace" data-content="${this.escapeAttribute(content)}" title="Replace selected text">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="23 4 23 10 17 10"/>
+                            <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+                        </svg>
+                        Replace
+                    </button>
+                    <button class="message-action-btn" data-action="insert" data-content="${this.escapeAttribute(content)}" title="Insert at cursor">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M12 5v14M5 12h14"/>
                         </svg>
                         Insert
                     </button>
-                    <button class="message-action-btn" data-action="copy" data-content="${this.escapeAttribute(content)}" title="Copy to Clipboard">
+                    <button class="message-action-btn" data-action="copy" data-content="${this.escapeAttribute(content)}" title="Copy to clipboard">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
                             <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
@@ -272,8 +408,23 @@ class AIChatUI {
     }
 
     attachMessageActions(messageDiv) {
+        const replaceBtn = messageDiv.querySelector('[data-action="replace"]');
         const insertBtn = messageDiv.querySelector('[data-action="insert"]');
         const copyBtn = messageDiv.querySelector('[data-action="copy"]');
+        
+        if (replaceBtn) {
+            replaceBtn.addEventListener('click', (e) => {
+                const content = e.currentTarget.dataset.content;
+                this.replaceInEditor(content);
+                
+                // Visual feedback
+                const originalText = replaceBtn.innerHTML;
+                replaceBtn.innerHTML = '<span style="color: #10b981;">✓ Replaced</span>';
+                setTimeout(() => {
+                    replaceBtn.innerHTML = originalText;
+                }, 2000);
+            });
+        }
         
         if (insertBtn) {
             insertBtn.addEventListener('click', (e) => {
@@ -304,21 +455,64 @@ class AIChatUI {
         }
     }
 
+    replaceInEditor(content) {
+        const editor = this.aiManager.editor;
+        if (!editor) return;
+        
+        const selection = editor.getSelection();
+        if (!selection || selection.isEmpty()) {
+            // No selection, just insert at cursor
+            this.insertToEditor(content);
+            return;
+        }
+        
+        // Strip markdown code blocks if present
+        let cleanContent = content.trim();
+        cleanContent = cleanContent.replace(/^```[\w]*\n?/, '');
+        cleanContent = cleanContent.replace(/\n?```$/, '');
+        
+        // Replace selected text
+        editor.executeEdits('ai-chat-replace', [{
+            range: selection,
+            text: cleanContent
+        }]);
+        
+        editor.focus();
+    }
+
     insertToEditor(content) {
         const editor = this.aiManager.editor;
-        const position = editor.getPosition();
+        if (!editor) return;
         
+        const position = editor.getPosition();
+        if (!position) return;
+        
+        // Strip markdown code blocks if present
+        let cleanContent = content.trim();
+        
+        // Remove opening code block (```markdown, ```javascript, etc.)
+        cleanContent = cleanContent.replace(/^```[\w]*\n?/, '');
+        
+        // Remove closing code block
+        cleanContent = cleanContent.replace(/\n?```$/, '');
+        
+        // Insert at cursor position using editor's executeEdits
         editor.executeEdits('ai-chat-insert', [{
-            range: new monaco.Range(position.lineNumber, position.column, position.lineNumber, position.column),
-            text: content
+            range: {
+                startLineNumber: position.lineNumber,
+                startColumn: position.column,
+                endLineNumber: position.lineNumber,
+                endColumn: position.column
+            },
+            text: cleanContent
         }]);
         
         // Move cursor to end of inserted text
-        const lines = content.split('\n');
+        const lines = cleanContent.split('\n');
         const lastLine = lines[lines.length - 1];
         const newPosition = {
             lineNumber: position.lineNumber + lines.length - 1,
-            column: lines.length === 1 ? position.column + content.length : lastLine.length + 1
+            column: lines.length === 1 ? position.column + cleanContent.length : lastLine.length + 1
         };
         editor.setPosition(newPosition);
         editor.focus();

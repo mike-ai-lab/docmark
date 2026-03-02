@@ -280,8 +280,7 @@ class CerebrasProvider extends AIProvider {
 class GroqProvider extends AIProvider {
     constructor(apiKey) {
         super(apiKey);
-        // Use local proxy to bypass CORS
-        this.endpoint = 'http://localhost:3001';
+        this.endpoint = 'https://api.groq.com/openai/v1/chat/completions';
         this.defaultModel = 'llama-3.3-70b-versatile';
     }
 
@@ -289,10 +288,10 @@ class GroqProvider extends AIProvider {
         const response = await fetch(this.endpoint, {
             method: 'POST',
             headers: {
+                'Authorization': `Bearer ${this.apiKey}`,
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                apiKey: this.apiKey,
                 model: options.model || this.defaultModel,
                 messages: [{ role: 'user', content: prompt }],
                 temperature: options.temperature || 0.7,
@@ -313,10 +312,10 @@ class GroqProvider extends AIProvider {
         const response = await fetch(this.endpoint, {
             method: 'POST',
             headers: {
+                'Authorization': `Bearer ${this.apiKey}`,
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                apiKey: this.apiKey,
                 model: options.model || this.defaultModel,
                 messages: [{ role: 'user', content: prompt }],
                 temperature: options.temperature || 0.7,
