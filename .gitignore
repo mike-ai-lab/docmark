@@ -135,3 +135,6 @@ diagnose-*.js
 # Text/log files
 *.txt
 console*.txt
+
+electron-build/
+electron-dist/
