@@ -7254,16 +7254,6 @@ ${fontLinkTags}
         const loadAISettings = () => {
             const settings = storage.getSettings();
             
-            // Default provider
-            const defaultProviderSelect = document.getElementById('ai-default-provider');
-            if (defaultProviderSelect && settings.defaultProvider) {
-                defaultProviderSelect.value = settings.defaultProvider;
-            }
-            // Ensure custom dropdown reflects the stored value
-            if (defaultProviderSelect) {
-                refreshEnhancedSelect(defaultProviderSelect);
-            }
-            
             // API keys
             const providers = ['openai', 'claude', 'cerebras', 'groq', 'mistral', 'openrouter', 'google', 'cohere', 'huggingface'];
             providers.forEach(provider => {
@@ -7288,21 +7278,24 @@ ${fontLinkTags}
             if (chatHistoryCheckbox) chatHistoryCheckbox.checked = settings.saveChatHistory !== false;
         };
         
-        // Save default provider
-        const defaultProviderSelect = document.getElementById('ai-default-provider');
-        if (defaultProviderSelect) {
-            // Enhance with custom dropdown UI
-            enhanceSelect(defaultProviderSelect);
-
-            defaultProviderSelect.addEventListener('change', (e) => {
-                storage.updateSettings({ defaultProvider: e.target.value });
-                try {
-                    aiManager.setProvider(e.target.value);
-                } catch (error) {
-                    console.error('Error setting provider:', error);
+        // Show/Hide API Key toggle buttons
+        const toggleVisibilityButtons = document.querySelectorAll('.ai-toggle-visibility-btn');
+        toggleVisibilityButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const targetId = btn.dataset.target;
+                const input = document.getElementById(targetId);
+                
+                if (input) {
+                    if (input.type === 'password') {
+                        input.type = 'text';
+                        btn.classList.add('visible');
+                    } else {
+                        input.type = 'password';
+                        btn.classList.remove('visible');
+                    }
                 }
             });
-        }
+        });
         
         // Save API keys on input
         const providers = ['openai', 'claude', 'cerebras', 'groq', 'mistral', 'openrouter', 'google', 'cohere', 'huggingface'];

@@ -1006,6 +1006,30 @@
     border-color: #3b82f6;
 }
 
+.ai-toggle-visibility-btn {
+    padding: 8px;
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    color: #64748b;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.ai-toggle-visibility-btn:hover {
+    background: #e2e8f0;
+    color: #475569;
+}
+
+.ai-toggle-visibility-btn.visible {
+    background: #dbeafe;
+    color: #1e40af;
+    border-color: #93c5fd;
+}
+
 .ai-test-key-btn {
     padding: 8px 16px;
     background: #f1f5f9;
@@ -1146,6 +1170,23 @@
 
 [data-theme="dark"] .ai-api-key-input-group input:focus {
     border-color: #007acc;
+}
+
+[data-theme="dark"] .ai-toggle-visibility-btn {
+    background: #2d2d2d;
+    border-color: #1a1a1a;
+    color: #64748b;
+}
+
+[data-theme="dark"] .ai-toggle-visibility-btn:hover {
+    background: #1a1a1a;
+    color: #94a3b8;
+}
+
+[data-theme="dark"] .ai-toggle-visibility-btn.visible {
+    background: #1e3a5f;
+    color: #60a5fa;
+    border-color: #1e40af;
 }
 
 [data-theme="dark"] .ai-test-key-btn {

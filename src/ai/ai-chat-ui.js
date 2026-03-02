@@ -121,6 +121,9 @@ class AIChatUI {
         // Provider selector
         const providerSelect = this.panel.querySelector('#ai-chat-provider-select');
         providerSelect?.addEventListener('change', (e) => {
+            // Clear any existing system messages first
+            this.clearSystemMessages();
+            
             try {
                 this.aiManager.setProvider(e.target.value);
             } catch (error) {
@@ -662,6 +665,15 @@ IMPORTANT: Return ONLY the result text. Do NOT wrap in code blocks. No explanati
                 <p>Chat cleared. How can I help you?</p>
             </div>
         `;
+    }
+
+    clearSystemMessages() {
+        const messagesDiv = this.panel.querySelector('#ai-chat-messages');
+        if (!messagesDiv) return;
+        
+        // Remove all system messages
+        const systemMessages = messagesDiv.querySelectorAll('.chat-message.system');
+        systemMessages.forEach(msg => msg.remove());
     }
 
     saveChatSession() {

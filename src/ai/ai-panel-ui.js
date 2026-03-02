@@ -216,6 +216,9 @@ class AIPanelUI {
     }
 
     handleProviderChange(providerName) {
+        // Clear any existing messages first
+        this.clearMessages();
+        
         try {
             this.aiManager.setProvider(providerName);
             this.showSuccess('Provider changed successfully');

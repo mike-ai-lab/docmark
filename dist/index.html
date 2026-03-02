@@ -88,8 +88,8 @@
     </script>
     <!-- <script type="module" src="./src/code-paste-window.js"></script> -->
     <title>Markdown Live Preview</title>
-    <script type="module" crossorigin src="./assets/index-DrRBg26O.js"></script>
-    <link rel="stylesheet" crossorigin href="./assets/index-CveE9DKr.css">
+    <script type="module" crossorigin src="./assets/index-8nO61rKw.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/index-BT72zZ3S.css">
   </head>
 
   <body>
@@ -822,87 +822,122 @@
                 <!-- AI Assistant Tab -->
                 <div class="settings-tab-content" data-tab-content="ai">
                     <div class="settings-section">
-                        <h4>Default Provider</h4>
-                        <div class="settings-item">
-                            <label>
-                                <span>Provider:</span>
-                                <select id="ai-default-provider">
-                                    <option value="openai">OpenAI</option>
-                                    <option value="claude">Anthropic Claude</option>
-                                    <option value="cerebras">Cerebras</option>
-                                    <option value="groq">Groq</option>
-                                    <option value="mistral">Mistral AI</option>
-                                    <option value="openrouter">OpenRouter</option>
-                                    <option value="google">Google AI Studio</option>
-                                    <option value="cohere">Cohere</option>
-                                    <option value="huggingface">Hugging Face</option>
-                                </select>
-                            </label>
-                        </div>
-                    </div>
-                    
-                    <div class="settings-section">
                         <h4>API Keys</h4>
+                        <p class="settings-hint">Add your API keys below. Keys are stored locally in your browser.</p>
                         <div class="ai-api-key-item">
                             <label>OpenAI:</label>
                             <div class="ai-api-key-input-group">
-                                <input type="password" id="ai-key-openai" placeholder="sk-...">
+                                <input type="password" id="ai-key-openai" placeholder="sk-..." data-provider="openai">
+                                <button class="ai-toggle-visibility-btn" data-target="ai-key-openai" title="Show/Hide API Key">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                                        <circle cx="12" cy="12" r="3"/>
+                                    </svg>
+                                </button>
                                 <button class="ai-test-key-btn" data-provider="openai">Test</button>
                             </div>
                         </div>
                         <div class="ai-api-key-item">
                             <label>Anthropic Claude:</label>
                             <div class="ai-api-key-input-group">
-                                <input type="password" id="ai-key-claude" placeholder="sk-ant-...">
+                                <input type="password" id="ai-key-claude" placeholder="sk-ant-..." data-provider="claude">
+                                <button class="ai-toggle-visibility-btn" data-target="ai-key-claude" title="Show/Hide API Key">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                                        <circle cx="12" cy="12" r="3"/>
+                                    </svg>
+                                </button>
                                 <button class="ai-test-key-btn" data-provider="claude">Test</button>
                             </div>
                         </div>
                         <div class="ai-api-key-item">
                             <label>Cerebras:</label>
                             <div class="ai-api-key-input-group">
-                                <input type="password" id="ai-key-cerebras" placeholder="csk-...">
+                                <input type="password" id="ai-key-cerebras" placeholder="csk-..." data-provider="cerebras">
+                                <button class="ai-toggle-visibility-btn" data-target="ai-key-cerebras" title="Show/Hide API Key">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                                        <circle cx="12" cy="12" r="3"/>
+                                    </svg>
+                                </button>
                                 <button class="ai-test-key-btn" data-provider="cerebras">Test</button>
                             </div>
                         </div>
                         <div class="ai-api-key-item">
                             <label>Groq:</label>
                             <div class="ai-api-key-input-group">
-                                <input type="password" id="ai-key-groq" placeholder="gsk_...">
+                                <input type="password" id="ai-key-groq" placeholder="gsk_..." data-provider="groq">
+                                <button class="ai-toggle-visibility-btn" data-target="ai-key-groq" title="Show/Hide API Key">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                                        <circle cx="12" cy="12" r="3"/>
+                                    </svg>
+                                </button>
                                 <button class="ai-test-key-btn" data-provider="groq">Test</button>
                             </div>
                         </div>
                         <div class="ai-api-key-item">
                             <label>Mistral AI:</label>
                             <div class="ai-api-key-input-group">
-                                <input type="password" id="ai-key-mistral" placeholder="...">
+                                <input type="password" id="ai-key-mistral" placeholder="..." data-provider="mistral">
+                                <button class="ai-toggle-visibility-btn" data-target="ai-key-mistral" title="Show/Hide API Key">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                                        <circle cx="12" cy="12" r="3"/>
+                                    </svg>
+                                </button>
                                 <button class="ai-test-key-btn" data-provider="mistral">Test</button>
                             </div>
                         </div>
                         <div class="ai-api-key-item">
                             <label>OpenRouter:</label>
                             <div class="ai-api-key-input-group">
-                                <input type="password" id="ai-key-openrouter" placeholder="sk-or-...">
+                                <input type="password" id="ai-key-openrouter" placeholder="sk-or-..." data-provider="openrouter">
+                                <button class="ai-toggle-visibility-btn" data-target="ai-key-openrouter" title="Show/Hide API Key">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                                        <circle cx="12" cy="12" r="3"/>
+                                    </svg>
+                                </button>
                                 <button class="ai-test-key-btn" data-provider="openrouter">Test</button>
                             </div>
                         </div>
                         <div class="ai-api-key-item">
                             <label>Google AI Studio:</label>
                             <div class="ai-api-key-input-group">
-                                <input type="password" id="ai-key-google" placeholder="...">
+                                <input type="password" id="ai-key-google" placeholder="..." data-provider="google">
+                                <button class="ai-toggle-visibility-btn" data-target="ai-key-google" title="Show/Hide API Key">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                                        <circle cx="12" cy="12" r="3"/>
+                                    </svg>
+                                </button>
                                 <button class="ai-test-key-btn" data-provider="google">Test</button>
                             </div>
                         </div>
                         <div class="ai-api-key-item">
                             <label>Cohere:</label>
                             <div class="ai-api-key-input-group">
-                                <input type="password" id="ai-key-cohere" placeholder="...">
+                                <input type="password" id="ai-key-cohere" placeholder="..." data-provider="cohere">
+                                <button class="ai-toggle-visibility-btn" data-target="ai-key-cohere" title="Show/Hide API Key">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                                        <circle cx="12" cy="12" r="3"/>
+                                    </svg>
+                                </button>
                                 <button class="ai-test-key-btn" data-provider="cohere">Test</button>
                             </div>
                         </div>
                         <div class="ai-api-key-item">
                             <label>Hugging Face:</label>
                             <div class="ai-api-key-input-group">
-                                <input type="password" id="ai-key-huggingface" placeholder="hf_...">
+                                <input type="password" id="ai-key-huggingface" placeholder="hf_..." data-provider="huggingface">
+                                <button class="ai-toggle-visibility-btn" data-target="ai-key-huggingface" title="Show/Hide API Key">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                                        <circle cx="12" cy="12" r="3"/>
+                                    </svg>
+                                </button>
                                 <button class="ai-test-key-btn" data-provider="huggingface">Test</button>
                             </div>
                         </div>
