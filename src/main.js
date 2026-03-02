@@ -3541,18 +3541,13 @@ ${fontLinkTags}
         const importHtmlButton = document.querySelector('#import-html-button');
         const importHtmlInput = document.querySelector('#import-html-input');
         
-        console.log('HTML Button:', importHtmlButton);
-        console.log('HTML Input:', importHtmlInput);
-        
         if (importHtmlButton && importHtmlInput) {
             importHtmlButton.addEventListener('click', (e) => {
                 e.preventDefault();
-                console.log('HTML button clicked!');
                 importHtmlInput.click();
             });
             
             importHtmlInput.addEventListener('change', async (event) => {
-                console.log('HTML file selected:', event.target.files[0]);
                 const file = event.target.files[0];
                 if (file) {
                     lastHtmlFilePath = file.name;
@@ -3596,8 +3591,6 @@ ${fontLinkTags}
                 // Reset input
                 event.target.value = '';
             });
-        } else {
-            console.error('HTML button or input not found!');
         }
     };
     
@@ -3606,24 +3599,19 @@ ${fontLinkTags}
         const importCssButton = document.querySelector('#import-css-button');
         const importCssInput = document.querySelector('#import-css-input');
         
-        console.log('CSS Button:', importCssButton);
-        console.log('CSS Input:', importCssInput);
-        
         if (importCssButton && importCssInput) {
             importCssButton.addEventListener('click', (e) => {
                 e.preventDefault();
-                console.log('CSS button clicked!');
                 importCssInput.click();
             });
             
             importCssInput.addEventListener('change', (event) => {
-                console.log('CSS file selected:', event.target.files[0]);
                 const file = event.target.files[0];
                 if (file) {
                     const reader = new FileReader();
                     reader.onload = (e) => {
                         loadedCSSContent = e.target.result;
-                        console.log('CSS Content loaded:', loadedCSSContent.length, 'characters');
+                        lastCssFilePath = file.name;
                         
                         // Get current HTML content
                         const currentContent = editorInstance ? editorInstance.getValue() : '';
@@ -3658,12 +3646,10 @@ ${fontLinkTags}
                             }
                             
                             // ALWAYS force re-render the preview to apply CSS
-                            console.log('Triggering preview update after CSS upload...');
                             if (editorInstance) {
                                 // Delay to ensure editor content is updated
                                 setTimeout(() => {
                                     const updatedContent = editorInstance.getValue();
-                                    console.log('Calling convert() with updated content...');
                                     convert(updatedContent);
                                 }, 150);
                             }
@@ -3681,8 +3667,6 @@ ${fontLinkTags}
                 // Reset input
                 event.target.value = '';
             });
-        } else {
-            console.error('CSS button or input not found!');
         }
     };
     
