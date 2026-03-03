@@ -28,6 +28,10 @@ const init = () => {
     let paperLayoutActive = false;
     let paperLayoutPaginator = null;
     
+    // Paper layout rendering stabilization guards
+    let isRenderingPaperLayout = false;      // Prevent re-entrant rendering
+    let paperLayoutRenderScheduled = false;  // Track if render already scheduled
+    
     // HTML/CSS upload state
     let loadedCSSContent = null; // Store loaded CSS content
     let lastHtmlFilePath = null; // Store HTML file path for CSS detection
@@ -697,7 +701,9 @@ This web site is using ${"`"}markedjs/marked${"`"}.
     };
 
     // Render markdown text as html with accurate line mapping
-    let convert = (markdown) => {
+    let convert = (markdown, options = {}) => {
+        // options.writeToDom: boolean (default: true)
+        const writeToDom = options.writeToDom === undefined ? true : !!options.writeToDom;
         // Check if HTML Preview Mode is enabled OR if content looks like a full HTML document
         const isFullHtmlDocument = markdown.trim().match(/^<!DOCTYPE\s+html>/i) || 
                                    markdown.trim().match(/^<html[\s>]/i);
@@ -1005,13 +1011,18 @@ This web site is using ${"`"}markedjs/marked${"`"}.
         
         finalHtml = tempContainer.innerHTML;
         
-        // Update the output
-        document.querySelector('#output').innerHTML = finalHtml;
-        
-        // Apply edit mode if enabled
-        if (editModeEnabled) {
-            applyEditMode();
+        // Update the output (unless caller requested a dry run)
+        if (writeToDom) {
+            document.querySelector('#output').innerHTML = finalHtml;
+
+            // Apply edit mode if enabled
+            if (editModeEnabled) {
+                applyEditMode();
+            }
         }
+
+        // Return the generated HTML so callers can use it without writing to DOM
+        return finalHtml;
     };
 
     // Cursor synchronization: highlight preview element based on editor cursor
@@ -3564,7 +3575,11 @@ ${fontLinkTags}
         if (exportPdfButton) {
             exportPdfButton.addEventListener('click', (event) => {
                 event.preventDefault();
-                exportPreviewToPdf();
+                showConfirmDialog(
+                    'Export PDF',
+                    'Are you sure you want to export this document as PDF? Make sure the PDF server is running (node pdf-server.js).',
+                    exportPreviewToPdf
+                );
             });
         }
         
@@ -3573,7 +3588,11 @@ ${fontLinkTags}
         if (printPdfButton) {
             printPdfButton.addEventListener('click', (event) => {
                 event.preventDefault();
-                printPreviewToPdf();
+                showConfirmDialog(
+                    'Print PDF',
+                    'Are you sure you want to print this document?',
+                    printPreviewToPdf
+                );
             });
         }
         
@@ -7967,147 +7986,188 @@ ${fontLinkTags}
     let lastPaginatedContent = '';
     let lastPageCount = 0;
     const renderPaperLayout = () => {
-        const outputDiv = document.querySelector('#output');
-        const previewWrapper = document.querySelector('#preview-wrapper');
-        
-        if (!outputDiv || !previewWrapper) return;
-        
-        // Get the current rendered HTML content
-        const htmlContent = outputDiv.innerHTML;
-        
-        // Skip if content hasn't changed
-        if (htmlContent === lastPaginatedContent) {
+        // GUARD 1: Prevent re-entrant rendering
+        if (isRenderingPaperLayout) {
+            console.warn('[PAPER_LAYOUT] Render already in progress, skipping');
             return;
         }
-        
-        // Get user's margin settings
-        const settings = loadPdfLayoutSettings();
-        const mmToPx = 3.78;
-        const topMargin = settings.margins.top * mmToPx;
-        const rightMargin = settings.margins.right * mmToPx;
-        const bottomMargin = settings.margins.bottom * mmToPx;
-        const leftMargin = settings.margins.left * mmToPx;
-        
-        // Calculate available content area
-        const pageWidth = 794; // A4 width in pixels
-        const pageHeight = 1123; // A4 height in pixels
-        const contentWidth = pageWidth - leftMargin - rightMargin;
-        const contentHeight = pageHeight - topMargin - bottomMargin - 60; // Reserve 60px for page number
-        
-        // Create a temporary container to measure actual rendered heights
-        const tempContainer = document.createElement('div');
-        tempContainer.style.cssText = `
-            position: absolute;
-            top: -10000px;
-            left: -10000px;
-            width: ${contentWidth}px;
-            visibility: hidden;
-            font-size: 14px;
-            font-family: Inter, sans-serif;
-            line-height: 1.6;
-        `;
-        tempContainer.innerHTML = htmlContent;
-        document.body.appendChild(tempContainer);
-        
-        // Split content into pages based on actual element heights
-        const pages = [];
-        let currentPage = [];
-        let currentHeight = 0;
-        const maxPageHeight = contentHeight;
-        
-        // Get all top-level elements
-        const elements = Array.from(tempContainer.children);
-        
-        elements.forEach((element) => {
-            const elementHeight = element.offsetHeight;
+
+        // GUARD 2: Check if paper layout is still active
+        if (!paperLayoutActive) {
+            return;
+        }
+
+        // Set rendering flag
+        isRenderingPaperLayout = true;
+        paperLayoutRenderScheduled = false;
+
+        try {
+            const outputDiv = document.querySelector('#output');
+            const previewWrapper = document.querySelector('#preview-wrapper');
             
-            // More conservative pagination - leave buffer space
-            const bufferSpace = 20; // 20px buffer to prevent clipping
+            if (!outputDiv || !previewWrapper) return;
             
-            // If element would overflow current page
-            if (currentHeight + elementHeight + bufferSpace > maxPageHeight && currentPage.length > 0) {
-                // Start new page
-                pages.push(currentPage);
-                currentPage = [element.cloneNode(true)];
-                currentHeight = elementHeight;
-            } else if (elementHeight > maxPageHeight) {
-                // Element is too tall for a single page - add to current page anyway
-                // (will be clipped, but better than losing it entirely)
-                if (currentPage.length > 0) {
-                    pages.push(currentPage);
-                    currentPage = [];
-                    currentHeight = 0;
+            // If editor is available, get the latest markdown and generate the preview HTML
+            // using convert in dry-run mode so we don't overwrite the current DOM until
+            // we build the paginated paper stack.
+            const markdownSource = (typeof editor !== 'undefined' && editor && typeof editor.getValue === 'function') ? editor.getValue() : null;
+            let htmlContent = outputDiv.innerHTML;
+            if (markdownSource) {
+                try {
+                    const generated = convert(markdownSource, { writeToDom: false });
+                    if (generated) htmlContent = generated;
+                } catch (e) {
+                    console.warn('[PAPER_LAYOUT] convert dry-run failed, falling back to DOM content', e);
+                    htmlContent = outputDiv.innerHTML;
                 }
-                pages.push([element.cloneNode(true)]);
-                currentHeight = 0;
-            } else {
-                // Fits on current page
-                currentPage.push(element.cloneNode(true));
-                currentHeight += elementHeight;
             }
-        });
-        
-        // Add last page
-        if (currentPage.length > 0) {
-            pages.push(currentPage);
-        }
-        
-        // Clean up temp container
-        document.body.removeChild(tempContainer);
-        
-        console.log(`📄 Paginated into ${pages.length} pages (content area: ${contentWidth}x${contentHeight}px)`);
-        
-        // Only update DOM if page count changed (prevents flashing)
-        if (pages.length === lastPageCount && outputDiv.classList.contains('paper-layout-active')) {
-            lastPaginatedContent = htmlContent;
-            return;
-        }
-        lastPageCount = pages.length;
-        lastPaginatedContent = htmlContent;
-        
-        // Clear output and render pages
-        outputDiv.innerHTML = '';
-        outputDiv.classList.add('paper-layout-active');
-        previewWrapper.classList.add('paper-layout-active');
-        
-        // Create paper stack container
-        const paperStack = document.createElement('div');
-        paperStack.className = 'paper-stack';
-        paperStack.id = 'paper-stack';
-        
-        // Render each page
-        pages.forEach((pageElements, pageIndex) => {
-            const paperPage = document.createElement('div');
-            paperPage.className = 'paper-page';
+            if (!htmlContent) return;
             
-            const paperContent = document.createElement('div');
-            paperContent.className = 'paper-content';
+            // Skip if content hasn't changed
+            if (htmlContent === lastPaginatedContent) {
+                return;
+            }
             
-            // Add elements to page
-            pageElements.forEach(element => {
-                paperContent.appendChild(element);
+            // Get user's margin settings
+            const settings = loadPdfLayoutSettings();
+            const mmToPx = 3.78;
+            const topMargin = settings.margins.top * mmToPx;
+            const rightMargin = settings.margins.right * mmToPx;
+            const bottomMargin = settings.margins.bottom * mmToPx;
+            const leftMargin = settings.margins.left * mmToPx;
+            
+            // Calculate available content area
+            const pageWidth = 794; // A4 width in pixels
+            const pageHeight = 1123; // A4 height in pixels
+            const contentWidth = pageWidth - leftMargin - rightMargin;
+            const contentHeight = pageHeight - topMargin - bottomMargin - 60; // Reserve 60px for page number
+            
+            // Create a temporary container to measure actual rendered heights
+            const tempContainer = document.createElement('div');
+            tempContainer.style.cssText = `
+                position: absolute;
+                top: -10000px;
+                left: -10000px;
+                width: ${contentWidth}px;
+                visibility: hidden;
+                font-size: 14px;
+                font-family: Inter, sans-serif;
+                line-height: 1.6;
+            `;
+            tempContainer.innerHTML = htmlContent;
+            document.body.appendChild(tempContainer);
+            
+            // Split content into pages based on actual element heights
+            const pages = [];
+            let currentPage = [];
+            let currentHeight = 0;
+            const maxPageHeight = contentHeight;
+            
+            // Get all top-level elements
+            const elements = Array.from(tempContainer.children);
+            
+            elements.forEach((element) => {
+                const elementHeight = element.offsetHeight;
+                
+                // More conservative pagination - leave buffer space
+                const bufferSpace = 20; // 20px buffer to prevent clipping
+                
+                // If element would overflow current page
+                if (currentHeight + elementHeight + bufferSpace > maxPageHeight && currentPage.length > 0) {
+                    // Start new page
+                    pages.push(currentPage);
+                    currentPage = [element.cloneNode(true)];
+                    currentHeight = elementHeight;
+                } else if (elementHeight > maxPageHeight) {
+                    // Element is too tall for a single page - add to current page anyway
+                    // (will be clipped, but better than losing it entirely)
+                    if (currentPage.length > 0) {
+                        pages.push(currentPage);
+                        currentPage = [];
+                        currentHeight = 0;
+                    }
+                    pages.push([element.cloneNode(true)]);
+                    currentHeight = 0;
+                } else {
+                    // Fits on current page
+                    currentPage.push(element.cloneNode(true));
+                    currentHeight += elementHeight;
+                }
             });
             
-            // Add page number
-            const pageNumber = document.createElement('div');
-            pageNumber.className = 'paper-page-number';
-            pageNumber.textContent = `Page ${pageIndex + 1}`;
+            // Add last page
+            if (currentPage.length > 0) {
+                pages.push(currentPage);
+            }
             
-            paperPage.appendChild(paperContent);
-            paperPage.appendChild(pageNumber);
-            paperStack.appendChild(paperPage);
-        });
-        
-        outputDiv.appendChild(paperStack);
-        
-        // Apply PDF settings to preview
-        applyPdfSettingsToPreview();
-        
-        // Update page count
-        updatePageCount(pages.length);
-        
-        // Apply current zoom
-        applyZoom(currentZoom);
+            // Clean up temp container
+            document.body.removeChild(tempContainer);
+            
+            console.log(`📄 Paginated into ${pages.length} pages (content area: ${contentWidth}x${contentHeight}px)`);
+            
+            // Only update DOM if page count changed (prevents flashing)
+            if (pages.length === lastPageCount && outputDiv.classList.contains('paper-layout-active')) {
+                lastPaginatedContent = htmlContent;
+                return;
+            }
+            lastPageCount = pages.length;
+            lastPaginatedContent = htmlContent;
+            
+            // Clear output and render pages
+            outputDiv.innerHTML = '';
+            outputDiv.classList.add('paper-layout-active');
+            previewWrapper.classList.add('paper-layout-active');
+            
+            // Create paper stack container
+            const paperStack = document.createElement('div');
+            paperStack.className = 'paper-stack';
+            paperStack.id = 'paper-stack';
+            
+            // Render each page
+            pages.forEach((pageElements, pageIndex) => {
+                const paperPage = document.createElement('div');
+                paperPage.className = 'paper-page';
+                
+                const paperContent = document.createElement('div');
+                paperContent.className = 'paper-content';
+                
+                // Add elements to page
+                pageElements.forEach(element => {
+                    paperContent.appendChild(element);
+                });
+                
+                // Add page number
+                const pageNumber = document.createElement('div');
+                pageNumber.className = 'paper-page-number';
+                pageNumber.textContent = `Page ${pageIndex + 1}`;
+                
+                paperPage.appendChild(paperContent);
+                paperPage.appendChild(pageNumber);
+                paperStack.appendChild(paperPage);
+            });
+            
+            outputDiv.appendChild(paperStack);
+
+            // Re-apply edit mode handlers if enabled so inline editing works inside paginated pages
+            if (editModeEnabled) {
+                applyEditMode();
+            }
+
+            // Apply PDF settings to preview
+            applyPdfSettingsToPreview();
+            
+            // Update page count
+            updatePageCount(pages.length);
+            
+            // Apply current zoom
+            applyZoom(currentZoom);
+            
+            lastPaginationTime = Date.now();
+        } catch (error) {
+            console.error('[PAPER_LAYOUT] Render error:', error);
+        } finally {
+            isRenderingPaperLayout = false;
+        }
     };
     
     // Restore normal web layout
@@ -8555,7 +8615,7 @@ ${fontLinkTags}
     // Re-paginate when content changes in paper layout mode
     let paperLayoutDebounceTimer = null;
     let lastPaginationTime = 0;
-    const MIN_PAGINATION_INTERVAL = 100; // Minimum time between paginations
+    const MIN_PAGINATION_INTERVAL = 250; // Minimum time between paginations (debounce to avoid thrash while typing)
     
     const handleContentChangeInPaperLayout = () => {
         if (!paperLayoutActive) return;
