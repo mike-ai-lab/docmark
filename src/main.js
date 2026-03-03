@@ -10,6 +10,8 @@ import AIChatUI from './ai/ai-chat-ui.js';
 // PDF Import
 import PDFImportUI from './pdf-import/pdf-import-ui.js';
 import { enhanceSelect, refreshEnhancedSelect } from './ui/custom-select.js';
+// TOC Styles for exports
+import { generateTocHtml } from './toc-styles.js';
 // DISABLED FOR DEPLOYMENT - Inspector and HTML Editor features not finished
 // import { initializeInspector, getInspector, getCurrentDoc } from './inspector-integration.js';
 // import { initInspectorPanel, showInspectorToggle, hideInspectorToggle } from './inspector-panel-ui.js';
@@ -151,17 +153,17 @@ const init = () => {
         }
     };
     
-    // PDF Font Settings - configurable
+    // PDF Font Settings - configurable (Professional document standards)
     let pdfFontSettings = {
-        h1: 10,
-        h2: 10,
-        h3: 10,
-        h4: 10,
-        paragraph: 8,
-        list: 8,
-        blockquote: 8,
-        code: 8,
-        table: 8,
+        h1: 16,              // Main title (16pt - professional standard)
+        h2: 14,              // Section headings (14pt)
+        h3: 12,              // Subsection headings (12pt)
+        h4: 11,              // Minor headings (11pt)
+        paragraph: 10,       // Body text (10pt - standard for professional docs)
+        list: 10,            // List items (10pt - same as body)
+        blockquote: 10,      // Blockquotes (10pt)
+        code: 9,             // Code blocks (9pt - slightly smaller, monospace)
+        table: 9,            // Table text (9pt - compact for data)
         fontFamily: 'helvetica', // helvetica, times, courier
         tableBorders: 'horizontal', // all, horizontal, none
         tableBorderWeight: 0.15,
@@ -980,6 +982,26 @@ This web site is using ${"`"}markedjs/marked${"`"}.
                 finalHtml = finalHtml + footerHtml;
             }
         }
+        
+        // ADD IDS TO HEADINGS FOR TOC LINKS TO WORK
+        // Parse the HTML and add IDs to all headings
+        const tempContainer = document.createElement('div');
+        tempContainer.innerHTML = finalHtml;
+        
+        const headings = tempContainer.querySelectorAll('h1, h2, h3, h4, h5, h6');
+        headings.forEach(heading => {
+            const text = heading.textContent.trim();
+            if (text) {
+                const id = text.toLowerCase()
+                    .replace(/[^\w\s-]/g, '')
+                    .replace(/\s+/g, '-')
+                    .replace(/-+/g, '-')
+                    .replace(/^-|-$/g, '');
+                heading.id = id;
+            }
+        });
+        
+        finalHtml = tempContainer.innerHTML;
         
         // Update the output
         document.querySelector('#output').innerHTML = finalHtml;
@@ -2547,12 +2569,19 @@ let performBeautify = (content) => {
         const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
         const css = await getStyleCss(currentStyle, isDark);
         
+        // Generate TOC HTML if TOC is enabled
+        let tocHtml = '';
+        if (tocEnabled) {
+            const tocData = generateTocData();
+            tocHtml = generateTocHtml(tocData, currentStyle) || '';
+        }
+        
         // Style-specific configurations for paper layout
         let paperStyles = '';
         if (currentStyle === 'gitbook') {
             paperStyles = `
                 body {
-                    background-color: ${isDark ? '#0d1117' : '#f5f5f5'};
+                    background-color: ${isDark ? '#040608' : '#f5f5f5'};
                     padding: 40px 20px;
                 }
                 .paper-container {
@@ -2592,14 +2621,14 @@ let performBeautify = (content) => {
             // GitHub style
             paperStyles = `
                 body {
-                    background-color: ${isDark ? '#0d1117' : '#f6f8fa'};
+                    background-color: ${isDark ? '#040608' : '#f6f8fa'};
                     padding: 40px 20px;
                     margin: 0;
                 }
                 .paper-container {
                     max-width: 980px;
                     margin: 0 auto;
-                    background-color: ${isDark ? '#0d1117' : '#ffffff'};
+                    background-color: ${isDark ? '#040608' : '#ffffff'};
                     padding: 40px 50px;
                     box-shadow: 0 0 10px rgba(0, 0, 0, ${isDark ? '0.3' : '0.08'});
                     min-height: 100vh;
@@ -2643,6 +2672,7 @@ let performBeautify = (content) => {
 <body>
     <div class="paper-container">
         <div class="markdown-body">
+            ${tocHtml}
             ${outputElement.innerHTML}
         </div>
     </div>
@@ -2728,9 +2758,14 @@ let performBeautify = (content) => {
             // Show loading indicator
             showLoadingIndicator('Generating PDF...');
 
-            // Get page setup settings (includes margins)
-            const pageSettings = loadPageSetupSettings();
-            const margins = pageSettings.margins || { top: 20, right: 20, bottom: 20, left: 20 };
+            // Get page setup settings (includes margins from dropdown)
+            const layoutSettings = loadPdfLayoutSettings();
+            const margins = {
+                top: layoutSettings.margins.top + 'mm',
+                right: layoutSettings.margins.right + 'mm',
+                bottom: layoutSettings.margins.bottom + 'mm',
+                left: layoutSettings.margins.left + 'mm'
+            };
 
             console.log('[PDF Export] Using margins:', margins);
 
@@ -2786,6 +2821,19 @@ let performBeautify = (content) => {
     // Helper function to collect HTML with inline styles for Puppeteer
     let collectHtmlForPuppeteer = async (outputElement) => {
         console.log('[PDF Export] Collecting HTML and CSS for Puppeteer...');
+        
+        // Load PDF layout settings
+        const layoutSettings = loadPdfLayoutSettings();
+        
+        // Generate TOC if enabled
+        let tocHtml = '';
+        if (tocEnabled) {
+            const tocData = generateTocData();
+            if (tocData && tocData.length > 0) {
+                tocHtml = generateTocHtml(tocData, currentStyle) || '';
+                console.log('[PDF Export] TOC generated for style:', currentStyle);
+            }
+        }
         
         // Get the current style CSS link
         const ghMarkdownLink = document.getElementById('gh-markdown-link');
@@ -2877,6 +2925,152 @@ ${fontLinkTags}
         /* Inline styles from page */
         ${inlineCss}
         
+        /* TOC Page Styling - Dedicated first page */
+        .toc-page-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            page-break-after: always;
+            break-after: page;
+            padding: 40px;
+            background: white;
+            min-height: 100vh;
+            box-sizing: border-box;
+        }
+        
+        .toc-page-content {
+            width: 100%;
+            max-width: 600px;
+            text-align: center;
+            page-break-inside: avoid;
+            break-inside: avoid;
+        }
+        
+        /* TOC Styling - Ensure proper list structure */
+        .toc-github,
+        .toc-gitbook,
+        .toc-vscode,
+        .toc-medium,
+        .toc-minimal,
+        .toc-notion,
+        .toc-latex {
+            page-break-inside: avoid;
+            break-inside: avoid;
+        }
+        
+        .toc-github ul,
+        .toc-gitbook ul,
+        .toc-vscode ul,
+        .toc-medium ul,
+        .toc-minimal ul,
+        .toc-notion ul,
+        .toc-latex ul {
+            list-style: none !important;
+            padding: 0 !important;
+            margin: 0 !important;
+        }
+        
+        .toc-github li,
+        .toc-gitbook li,
+        .toc-vscode li,
+        .toc-medium li,
+        .toc-minimal li,
+        .toc-notion li,
+        .toc-latex li {
+            display: list-item !important;
+            list-style: none !important;
+            margin: 0 !important;
+            padding: 0 !important;
+        }
+        
+        .toc-github a,
+        .toc-gitbook a,
+        .toc-vscode a,
+        .toc-medium a,
+        .toc-minimal a,
+        .toc-notion a,
+        .toc-latex a {
+            text-decoration: none !important;
+        }
+        
+        /* Content starts on page 2 */
+        .content-container {
+            page-break-before: avoid;
+        }
+        
+        /* Professional PDF spacing and typography */
+        .markdown-body {
+            line-height: 1.4 !important; /* Compact professional line spacing */
+            text-align: ${layoutSettings.textAlign} !important; /* User-defined alignment */
+        }
+        
+        .markdown-body h1 {
+            font-size: 16pt !important;
+            line-height: 1.3 !important;
+            margin-top: 12pt !important;
+            margin-bottom: 8pt !important;
+        }
+        
+        .markdown-body h2 {
+            font-size: 14pt !important;
+            line-height: 1.3 !important;
+            margin-top: 10pt !important;
+            margin-bottom: 6pt !important;
+        }
+        
+        .markdown-body h3 {
+            font-size: 12pt !important;
+            line-height: 1.3 !important;
+            margin-top: 8pt !important;
+            margin-bottom: 5pt !important;
+        }
+        
+        .markdown-body h4,
+        .markdown-body h5,
+        .markdown-body h6 {
+            font-size: 11pt !important;
+            line-height: 1.3 !important;
+            margin-top: 6pt !important;
+            margin-bottom: 4pt !important;
+        }
+        
+        .markdown-body p {
+            font-size: 10pt !important;
+            line-height: 1.4 !important;
+            margin-top: 0 !important;
+            margin-bottom: 6pt !important;
+        }
+        
+        .markdown-body ul,
+        .markdown-body ol {
+            font-size: 10pt !important;
+            line-height: 1.4 !important;
+            margin-top: 4pt !important;
+            margin-bottom: 6pt !important;
+            padding-left: 20pt !important;
+        }
+        
+        .markdown-body li {
+            margin-bottom: 2pt !important;
+        }
+        
+        .markdown-body blockquote {
+            font-size: 10pt !important;
+            line-height: 1.4 !important;
+            margin: 6pt 0 !important;
+            padding: 6pt 12pt !important;
+        }
+        
+        .markdown-body pre,
+        .markdown-body code {
+            font-size: 9pt !important;
+            line-height: 1.3 !important;
+        }
+        
+        .markdown-body hr {
+            margin: 8pt 0 !important;
+        }
+        
         /* Table overflow fixes for PDF export */
         table {
             width: 100% !important;
@@ -2885,6 +3079,7 @@ ${fontLinkTags}
             word-wrap: break-word !important;
             overflow-wrap: break-word !important;
             page-break-inside: auto !important;
+            font-size: 9pt !important;
         }
         
         table th,
@@ -2892,13 +3087,13 @@ ${fontLinkTags}
             word-wrap: break-word !important;
             overflow-wrap: break-word !important;
             white-space: normal !important;
-            padding: 6px 8px !important;
-            font-size: 11px !important;
-            line-height: 1.4 !important;
+            padding: 4px 6px !important;
+            font-size: 9pt !important;
+            line-height: 1.3 !important;
         }
         
         table thead th {
-            font-size: 11px !important;
+            font-size: 9pt !important;
             font-weight: 600 !important;
         }
         
@@ -2968,7 +3163,8 @@ ${fontLinkTags}
     </style>
 </head>
 <body>
-    <div class="markdown-body">
+    ${tocHtml ? `<div class="toc-page-container"><div class="toc-page-content">${tocHtml}</div></div>` : ''}
+    <div class="markdown-body content-container">
         ${outputElement.innerHTML}
     </div>
 </body>
@@ -3363,6 +3559,121 @@ ${fontLinkTags}
                 exportPreviewToHtml();
             });
         }
+        
+        // Setup PDF Settings Modal
+        setupPdfSettingsModal();
+    };
+    
+    // PDF Settings Modal Handler
+    let setupPdfSettingsModal = () => {
+        const modal = document.getElementById('pdf-settings-modal');
+        const openBtn = document.getElementById('pdf-settings-btn');
+        const closeBtn = document.getElementById('pdf-settings-modal-close');
+        const applyBtn = document.getElementById('pdf-apply-btn');
+        const resetBtn = document.getElementById('pdf-reset-btn');
+        
+        if (!modal || !openBtn) return;
+        
+        // Load saved settings
+        const savedSettings = loadPdfLayoutSettings();
+        
+        // Set initial values
+        document.getElementById('pdf-margin-top').value = savedSettings.margins.top;
+        document.getElementById('pdf-margin-right').value = savedSettings.margins.right;
+        document.getElementById('pdf-margin-bottom').value = savedSettings.margins.bottom;
+        document.getElementById('pdf-margin-left').value = savedSettings.margins.left;
+        
+        // Set active alignment
+        const alignButtons = modal.querySelectorAll('.pdf-align-btn');
+        alignButtons.forEach(btn => {
+            if (btn.dataset.align === savedSettings.textAlign) {
+                btn.classList.add('active');
+            }
+        });
+        
+        // Open modal
+        openBtn.addEventListener('click', () => {
+            modal.classList.add('active');
+        });
+        
+        // Close modal
+        const closeModal = () => {
+            modal.classList.remove('active');
+        };
+        
+        closeBtn.addEventListener('click', closeModal);
+        applyBtn.addEventListener('click', closeModal);
+        
+        // Close on overlay click
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) closeModal();
+        });
+        
+        // Alignment buttons
+        alignButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                alignButtons.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                
+                const settings = loadPdfLayoutSettings();
+                settings.textAlign = btn.dataset.align;
+                savePdfLayoutSettings(settings);
+            });
+        });
+        
+        // Margin inputs
+        ['top', 'right', 'bottom', 'left'].forEach(side => {
+            const input = document.getElementById(`pdf-margin-${side}`);
+            if (input) {
+                input.addEventListener('change', () => {
+                    const settings = loadPdfLayoutSettings();
+                    settings.margins[side] = parseInt(input.value) || 15;
+                    savePdfLayoutSettings(settings);
+                });
+            }
+        });
+        
+        // Reset button
+        resetBtn.addEventListener('click', () => {
+            const defaults = { textAlign: 'left', margins: { top: 15, right: 15, bottom: 15, left: 15 } };
+            savePdfLayoutSettings(defaults);
+            
+            document.getElementById('pdf-margin-top').value = 15;
+            document.getElementById('pdf-margin-right').value = 15;
+            document.getElementById('pdf-margin-bottom').value = 15;
+            document.getElementById('pdf-margin-left').value = 15;
+            
+            alignButtons.forEach(b => b.classList.remove('active'));
+            modal.querySelector('[data-align="left"]').classList.add('active');
+            
+            showMofuHelper('Settings reset to defaults');
+        });
+    };
+    
+    // Load PDF layout settings
+    let loadPdfLayoutSettings = () => {
+        try {
+            const raw = localStorage.getItem(localStorageNamespace + '.pdf_layout_settings');
+            if (raw) {
+                return JSON.parse(raw);
+            }
+        } catch (e) {
+            console.error('Failed to load PDF layout settings', e);
+        }
+        // Return defaults
+        return {
+            textAlign: 'left',
+            margins: { top: 15, right: 15, bottom: 15, left: 15 }
+        };
+    };
+    
+    // Save PDF layout settings
+    let savePdfLayoutSettings = (settings) => {
+        try {
+            localStorage.setItem(localStorageNamespace + '.pdf_layout_settings', JSON.stringify(settings));
+        } catch (e) {
+            console.error('Failed to save PDF layout settings', e);
+        }
     };
 
     let setupHtmlRefreshButton = () => {
@@ -3405,7 +3716,23 @@ ${fontLinkTags}
                     return;
                 }
                 
-                const content = editorInstance.getValue();
+                let content = editorInstance.getValue();
+                
+                // Add TOC at the beginning if enabled
+                if (tocEnabled) {
+                    const tocData = generateTocData();
+                    if (tocData.length > 0) {
+                        // Generate markdown TOC
+                        let tocMarkdown = '# Table of Contents\n\n';
+                        tocData.forEach(item => {
+                            const indent = '  '.repeat(item.level - 1);
+                            const link = `[${item.text}](#${item.id})`;
+                            tocMarkdown += `${indent}- ${link}\n`;
+                        });
+                        tocMarkdown += '\n---\n\n';
+                        content = tocMarkdown + content;
+                    }
+                }
                 
                 // Extract title from YAML front matter or first heading
                 let documentTitle = 'document';
@@ -4970,24 +5297,49 @@ ${fontLinkTags}
         }
     };
     
+    // Setup TOC toolbar button
+    let setupTocButton = () => {
+        const tocButton = document.querySelector('#toc-toggle-btn');
+        if (!tocButton) return;
+        
+        // Load saved setting and update button state
+        const savedSetting = loadTocSettings();
+        if (savedSetting) {
+            tocButton.classList.add('active');
+        }
+        
+        tocButton.addEventListener('click', () => {
+            tocEnabled = !tocEnabled;
+            saveTocSettings(tocEnabled);
+            
+            // Update button state
+            if (tocEnabled) {
+                tocButton.classList.add('active');
+            } else {
+                tocButton.classList.remove('active');
+            }
+            
+            toggleToc();
+        });
+    };
+    
     let toggleToc = () => {
 
         tocVisible = tocEnabled;
         
         const panel = document.querySelector('#toc-panel');
         const container = document.querySelector('#container');
-        
-
+        const tocButton = document.querySelector('#toc-toggle-btn');
         
         if (tocVisible) {
-
             panel.classList.remove('hidden');
             container.classList.add('toc-visible');
+            if (tocButton) tocButton.classList.add('active');
             updateToc();
         } else {
-
             panel.classList.add('hidden');
             container.classList.remove('toc-visible');
+            if (tocButton) tocButton.classList.remove('active');
         }
         
         // Trigger Monaco editor resize
@@ -5799,6 +6151,7 @@ ${fontLinkTags}
     setupMediaContextMenu();
     setupCheatSheetButton();
     setupTocCheckbox();
+    setupTocButton();
     setupValidationCheckbox();
     setupEditModeCheckbox();
     

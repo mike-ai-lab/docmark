@@ -61,7 +61,7 @@ header {
   color: #1e293b;
   box-shadow: 0 1px 3px rgba(0,0,0,0.05);
   position: relative;
-  overflow: hidden;
+  overflow: visible; /* Changed from hidden to allow dropdown to show */
   z-index: 100;
   box-sizing: border-box;
 }
@@ -521,8 +521,17 @@ header a:hover {
   box-shadow: 0 1px 3px rgba(0,0,0,0.1);
 }
 
+.btn-item.active {
+  background: #dbeafe;
+  color: #1e40af;
+  font-weight: 600;
+}
+
 .btn-item a {
   display: block;
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 /* Dropdown styles */
@@ -1254,6 +1263,11 @@ footer {
 [data-theme="dark"] .btn-item:hover {
   background: #3d3d3d;
   color: #e2e8f0;
+}
+
+[data-theme="dark"] .btn-item.active {
+  background: #1e3a5f;
+  color: #60a5fa;
 }
 
 [data-theme="dark"] .dropdown-content {
@@ -3982,7 +3996,7 @@ footer {
 }
 
 [data-theme="dark"] .compare-pane-content {
-    background: #0d1117;
+    background: #040608;
     color: #e6edf3;
 }
 
@@ -3992,7 +4006,7 @@ footer {
 }
 
 [data-theme="dark"] .raw-markdown-view {
-    background: #0d1117;
+    background: #040608;
     color: #e6edf3;
 }
 
@@ -4375,9 +4389,8 @@ footer {
     position: relative;
     background: #ffffff;
     border-radius: 8px;
-    width: 90%;
-    max-width: 420px;
-    max-height: 80vh;
+    width: 400px;
+    height: 590px;
     display: flex;
     flex-direction: column;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
@@ -6088,4 +6101,274 @@ footer {
 
 [data-theme="dark"] .paper-page-number {
   color: #64748b;
+}
+
+/* ===== PDF SETTINGS MODAL ===== */
+.pdf-settings-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 10003;
+}
+
+.pdf-settings-modal-overlay.active {
+  display: flex;
+}
+
+.pdf-settings-modal {
+  background: white;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 500px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  animation: modalSlideIn 0.3s ease-out;
+}
+
+@keyframes modalSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.pdf-settings-modal-header {
+  padding: 20px 24px;
+  border-bottom: 1px solid #e2e8f0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.pdf-settings-modal-header h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.pdf-settings-modal-close {
+  background: none;
+  border: none;
+  font-size: 28px;
+  color: #64748b;
+  cursor: pointer;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  transition: all 0.2s;
+}
+
+.pdf-settings-modal-close:hover {
+  background: #f1f5f9;
+  color: #1e293b;
+}
+
+.pdf-settings-modal-body {
+  padding: 24px;
+}
+
+.pdf-modal-section {
+  margin-bottom: 24px;
+}
+
+.pdf-modal-section:last-of-type {
+  margin-bottom: 0;
+}
+
+.pdf-modal-label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: #475569;
+  margin-bottom: 12px;
+}
+
+.pdf-align-buttons {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+
+.pdf-align-btn {
+  padding: 12px 8px;
+  background: #f8fafc;
+  border: 2px solid #e2e8f0;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.pdf-align-btn:hover {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+}
+
+.pdf-align-btn.active {
+  background: #eff6ff;
+  border-color: #3b82f6;
+  color: #3b82f6;
+}
+
+.pdf-align-btn.active svg {
+  stroke: #3b82f6;
+}
+
+.pdf-margin-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+.pdf-margin-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.pdf-margin-field label {
+  font-size: 12px;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.pdf-margin-field input {
+  padding: 10px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  font-size: 14px;
+  color: #1e293b;
+  transition: border-color 0.2s;
+}
+
+.pdf-margin-field input:focus {
+  outline: none;
+  border-color: #3b82f6;
+}
+
+.pdf-modal-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 24px;
+  padding-top: 24px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.pdf-modal-btn-secondary,
+.pdf-modal-btn-primary {
+  flex: 1;
+  padding: 12px 20px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.pdf-modal-btn-secondary {
+  background: white;
+  border: 1px solid #e2e8f0;
+  color: #64748b;
+}
+
+.pdf-modal-btn-secondary:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+}
+
+.pdf-modal-btn-primary {
+  background: #3b82f6;
+  border: none;
+  color: white;
+}
+
+.pdf-modal-btn-primary:hover {
+  background: #2563eb;
+}
+
+/* Dark theme */
+[data-theme="dark"] .pdf-settings-modal {
+  background: #1e293b;
+}
+
+[data-theme="dark"] .pdf-settings-modal-header {
+  border-bottom-color: #334155;
+}
+
+[data-theme="dark"] .pdf-settings-modal-header h3 {
+  color: #f1f5f9;
+}
+
+[data-theme="dark"] .pdf-settings-modal-close {
+  color: #94a3b8;
+}
+
+[data-theme="dark"] .pdf-settings-modal-close:hover {
+  background: #334155;
+  color: #f1f5f9;
+}
+
+[data-theme="dark"] .pdf-modal-label {
+  color: #cbd5e1;
+}
+
+[data-theme="dark"] .pdf-align-btn {
+  background: #0f172a;
+  border-color: #334155;
+  color: #94a3b8;
+}
+
+[data-theme="dark"] .pdf-align-btn:hover {
+  background: #1e293b;
+  border-color: #475569;
+}
+
+[data-theme="dark"] .pdf-align-btn.active {
+  background: #1e3a8a;
+  border-color: #3b82f6;
+  color: #60a5fa;
+}
+
+[data-theme="dark"] .pdf-margin-field label {
+  color: #94a3b8;
+}
+
+[data-theme="dark"] .pdf-margin-field input {
+  background: #0f172a;
+  border-color: #334155;
+  color: #f1f5f9;
+}
+
+[data-theme="dark"] .pdf-modal-actions {
+  border-top-color: #334155;
+}
+
+[data-theme="dark"] .pdf-modal-btn-secondary {
+  background: #0f172a;
+  border-color: #334155;
+  color: #94a3b8;
+}
+
+[data-theme="dark"] .pdf-modal-btn-secondary:hover {
+  background: #1e293b;
+  border-color: #475569;
 }

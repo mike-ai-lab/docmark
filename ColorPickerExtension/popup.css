@@ -1,0 +1,78 @@
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  width: 250px;
+  margin: 0;
+  padding: 15px;
+  background-color: #f9f9f9;
+  color: #333;
+}
+
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+#pick-color-btn {
+  background-color: #007bff;
+  color: white;
+  border: none;
+  padding: 10px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: background-color 0.2s;
+}
+
+#pick-color-btn:hover {
+  background-color: #0056b3;
+}
+
+.color-display {
+  height: 60px;
+  border-radius: 5px;
+  border: 1px solid #ccc;
+  background-color: #ffffff; /* Default blank color */
+  transition: background-color 0.3s;
+}
+
+.color-info {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px;
+  background-color: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.2s, transform 0.1s;
+}
+
+.color-info:hover {
+  background-color: #f0f0f0;
+}
+
+.color-info:active {
+  transform: scale(0.98);
+}
+
+.label {
+  font-weight: bold;
+  color: #555;
+}
+
+.value {
+  font-family: monospace;
+  font-size: 1.1em;
+}
+
+#copy-message {
+  text-align: center;
+  color: #28a745;
+  font-size: 0.9em;
+  font-weight: bold;
+  min-height: 20px;
+}
+
+.hidden {
+  visibility: hidden;
+}

@@ -165,7 +165,7 @@
 /* Dark Theme */
 [data-theme="dark"] .markdown-body {
   color: rgba(255, 255, 255, 0.9);
-  background-color: #191919;
+  background-color: #040608;
 }
 
 [data-theme="dark"] .markdown-body h1,
