@@ -371,11 +371,13 @@ This web site is using ${"`"}markedjs/marked${"`"}.
             
             // Don't convert if we're updating from preview edit
             if (!isUpdating) {
-                convert(value);
-                
-                // Re-paginate if in paper layout mode
-                if (typeof paperLayoutActive !== 'undefined' && paperLayoutActive && typeof handleContentChangeInPaperLayout !== 'undefined') {
+                // Check if paper layout is active
+                if (paperLayoutActive) {
+                    // Re-render paper layout instead of normal convert
                     handleContentChangeInPaperLayout();
+                } else {
+                    // Normal web layout - use convert
+                    convert(value);
                 }
             }
             
@@ -3763,30 +3765,34 @@ ${fontLinkTags}
         // Convert mm to pixels: 1mm ≈ 3.78px at 96 DPI
         const mmToPx = 3.78;
         
-        // EXPERT FIX: Apply margins to paper-content, NOT paper-page
-        // This keeps the coordinate origin (0,0) at the true page edge
-        // Margins are now internal padding within the content container
         paperPages.forEach(page => {
-            page.style.padding = '0'; // Keep page padding at 0 to preserve coordinate origin
+            const pageContent = page.querySelector('.paper-content');
+            if (!pageContent) return;
+            
+            // Apply margins to CONTENT padding (not page padding)
+            pageContent.style.padding = `${settings.margins.top}mm ${settings.margins.right}mm ${settings.margins.bottom}mm ${settings.margins.left}mm`;
+            pageContent.style.textAlign = settings.textAlign || 'left';
+            
+            // Update visual margin guides using CSS custom properties
+            page.style.setProperty('--margin-top', `${settings.margins.top * mmToPx}px`);
+            page.style.setProperty('--margin-right', `${settings.margins.right * mmToPx}px`);
+            page.style.setProperty('--margin-bottom', `${settings.margins.bottom * mmToPx}px`);
+            page.style.setProperty('--margin-left', `${settings.margins.left * mmToPx}px`);
+            
+            // Show/hide margin guides
+            if (settings.showMarginGuides === false) {
+                page.classList.add('hide-margin-guides');
+            } else {
+                page.classList.remove('hide-margin-guides');
+            }
         });
         
-        // Apply margins as padding to paper-content instead
-        paperContents.forEach(content => {
-            content.style.paddingTop = `${settings.margins.top * mmToPx}px`;
-            content.style.paddingRight = `${settings.margins.right * mmToPx}px`;
-            content.style.paddingBottom = `${settings.margins.bottom * mmToPx}px`;
-            content.style.paddingLeft = `${settings.margins.left * mmToPx}px`;
-            content.style.textAlign = settings.textAlign;
-        });
-        
-        // Apply page number positioning separately
+        // Apply page number positioning
         pageNumbers.forEach(pageNum => {
-            // Reset all positioning
             pageNum.style.left = '';
             pageNum.style.right = '';
             pageNum.style.textAlign = '';
             
-            // Apply new position
             if (settings.pageNumberPosition === 'left') {
                 pageNum.style.left = `${settings.margins.left * mmToPx}px`;
                 pageNum.style.right = 'auto';
@@ -3796,7 +3802,6 @@ ${fontLinkTags}
                 pageNum.style.left = 'auto';
                 pageNum.style.textAlign = 'right';
             } else {
-                // center
                 pageNum.style.left = '0';
                 pageNum.style.right = '0';
                 pageNum.style.textAlign = 'center';
@@ -7967,7 +7972,7 @@ ${fontLinkTags}
         
         if (!outputDiv || !previewWrapper) return;
         
-        // Get the current rendered HTML content (don't re-render, just re-paginate)
+        // Get the current rendered HTML content
         const htmlContent = outputDiv.innerHTML;
         
         // Skip if content hasn't changed
@@ -7977,7 +7982,7 @@ ${fontLinkTags}
         
         // Get user's margin settings
         const settings = loadPdfLayoutSettings();
-        const mmToPx = 3.78; // 1mm ≈ 3.78px at 96 DPI
+        const mmToPx = 3.78;
         const topMargin = settings.margins.top * mmToPx;
         const rightMargin = settings.margins.right * mmToPx;
         const bottomMargin = settings.margins.bottom * mmToPx;
@@ -8016,21 +8021,25 @@ ${fontLinkTags}
         elements.forEach((element) => {
             const elementHeight = element.offsetHeight;
             
-            // If element is too tall for a page, allow it to break
-            if (elementHeight > maxPageHeight * 0.8) {
-                // Large element - add to current page and start new page
+            // More conservative pagination - leave buffer space
+            const bufferSpace = 20; // 20px buffer to prevent clipping
+            
+            // If element would overflow current page
+            if (currentHeight + elementHeight + bufferSpace > maxPageHeight && currentPage.length > 0) {
+                // Start new page
+                pages.push(currentPage);
+                currentPage = [element.cloneNode(true)];
+                currentHeight = elementHeight;
+            } else if (elementHeight > maxPageHeight) {
+                // Element is too tall for a single page - add to current page anyway
+                // (will be clipped, but better than losing it entirely)
                 if (currentPage.length > 0) {
                     pages.push(currentPage);
                     currentPage = [];
                     currentHeight = 0;
                 }
-                // Add the large element to its own page
                 pages.push([element.cloneNode(true)]);
-            } else if (currentHeight + elementHeight > maxPageHeight && currentPage.length > 0) {
-                // Would overflow - start new page
-                pages.push(currentPage);
-                currentPage = [element.cloneNode(true)];
-                currentHeight = elementHeight;
+                currentHeight = 0;
             } else {
                 // Fits on current page
                 currentPage.push(element.cloneNode(true));

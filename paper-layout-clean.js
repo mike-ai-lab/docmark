@@ -2,6 +2,33 @@
    PAPER LAYOUT SYSTEM - CLEAN IMPLEMENTATION FROM WORKING MOCKUP
    ============================================================================ */
 
+// Load PDF layout settings from localStorage
+function loadPdfLayoutSettings() {
+    try {
+        const raw = localStorage.getItem('com.markdownlivepreview.pdf_layout_settings');
+        if (raw) {
+            return JSON.parse(raw);
+        }
+    } catch (e) {
+        console.error('Failed to load PDF layout settings', e);
+    }
+    // Return defaults
+    return {
+        textAlign: 'left',
+        pageNumberPosition: 'center',
+        margins: { top: 15, right: 15, bottom: 15, left: 15 }
+    };
+}
+
+// Save PDF layout settings to localStorage
+function savePdfLayoutSettings(settings) {
+    try {
+        localStorage.setItem('com.markdownlivepreview.pdf_layout_settings', JSON.stringify(settings));
+    } catch (e) {
+        console.error('Failed to save PDF layout settings', e);
+    }
+}
+
 // Apply margins to paper pages
 function applyPdfSettingsToPreview() {
     const settings = loadPdfLayoutSettings();
