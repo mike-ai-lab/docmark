@@ -58,7 +58,7 @@ header {
   background-color: #ffffff;
   border-bottom: 1px solid #e2e8f0;
   font-size: 13px;
-  color: #1e293b;
+  color: #1e1e1e;
   box-shadow: 0 1px 3px rgba(0,0,0,0.05);
   position: relative;
   overflow: hidden;
@@ -67,7 +67,7 @@ header {
 }
 
 header a:link, header a:hover, header a:visited, header a:active {
-  color: #1e293b;
+  color: #1e1e1e;
 }
 
 header a:hover {
@@ -138,7 +138,7 @@ header a:hover {
 .paste-dialog-header h3 {
   font-size: 18px;
   font-weight: 600;
-  color: #1e293b;
+  color: #1e1e1e;
   margin: 0;
 }
 
@@ -160,7 +160,7 @@ header a:hover {
 
 .paste-dialog-close:hover {
   background: #f1f5f9;
-  color: #1e293b;
+  color: #1e1e1e;
 }
 
 .paste-dialog-body {
@@ -303,7 +303,7 @@ header a:hover {
 /* Mofu Blob Widget */
 .mofu-header-widget {
   --m-size: 40px;
-  --m-stroke: #1e293b;
+  --m-stroke: #1e1e1e;
   display: flex;
   align-items: center;
   cursor: pointer;
@@ -363,7 +363,7 @@ header a:hover {
 .mofu-dot {
   width: 4px;
   height: 6px;
-  background: #1e293b;
+  background: #1e1e1e;
   border-radius: 50%;
   animation: mofu-blink-small 4s infinite ease-in-out;
   transition: transform 0.2s ease;
@@ -372,7 +372,7 @@ header a:hover {
 .mofu-smile {
   width: 7px;
   height: 3.5px;
-  border: 1.5px solid #1e293b;
+  border: 1.5px solid #1e1e1e;
   border-top: none;
   border-radius: 0 0 10px 10px;
   transition: all 0.2s ease;
@@ -382,7 +382,7 @@ header a:hover {
 .mofu-mouth-o {
   width: 6px !important;
   height: 8px !important;
-  border: 1.5px solid #1e293b !important;
+  border: 1.5px solid #1e1e1e !important;
   border-radius: 50% !important;
 }
 
@@ -517,7 +517,7 @@ header a:hover {
 
 .btn-item:hover {
   background: #ffffff;
-  color: #1e293b;
+  color: #1e1e1e;
   box-shadow: 0 1px 3px rgba(0,0,0,0.1);
 }
 
@@ -585,7 +585,7 @@ header a:hover {
 
 .dropdown-content a:hover {
   background: #f1f5f9;
-  color: #1e293b;
+  color: #1e1e1e;
 }
 
 .dropdown-content .dropdown-item {
@@ -601,7 +601,7 @@ header a:hover {
 
 .dropdown-content .dropdown-item select {
   background: #f8fafc;
-  color: #1e293b;
+  color: #1e1e1e;
   border: 1px solid #e2e8f0;
   padding: 6px 10px;
   border-radius: 6px;
@@ -1449,7 +1449,7 @@ footer {
   margin: 0;
   font-size: 13px;
   font-weight: 700;
-  color: #1e293b;
+  color: #1e1e1e;
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
@@ -1473,7 +1473,7 @@ footer {
 
 .cheatsheet-close:hover {
   background: #f1f5f9;
-  color: #1e293b;
+  color: #1e1e1e;
 }
 
 .cheatsheet-panel-content {
@@ -1777,7 +1777,7 @@ footer {
   margin: 0;
   font-size: 13px;
   font-weight: 700;
-  color: #1e293b;
+  color: #1e1e1e;
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
@@ -1801,7 +1801,7 @@ footer {
 
 .toc-close:hover {
   background: #f1f5f9;
-  color: #1e293b;
+  color: #1e1e1e;
 }
 
 .toc-panel-content {
@@ -2084,7 +2084,7 @@ footer {
   top: 80px;
   right: 24px;
   background: #ffffff;
-  color: #1e293b;
+  color: #1e1e1e;
   padding: 12px 20px;
   border-radius: 10px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
@@ -2145,7 +2145,7 @@ footer {
   top: 70px;
   left: 80px;
   background: #ffffff;
-  color: #1e293b;
+  color: #1e1e1e;
   padding: 14px 18px;
   border-radius: 12px;
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
@@ -2749,7 +2749,7 @@ footer {
 
 .status-item:hover {
     background: #f1f5f9;
-    color: #1e293b;
+    color: #1e1e1e;
 }
 
 [data-theme="dark"] .status-item:hover {
@@ -2792,7 +2792,7 @@ footer {
 
 .status-value {
     font-weight: 500;
-    color: #1e293b;
+    color: #1e1e1e;
 }
 
 [data-theme="dark"] .status-value {
@@ -3139,7 +3139,7 @@ footer {
 .version-history-header h3 {
     font-size: 13px;
     font-weight: 700;
-    color: #1e293b;
+    color: #1e1e1e;
     text-transform: uppercase;
     letter-spacing: 0.5px;
     margin: 0;
@@ -3162,7 +3162,7 @@ footer {
     border-radius: 6px;
     font-size: 13px;
     background: #ffffff;
-    color: #1e293b;
+    color: #1e1e1e;
     transition: all 0.2s;
     margin-bottom: 12px;
 }
@@ -3237,7 +3237,7 @@ footer {
 
 .version-history-close:hover {
     background: #f1f5f9;
-    color: #1e293b;
+    color: #1e1e1e;
 }
 
 [data-theme="dark"] .version-history-close:hover {
@@ -3537,7 +3537,7 @@ footer {
     margin: 0;
     font-size: 16px;
     font-weight: 600;
-    color: #1e293b;
+    color: #1e1e1e;
 }
 
 [data-theme="dark"] .autosave-modal-header h3 {
@@ -3562,7 +3562,7 @@ footer {
 
 .autosave-modal-close:hover {
     background: #f1f5f9;
-    color: #1e293b;
+    color: #1e1e1e;
 }
 
 [data-theme="dark"] .autosave-modal-close:hover {
@@ -3609,7 +3609,7 @@ footer {
 
 .autosave-toggle span {
     font-size: 14px;
-    color: #1e293b;
+    color: #1e1e1e;
 }
 
 [data-theme="dark"] .autosave-toggle span {
@@ -3681,7 +3681,7 @@ footer {
     border: 1px solid #e2e8f0;
     border-radius: 6px;
     font-size: 13px;
-    color: #1e293b;
+    color: #1e1e1e;
 }
 
 [data-theme="dark"] .autosave-custom-interval input {
@@ -3786,7 +3786,7 @@ footer {
     margin: 0;
     font-size: 16px;
     font-weight: 600;
-    color: #1e293b;
+    color: #1e1e1e;
 }
 
 [data-theme="dark"] .confirm-dialog-header h3 {
@@ -3909,7 +3909,7 @@ footer {
 .version-modal-header h3 {
     font-size: 16px;
     font-weight: 700;
-    color: #1e293b;
+    color: #1e1e1e;
     margin: 0;
 }
 
@@ -3935,7 +3935,7 @@ footer {
 
 .version-modal-close:hover {
     background: #f1f5f9;
-    color: #1e293b;
+    color: #1e1e1e;
 }
 
 [data-theme="dark"] .version-modal-close:hover {
@@ -4002,7 +4002,7 @@ footer {
 
 .raw-markdown-view {
     background: #f8fafc;
-    color: #1e293b;
+    color: #1e1e1e;
 }
 
 [data-theme="dark"] .raw-markdown-view {
@@ -4873,7 +4873,7 @@ footer {
   align-items: center;
   gap: 10px;
   font-size: 13px;
-  color: #1e293b;
+  color: #1e1e1e;
   transition: background 0.15s ease;
 }
 
@@ -4969,7 +4969,7 @@ footer {
 .inspector-panel-header h3 {
   font-size: 14px;
   font-weight: 600;
-  color: #1e293b;
+  color: #1e1e1e;
   margin: 0;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -4993,7 +4993,7 @@ footer {
 
 .inspector-close:hover {
   background: #e2e8f0;
-  color: #1e293b;
+  color: #1e1e1e;
 }
 
 .inspector-panel-content {
@@ -5059,7 +5059,7 @@ footer {
   border: 1px solid #cbd5e1;
   border-radius: 4px;
   font-size: 13px;
-  color: #1e293b;
+  color: #1e1e1e;
   background: #ffffff;
   transition: all 0.2s;
 }
@@ -5666,7 +5666,7 @@ footer {
 
 .paper-control-btn-sm:hover {
   background: #f1f5f9;
-  color: #1e293b;
+  color: #1e1e1e;
 }
 
 .paper-control-btn-sm:active {
@@ -5899,7 +5899,7 @@ footer {
   overflow: hidden;
   font-size: 14px;
   line-height: 1.6;
-  color: #1e293b;
+  color: #1e1e1e;
 }
 
 /* Preserve markdown formatting in paper layout */
@@ -6253,7 +6253,7 @@ footer {
   border-radius: 4px;
   font-size: 13px;
   background: white;
-  color: #1e293b;
+  color: #1e1e1e;
   transition: border-color 0.2s ease;
 }
 
@@ -6282,7 +6282,7 @@ footer {
 
 /* Dark theme support */
 [data-theme="dark"] .pdf-settings-menu {
-  background: #1e293b;
+  background: #1e1e1e;
   border-color: #334155;
 }
 
@@ -6291,13 +6291,13 @@ footer {
 }
 
 [data-theme="dark"] .pdf-align-btn {
-  background: #0f172a;
+  background: #2d2d2d;
   border-color: #334155;
   color: #e2e8f0;
 }
 
 [data-theme="dark"] .pdf-align-btn:hover {
-  background: #1e293b;
+  background: #1e1e1e;
   border-color: #475569;
 }
 
@@ -6311,7 +6311,7 @@ footer {
 }
 
 [data-theme="dark"] .pdf-margin-input input {
-  background: #0f172a;
+  background: #2d2d2d;
   border-color: #334155;
   color: #e2e8f0;
 }
@@ -6321,12 +6321,12 @@ footer {
 }
 
 [data-theme="dark"] .pdf-reset-margins-btn {
-  background: #0f172a;
+  background: #2d2d2d;
   border-color: #334155;
   color: #94a3b8;
 }
 
 [data-theme="dark"] .pdf-reset-margins-btn:hover {
-  background: #1e293b;
+  background: #1e1e1e;
   color: #cbd5e1;
 }

@@ -38,6 +38,42 @@ function hexToHsl(hex) {
   return `hsl(${Math.round(h * 360)}, ${Math.round(s * 100)}%, ${Math.round(l * 100)}%)`;
 }
 
+// Initialize workflow mode toggle state
+document.addEventListener('DOMContentLoaded', () => {
+  chrome.storage.local.get(['workflowModeEnabled'], (result) => {
+    const toggle = document.getElementById('workflow-mode-toggle');
+    toggle.checked = result.workflowModeEnabled || false;
+  });
+});
+
+// Handle workflow mode toggle
+document.getElementById('workflow-mode-toggle').addEventListener('change', async (e) => {
+  const enabled = e.target.checked;
+  
+  // Save state
+  await chrome.storage.local.set({ workflowModeEnabled: enabled });
+  
+  // Send message to all tabs to show/hide floating button
+  const tabs = await chrome.tabs.query({});
+  tabs.forEach(tab => {
+    chrome.tabs.sendMessage(tab.id, {
+      action: 'toggleWorkflowMode',
+      enabled: enabled
+    }).catch(() => {
+      // Ignore errors for tabs that don't have content script
+    });
+  });
+  
+  // Show feedback
+  const msg = document.getElementById('copy-message');
+  msg.textContent = enabled ? 'Workflow mode enabled!' : 'Workflow mode disabled!';
+  msg.classList.remove('hidden');
+  setTimeout(() => {
+    msg.classList.add('hidden');
+    msg.textContent = 'Copied to clipboard!';
+  }, 1500);
+});
+
 // Function to copy text to the user's clipboard
 async function copyToClipboard(text) {
   if (!text || text === '-') return; // Do not copy empty values
@@ -100,4 +136,92 @@ document.getElementById('rgb-container').addEventListener('click', () => {
 
 document.getElementById('hsl-container').addEventListener('click', () => {
   copyToClipboard(document.getElementById('hsl-value').textContent);
+});
+
+// Hot Reload: Hard refresh + clear cache for current tab
+document.getElementById('hot-reload-btn').addEventListener('click', async () => {
+  try {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    
+    if (!tab || !tab.url) {
+      alert('No active tab found');
+      return;
+    }
+
+    // Extract the origin (protocol + hostname + port) from the tab URL
+    const url = new URL(tab.url);
+    const origins = [url.origin];
+
+    // Clear cache for the current tab's origin
+    await chrome.browsingData.removeCache({
+      origins: origins
+    });
+
+    // Also clear other storage types that might affect dev workflow
+    await chrome.browsingData.remove({
+      origins: origins
+    }, {
+      cacheStorage: true,
+      serviceWorkers: true
+    });
+
+    // Hard reload the page (bypass cache)
+    await chrome.tabs.reload(tab.id, { bypassCache: true });
+
+    // Show feedback
+    const msg = document.getElementById('copy-message');
+    msg.textContent = 'Hot reloaded!';
+    msg.classList.remove('hidden');
+    setTimeout(() => {
+      msg.classList.add('hidden');
+      msg.textContent = 'Copied to clipboard!';
+    }, 1500);
+
+  } catch (err) {
+    console.error('Hot reload failed:', err);
+    alert('Hot reload failed: ' + err.message);
+  }
+});
+
+// Clear Cache: Clear all cache for current tab's origin
+document.getElementById('clear-cache-btn').addEventListener('click', async () => {
+  try {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    
+    if (!tab || !tab.url) {
+      alert('No active tab found');
+      return;
+    }
+
+    // Extract the origin from the tab URL
+    const url = new URL(tab.url);
+    const origins = [url.origin];
+
+    // Clear comprehensive cache data
+    await chrome.browsingData.removeCache({
+      origins: origins
+    });
+
+    await chrome.browsingData.remove({
+      origins: origins
+    }, {
+      cacheStorage: true,
+      serviceWorkers: true,
+      localStorage: true,
+      indexedDB: true
+    });
+
+    // Show feedback
+    const msg = document.getElementById('copy-message');
+    msg.textContent = 'Cache cleared!';
+    msg.classList.remove('hidden');
+    setTimeout(() => {
+      msg.classList.add('hidden');
+      msg.textContent = 'Copied to clipboard!';
+    }, 1500);
+
+  } catch (err) {
+    console.error('Clear cache failed:', err);
+    alert('Clear cache failed: ' + err.message);
+  }
 });

@@ -1,0 +1,245 @@
+/* ============================================================================
+   PAPER LAYOUT SYSTEM - CLEAN IMPLEMENTATION FROM WORKING MOCKUP
+   ============================================================================ */
+
+/* Paper Layout Active State */
+#preview-wrapper.paper-layout-active {
+    background: #e5e7eb;
+    padding: 40px 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+}
+
+[data-theme="dark"] #preview-wrapper.paper-layout-active {
+    background: #0d1117;
+}
+
+#output.paper-layout-active {
+    max-width: none;
+    width: auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+}
+
+/* Paper Stack Container */
+.paper-stack {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+}
+
+/* Individual Page */
+.paper-page {
+    width: 794px; /* A4 width at 96 DPI: 210mm */
+    height: 1123px; /* A4 height at 96 DPI: 297mm - FIXED, not min-height */
+    background: white;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    box-sizing: border-box;
+    position: relative;
+    margin-bottom: 20px;
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    overflow: hidden; /* Prevent content from overflowing page boundaries */
+    padding: 0 !important; /* NO padding - coordinate origin at (0,0) */
+}
+
+.paper-page:last-child {
+    margin-bottom: 0;
+}
+
+/* Letter size pages */
+.paper-page.letter-size {
+    width: 816px; /* 8.5in at 96 DPI */
+    height: 1056px; /* 11in at 96 DPI */
+}
+
+[data-theme="dark"] .paper-page {
+    background: #1e1e1e;
+    color: #e6edf3;
+}
+
+/* Page Content Area - Where margins are applied */
+.paper-content {
+    flex: 1;
+    overflow: hidden;
+    position: relative;
+    z-index: 5;
+    box-sizing: border-box;
+    display: block;
+    word-wrap: break-word;
+    hyphens: auto;
+    /* Margins applied dynamically via JavaScript */
+    padding: 0;
+}
+
+[data-theme="dark"] .paper-content {
+    color: #e2e8f0;
+}
+
+/* Margin Guide Overlay - Visual feedback for content boundaries */
+.paper-page::after {
+    content: '';
+    position: absolute;
+    pointer-events: none;
+    z-index: 10;
+    border: 2px solid #ef4444;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    /* Dynamic positioning via CSS custom properties */
+    top: var(--margin-top, 0px);
+    left: var(--margin-left, 0px);
+    right: var(--margin-right, 0px);
+    bottom: var(--margin-bottom, 0px);
+}
+
+.paper-page.show-margin-guides::after {
+    opacity: 0.8;
+}
+
+[data-theme="dark"] .paper-page::after {
+    border-color: #f87171;
+}
+
+/* Page Header (optional) */
+.paper-page-header {
+    position: absolute;
+    top: 10mm;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 10px;
+    color: #64748b;
+    z-index: 1;
+    font-weight: 500;
+    text-align: center;
+    white-space: nowrap;
+}
+
+/* Page Number */
+.paper-page-number {
+    position: absolute;
+    bottom: 10mm;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 11px;
+    color: #94a3b8;
+    font-weight: 500;
+    z-index: 1;
+    text-align: center;
+    white-space: nowrap;
+}
+
+/* Page number alignment classes */
+.paper-page-number.align-left {
+    left: 20mm;
+    transform: none;
+}
+
+.paper-page-number.align-center {
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+.paper-page-number.align-right {
+    right: 20mm;
+    left: auto;
+    transform: none;
+}
+
+/* Pagination Mode - Single page view */
+.paper-stack.pagination-mode {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100%;
+}
+
+.paper-stack.pagination-mode .paper-page {
+    display: none;
+}
+
+.paper-stack.pagination-mode .paper-page.active-page {
+    display: block;
+    margin: auto;
+}
+
+/* Preserve markdown formatting in paper layout */
+.paper-content h1,
+.paper-content h2,
+.paper-content h3,
+.paper-content h4,
+.paper-content h5,
+.paper-content h6 {
+    margin-top: 0;
+    margin-bottom: 16px;
+    font-weight: 600;
+    line-height: 1.25;
+    page-break-after: avoid;
+}
+
+.paper-content p {
+    margin-top: 0;
+    margin-bottom: 16px;
+    line-height: 1.6;
+}
+
+.paper-content ul,
+.paper-content ol {
+    margin-top: 0;
+    margin-bottom: 16px;
+    padding-left: 2em;
+}
+
+.paper-content li {
+    margin-bottom: 0.25em;
+}
+
+.paper-content pre {
+    margin-top: 0;
+    margin-bottom: 16px;
+    padding: 16px;
+    overflow-x: auto;
+    background: #f6f8fa;
+    border-radius: 6px;
+}
+
+[data-theme="dark"] .paper-content pre {
+    background: #161b22;
+}
+
+.paper-content code {
+    padding: 0.2em 0.4em;
+    margin: 0;
+    font-size: 85%;
+    background-color: rgba(175,184,193,0.2);
+    border-radius: 6px;
+}
+
+.paper-content table {
+    width: 100%;
+    max-width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 16px;
+}
+
+.paper-content table th,
+.paper-content table td {
+    padding: 6px 13px;
+    border: 1px solid #d0d7de;
+}
+
+[data-theme="dark"] .paper-content table th,
+[data-theme="dark"] .paper-content table td {
+    border-color: #3d444d;
+}
+
+.paper-content img {
+    max-width: 100%;
+    height: auto;
+}

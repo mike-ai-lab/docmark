@@ -2760,14 +2760,19 @@ let performBeautify = (content) => {
 
             // Get page setup settings (includes margins from dropdown)
             const layoutSettings = loadPdfLayoutSettings();
+            
+            // CRITICAL FIX: Set PDF engine margins to 0
+            // Puppeteer shrinks viewport when margins are applied, shifting coordinates
+            // We'll apply margins manually via CSS padding instead
             const margins = {
-                top: layoutSettings.margins.top + 'mm',
-                right: layoutSettings.margins.right + 'mm',
-                bottom: layoutSettings.margins.bottom + 'mm',
-                left: layoutSettings.margins.left + 'mm'
+                top: '0mm',
+                right: '0mm',
+                bottom: '0mm',
+                left: '0mm'
             };
 
-            console.log('[PDF Export] Using margins:', margins);
+            console.log('[PDF Export] PDF engine margins set to 0 (manual margins via CSS)');
+            console.log('[PDF Export] User margins will be applied as padding:', layoutSettings.margins);
 
             // Collect HTML with all styles (async - fetches CSS)
             const fullHtml = await collectHtmlForPuppeteer(outputElement);
@@ -3111,10 +3116,29 @@ ${fontLinkTags}
         
         /* Print-specific resets */
         @media print {
-            html, body {
+            /* CRITICAL FIX: Manual margins via padding */
+            /* PDF engine margins are set to 0 to prevent viewport shrinking */
+            /* We apply margins manually using body padding */
+            @page {
+                size: A4;
+                margin: 0; /* Force 0 margins - we handle margins manually */
+            }
+            
+            html {
                 margin: 0 !important;
                 padding: 0 !important;
                 background: white !important;
+            }
+            
+            body {
+                margin: 0 !important;
+                /* Apply user margins as padding - this keeps coordinate system intact */
+                padding-top: ${layoutSettings.margins.top}mm !important;
+                padding-right: ${layoutSettings.margins.right}mm !important;
+                padding-bottom: ${layoutSettings.margins.bottom}mm !important;
+                padding-left: ${layoutSettings.margins.left}mm !important;
+                background: white !important;
+                box-sizing: border-box !important;
             }
             
             /* Reset paper layout preview styles */
@@ -3583,16 +3607,51 @@ ${fontLinkTags}
         document.getElementById('pdf-margin-bottom').value = savedSettings.margins.bottom;
         document.getElementById('pdf-margin-left').value = savedSettings.margins.left;
         
-        // Set active alignment
+        // Set active alignment - CLEAR ALL FIRST to fix the bug
         const alignButtons = modal.querySelectorAll('.pdf-align-btn');
+        alignButtons.forEach(btn => btn.classList.remove('active')); // Clear all first
         alignButtons.forEach(btn => {
             if (btn.dataset.align === savedSettings.textAlign) {
                 btn.classList.add('active');
             }
         });
         
-        // Open modal
+        // Set active page number position
+        const pageNumButtons = modal.querySelectorAll('.pdf-page-num-btn');
+        pageNumButtons.forEach(btn => btn.classList.remove('active'));
+        pageNumButtons.forEach(btn => {
+            if (btn.dataset.position === savedSettings.pageNumberPosition) {
+                btn.classList.add('active');
+            }
+        });
+        
+        // Open modal - refresh settings each time
         openBtn.addEventListener('click', () => {
+            // Reload settings when opening modal
+            const currentSettings = loadPdfLayoutSettings();
+            
+            // Update margin inputs
+            document.getElementById('pdf-margin-top').value = currentSettings.margins.top;
+            document.getElementById('pdf-margin-right').value = currentSettings.margins.right;
+            document.getElementById('pdf-margin-bottom').value = currentSettings.margins.bottom;
+            document.getElementById('pdf-margin-left').value = currentSettings.margins.left;
+            
+            // Update alignment buttons - clear all first
+            alignButtons.forEach(btn => btn.classList.remove('active'));
+            alignButtons.forEach(btn => {
+                if (btn.dataset.align === currentSettings.textAlign) {
+                    btn.classList.add('active');
+                }
+            });
+            
+            // Update page number buttons - clear all first
+            pageNumButtons.forEach(btn => btn.classList.remove('active'));
+            pageNumButtons.forEach(btn => {
+                if (btn.dataset.position === currentSettings.pageNumberPosition) {
+                    btn.classList.add('active');
+                }
+            });
+            
             modal.classList.add('active');
         });
         
@@ -3618,6 +3677,32 @@ ${fontLinkTags}
                 const settings = loadPdfLayoutSettings();
                 settings.textAlign = btn.dataset.align;
                 savePdfLayoutSettings(settings);
+                
+                // Apply to preview immediately if paper layout is active
+                if (paperLayoutActive) {
+                    applyPdfSettingsToPreview();
+                }
+                
+                showMofuHelper(`Text alignment: ${btn.dataset.align}`);
+            });
+        });
+        
+        // Page number position buttons
+        pageNumButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                pageNumButtons.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                
+                const settings = loadPdfLayoutSettings();
+                settings.pageNumberPosition = btn.dataset.position;
+                savePdfLayoutSettings(settings);
+                
+                // Apply to preview immediately if paper layout is active
+                if (paperLayoutActive) {
+                    applyPdfSettingsToPreview();
+                }
+                
+                showMofuHelper(`Page number position: ${btn.dataset.position}`);
             });
         });
         
@@ -3627,15 +3712,23 @@ ${fontLinkTags}
             if (input) {
                 input.addEventListener('change', () => {
                     const settings = loadPdfLayoutSettings();
-                    settings.margins[side] = parseInt(input.value) || 15;
+                    const value = parseInt(input.value);
+                    settings.margins[side] = isNaN(value) ? 15 : value; // Allow 0, only default to 15 if NaN
                     savePdfLayoutSettings(settings);
+                    
+                    // Apply to preview immediately if paper layout is active
+                    if (paperLayoutActive) {
+                        applyPdfSettingsToPreview();
+                    }
+                    
+                    showMofuHelper(`Margin updated: ${side} = ${settings.margins[side]}mm`);
                 });
             }
         });
         
         // Reset button
         resetBtn.addEventListener('click', () => {
-            const defaults = { textAlign: 'left', margins: { top: 15, right: 15, bottom: 15, left: 15 } };
+            const defaults = { textAlign: 'left', pageNumberPosition: 'center', margins: { top: 15, right: 15, bottom: 15, left: 15 } };
             savePdfLayoutSettings(defaults);
             
             document.getElementById('pdf-margin-top').value = 15;
@@ -3646,8 +3739,71 @@ ${fontLinkTags}
             alignButtons.forEach(b => b.classList.remove('active'));
             modal.querySelector('[data-align="left"]').classList.add('active');
             
+            pageNumButtons.forEach(b => b.classList.remove('active'));
+            modal.querySelector('[data-position="center"]').classList.add('active');
+            
+            // Apply to preview immediately if paper layout is active
+            if (paperLayoutActive) {
+                applyPdfSettingsToPreview();
+            }
+            
             showMofuHelper('Settings reset to defaults');
         });
+    };
+    
+    // Apply PDF settings to paper layout preview
+    let applyPdfSettingsToPreview = () => {
+        const settings = loadPdfLayoutSettings();
+        const paperPages = document.querySelectorAll('.paper-page');
+        const paperContents = document.querySelectorAll('.paper-content');
+        const pageNumbers = document.querySelectorAll('.paper-page-number');
+        
+        if (paperPages.length === 0) return;
+        
+        // Convert mm to pixels: 1mm ≈ 3.78px at 96 DPI
+        const mmToPx = 3.78;
+        
+        // EXPERT FIX: Apply margins to paper-content, NOT paper-page
+        // This keeps the coordinate origin (0,0) at the true page edge
+        // Margins are now internal padding within the content container
+        paperPages.forEach(page => {
+            page.style.padding = '0'; // Keep page padding at 0 to preserve coordinate origin
+        });
+        
+        // Apply margins as padding to paper-content instead
+        paperContents.forEach(content => {
+            content.style.paddingTop = `${settings.margins.top * mmToPx}px`;
+            content.style.paddingRight = `${settings.margins.right * mmToPx}px`;
+            content.style.paddingBottom = `${settings.margins.bottom * mmToPx}px`;
+            content.style.paddingLeft = `${settings.margins.left * mmToPx}px`;
+            content.style.textAlign = settings.textAlign;
+        });
+        
+        // Apply page number positioning separately
+        pageNumbers.forEach(pageNum => {
+            // Reset all positioning
+            pageNum.style.left = '';
+            pageNum.style.right = '';
+            pageNum.style.textAlign = '';
+            
+            // Apply new position
+            if (settings.pageNumberPosition === 'left') {
+                pageNum.style.left = `${settings.margins.left * mmToPx}px`;
+                pageNum.style.right = 'auto';
+                pageNum.style.textAlign = 'left';
+            } else if (settings.pageNumberPosition === 'right') {
+                pageNum.style.right = `${settings.margins.right * mmToPx}px`;
+                pageNum.style.left = 'auto';
+                pageNum.style.textAlign = 'right';
+            } else {
+                // center
+                pageNum.style.left = '0';
+                pageNum.style.right = '0';
+                pageNum.style.textAlign = 'center';
+            }
+        });
+        
+        console.log('✅ Applied PDF settings to preview:', settings);
     };
     
     // Load PDF layout settings
@@ -3663,6 +3819,7 @@ ${fontLinkTags}
         // Return defaults
         return {
             textAlign: 'left',
+            pageNumberPosition: 'center',
             margins: { top: 15, right: 15, bottom: 15, left: 15 }
         };
     };
@@ -7818,13 +7975,27 @@ ${fontLinkTags}
             return;
         }
         
+        // Get user's margin settings
+        const settings = loadPdfLayoutSettings();
+        const mmToPx = 3.78; // 1mm ≈ 3.78px at 96 DPI
+        const topMargin = settings.margins.top * mmToPx;
+        const rightMargin = settings.margins.right * mmToPx;
+        const bottomMargin = settings.margins.bottom * mmToPx;
+        const leftMargin = settings.margins.left * mmToPx;
+        
+        // Calculate available content area
+        const pageWidth = 794; // A4 width in pixels
+        const pageHeight = 1123; // A4 height in pixels
+        const contentWidth = pageWidth - leftMargin - rightMargin;
+        const contentHeight = pageHeight - topMargin - bottomMargin - 60; // Reserve 60px for page number
+        
         // Create a temporary container to measure actual rendered heights
         const tempContainer = document.createElement('div');
         tempContainer.style.cssText = `
             position: absolute;
             top: -10000px;
             left: -10000px;
-            width: ${794 - 160}px;
+            width: ${contentWidth}px;
             visibility: hidden;
             font-size: 14px;
             font-family: Inter, sans-serif;
@@ -7837,7 +8008,7 @@ ${fontLinkTags}
         const pages = [];
         let currentPage = [];
         let currentHeight = 0;
-        const maxPageHeight = 1123 - 160; // A4 height minus margins
+        const maxPageHeight = contentHeight;
         
         // Get all top-level elements
         const elements = Array.from(tempContainer.children);
@@ -7875,7 +8046,7 @@ ${fontLinkTags}
         // Clean up temp container
         document.body.removeChild(tempContainer);
         
-        console.log(`📄 Paginated into ${pages.length} pages`);
+        console.log(`📄 Paginated into ${pages.length} pages (content area: ${contentWidth}x${contentHeight}px)`);
         
         // Only update DOM if page count changed (prevents flashing)
         if (pages.length === lastPageCount && outputDiv.classList.contains('paper-layout-active')) {
@@ -7919,6 +8090,9 @@ ${fontLinkTags}
         });
         
         outputDiv.appendChild(paperStack);
+        
+        // Apply PDF settings to preview
+        applyPdfSettingsToPreview();
         
         // Update page count
         updatePageCount(pages.length);

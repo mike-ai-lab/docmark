@@ -34,7 +34,7 @@
 
 .ai-panel-header {
     background: #ffffff;
-    color: #1e293b;
+    color: #1e1e1e;
     padding: 16px 20px;
     border-radius: 12px 12px 0 0;
     display: flex;
@@ -46,7 +46,7 @@
 .ai-panel-header h3 {
     font-size: 14px;
     font-weight: 600;
-    color: #1e293b;
+    color: #1e1e1e;
     margin: 0;
 }
 
@@ -68,7 +68,7 @@
 
 .ai-close-btn:hover {
     background: #e2e8f0;
-    color: #1e293b;
+    color: #1e1e1e;
 }
 
 .ai-panel-content {
@@ -101,7 +101,7 @@
     font-size: 13px;
     font-family: 'Inter', sans-serif;
     background-color: #ffffff;
-    color: #1e293b;
+    color: #1e1e1e;
     cursor: pointer;
     transition: all 0.2s;
     appearance: none;
@@ -159,7 +159,7 @@
 .ai-action-btn:hover:not(:disabled) {
     background: #f8fafc;
     border-color: #cbd5e1;
-    color: #1e293b;
+    color: #1e1e1e;
 }
 
 .ai-action-btn:disabled {
@@ -258,7 +258,7 @@
     bottom: 20px;
     left: 50%;
     transform: translateX(-50%);
-    background: #1e293b;
+    background: #1e1e1e;
     color: #ffffff;
     padding: 10px 20px;
     border-radius: 8px;
@@ -459,7 +459,7 @@
 .ai-modal-header h3 {
     font-size: 16px;
     font-weight: 600;
-    color: #1e293b;
+    color: #1e1e1e;
     margin: 0;
 }
 
@@ -481,7 +481,7 @@
 
 .ai-modal-close:hover {
     background: #e2e8f0;
-    color: #1e293b;
+    color: #1e1e1e;
 }
 
 .ai-modal-body {
@@ -504,7 +504,7 @@
     border-radius: 8px;
     font-size: 14px;
     font-family: 'Inter', sans-serif;
-    color: #1e293b;
+    color: #1e1e1e;
     resize: vertical;
     background: #ffffff;
     box-sizing: border-box;
@@ -678,7 +678,7 @@
 
 .ai-chat-header {
     background: #ffffff;
-    color: #1e293b;
+    color: #1e1e1e;
     padding: 8px 12px;
     display: flex;
     justify-content: space-between;
@@ -704,7 +704,7 @@
     padding: 5px 8px;
     border: 1px solid #e2e8f0;
     background: #ffffff;
-    color: #1e293b;
+    color: #1e1e1e;
     border-radius: 6px;
     font-size: 11px;
     font-weight: 500;
@@ -738,7 +738,7 @@
 
 .ai-chat-control-btn:hover {
     background: #f1f5f9;
-    color: #1e293b;
+    color: #1e1e1e;
 }
 
 .ai-chat-messages {
@@ -997,7 +997,7 @@
     border-radius: 6px;
     font-size: 13px;
     background: #ffffff;
-    color: #1e293b;
+    color: #1e1e1e;
     font-family: 'Monaco', 'Menlo', monospace;
 }
 
@@ -1045,7 +1045,7 @@
 
 .ai-test-key-btn:hover {
     background: #e2e8f0;
-    color: #1e293b;
+    color: #1e1e1e;
 }
 
 .ai-test-key-btn:active {
@@ -1089,7 +1089,7 @@
     font-family: 'Monaco', 'Menlo', monospace;
     font-size: 12px;
     font-weight: 600;
-    color: #1e293b;
+    color: #1e1e1e;
     background: #ffffff;
     padding: 4px 8px;
     border-radius: 4px;
@@ -1272,7 +1272,7 @@
 
 .message-action-btn:hover {
     background: #f1f5f9;
-    color: #1e293b;
+    color: #1e1e1e;
     border-color: #cbd5e1;
 }
 
@@ -1569,7 +1569,7 @@
     font-family: 'Inter', sans-serif;
     resize: none;
     max-height: 120px;
-    color: #1e293b;
+    color: #1e1e1e;
     background: #ffffff;
 }
 

@@ -129,10 +129,10 @@ Traditional academic formatting.
 - Background: White
 - Border: Light gray (#e2e8f0)
 - Active button: Blue (#3b82f6)
-- Text: Dark gray (#1e293b)
+- Text: Dark gray (#1e1e1e)
 
 ### Dark Theme
-- Background: Dark blue (#1e293b)
+- Background: Dark blue (#1e1e1e)
 - Border: Medium gray (#334155)
 - Active button: Blue (#3b82f6)
 - Text: Light gray (#e2e8f0)
