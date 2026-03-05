@@ -116,8 +116,9 @@ New*Session.md
 *.svg
 !public/**/*.svg
 
-# Utility scripts
+# Utility scripts (but not in src/)
 pdf-*.js
+!src/**/pdf-*.js
 svg-*.js
 create-*.js
 convert-*.js
