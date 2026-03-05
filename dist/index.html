@@ -88,8 +88,8 @@
     </script>
     <!-- <script type="module" src="./src/code-paste-window.js"></script> -->
     <title>Markdown Live Preview</title>
-    <script type="module" crossorigin src="./assets/index-C9CnCZTU.js"></script>
-    <link rel="stylesheet" crossorigin href="./assets/index-COSz6cHr.css">
+    <script type="module" crossorigin src="./assets/index-BFW3tBPN.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/index-HGF5miAE.css">
   </head>
 
   <body>
@@ -200,77 +200,14 @@
             </div>
             
             <div class="button-group">
-                <!-- PDF Settings Dropdown -->
-                <div class="pdf-settings-dropdown">
-                    <button class="icon-button" id="pdf-settings-dropdown-btn" title="PDF Settings">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <circle cx="12" cy="12" r="3"></circle>
-                            <path d="M12 1v6m0 6v6"></path>
-                            <path d="M5.64 5.64l4.24 4.24m4.24 4.24l4.24 4.24"></path>
-                            <path d="M18.36 5.64l-4.24 4.24m-4.24 4.24l-4.24 4.24"></path>
-                        </svg>
-                    </button>
-                    <div class="pdf-settings-menu" id="pdf-settings-menu">
-                        <div class="pdf-settings-section">
-                            <div class="pdf-settings-label">Text Alignment</div>
-                            <div class="pdf-settings-buttons">
-                                <button class="pdf-align-btn active" data-align="left" title="Align Left">
-                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                        <line x1="3" y1="6" x2="21" y2="6"></line>
-                                        <line x1="3" y1="12" x2="15" y2="12"></line>
-                                        <line x1="3" y1="18" x2="18" y2="18"></line>
-                                    </svg>
-                                </button>
-                                <button class="pdf-align-btn" data-align="center" title="Align Center">
-                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                        <line x1="3" y1="6" x2="21" y2="6"></line>
-                                        <line x1="6" y1="12" x2="18" y2="12"></line>
-                                        <line x1="4" y1="18" x2="20" y2="18"></line>
-                                    </svg>
-                                </button>
-                                <button class="pdf-align-btn" data-align="right" title="Align Right">
-                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                        <line x1="3" y1="6" x2="21" y2="6"></line>
-                                        <line x1="9" y1="12" x2="21" y2="12"></line>
-                                        <line x1="6" y1="18" x2="21" y2="18"></line>
-                                    </svg>
-                                </button>
-                                <button class="pdf-align-btn" data-align="justify" title="Justify">
-                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                        <line x1="3" y1="6" x2="21" y2="6"></line>
-                                        <line x1="3" y1="12" x2="21" y2="12"></line>
-                                        <line x1="3" y1="18" x2="21" y2="18"></line>
-                                    </svg>
-                                </button>
-                            </div>
-                        </div>
-                        
-                        <div class="pdf-settings-divider"></div>
-                        
-                        <div class="pdf-settings-section">
-                            <div class="pdf-settings-label">Page Margins (mm)</div>
-                            <div class="pdf-margin-grid">
-                                <div class="pdf-margin-input">
-                                    <label>Top</label>
-                                    <input type="number" id="pdf-margin-top" min="5" max="50" value="15" step="1">
-                                </div>
-                                <div class="pdf-margin-input">
-                                    <label>Right</label>
-                                    <input type="number" id="pdf-margin-right" min="5" max="50" value="15" step="1">
-                                </div>
-                                <div class="pdf-margin-input">
-                                    <label>Bottom</label>
-                                    <input type="number" id="pdf-margin-bottom" min="5" max="50" value="15" step="1">
-                                </div>
-                                <div class="pdf-margin-input">
-                                    <label>Left</label>
-                                    <input type="number" id="pdf-margin-left" min="5" max="50" value="15" step="1">
-                                </div>
-                            </div>
-                            <button class="pdf-reset-margins-btn" id="pdf-reset-margins-btn">Reset to Default</button>
-                        </div>
-                    </div>
-                </div>
+                <button class="icon-button" id="pdf-settings-btn" title="PDF Settings">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="3"></circle>
+                        <path d="M12 1v6m0 6v6"></path>
+                        <path d="M5.64 5.64l4.24 4.24m4.24 4.24l4.24 4.24"></path>
+                        <path d="M18.36 5.64l-4.24 4.24m-4.24 4.24l-4.24 4.24"></path>
+                    </svg>
+                </button>
                 
                 <button class="icon-button" id="export-pdf-button" title="Export PDF">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -1063,6 +1000,115 @@
         <div class="ai-status-content">
             <div class="ai-status-spinner"></div>
             <span class="ai-status-text">Processing...</span>
+        </div>
+    </div>
+    
+    <!-- PDF Settings Modal -->
+    <div class="pdf-settings-modal-overlay" id="pdf-settings-modal">
+        <div class="pdf-settings-modal">
+            <div class="pdf-settings-modal-header">
+                <h3>PDF Export Settings</h3>
+                <button class="pdf-settings-modal-close" id="pdf-settings-modal-close">×</button>
+            </div>
+            <div class="pdf-settings-modal-body">
+                <div class="pdf-modal-section">
+                    <label class="pdf-modal-label">Text Alignment</label>
+                    <div class="pdf-align-buttons">
+                        <button class="pdf-align-btn active" data-align="left">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="3" y1="6" x2="21" y2="6"></line>
+                                <line x1="3" y1="12" x2="15" y2="12"></line>
+                                <line x1="3" y1="18" x2="18" y2="18"></line>
+                            </svg>
+                            <span>Left</span>
+                        </button>
+                        <button class="pdf-align-btn" data-align="center">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="3" y1="6" x2="21" y2="6"></line>
+                                <line x1="6" y1="12" x2="18" y2="12"></line>
+                                <line x1="4" y1="18" x2="20" y2="18"></line>
+                            </svg>
+                            <span>Center</span>
+                        </button>
+                        <button class="pdf-align-btn" data-align="right">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="3" y1="6" x2="21" y2="6"></line>
+                                <line x1="9" y1="12" x2="21" y2="12"></line>
+                                <line x1="6" y1="18" x2="21" y2="18"></line>
+                            </svg>
+                            <span>Right</span>
+                        </button>
+                        <button class="pdf-align-btn" data-align="justify">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="3" y1="6" x2="21" y2="6"></line>
+                                <line x1="3" y1="12" x2="21" y2="12"></line>
+                                <line x1="3" y1="18" x2="21" y2="18"></line>
+                            </svg>
+                            <span>Justify</span>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="pdf-modal-section">
+                    <label class="pdf-modal-label">Page Number Position</label>
+                    <div class="pdf-align-buttons">
+                        <button class="pdf-page-num-btn" data-position="left">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="3" y="3" width="18" height="18" rx="2"></rect>
+                                <text x="6" y="18" font-size="8" fill="currentColor">1</text>
+                            </svg>
+                            <span>Left</span>
+                        </button>
+                        <button class="pdf-page-num-btn active" data-position="center">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="3" y="3" width="18" height="18" rx="2"></rect>
+                                <text x="10" y="18" font-size="8" fill="currentColor">1</text>
+                            </svg>
+                            <span>Center</span>
+                        </button>
+                        <button class="pdf-page-num-btn" data-position="right">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="3" y="3" width="18" height="18" rx="2"></rect>
+                                <text x="15" y="18" font-size="8" fill="currentColor">1</text>
+                            </svg>
+                            <span>Right</span>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="pdf-modal-section">
+                    <label class="pdf-modal-label">Page Margins (mm)</label>
+                    <div class="pdf-margin-grid">
+                        <div class="pdf-margin-field">
+                            <label>Top</label>
+                            <input type="number" id="pdf-margin-top" min="0" max="50" value="15">
+                        </div>
+                        <div class="pdf-margin-field">
+                            <label>Right</label>
+                            <input type="number" id="pdf-margin-right" min="0" max="50" value="15">
+                        </div>
+                        <div class="pdf-margin-field">
+                            <label>Bottom</label>
+                            <input type="number" id="pdf-margin-bottom" min="0" max="50" value="15">
+                        </div>
+                        <div class="pdf-margin-field">
+                            <label>Left</label>
+                            <input type="number" id="pdf-margin-left" min="0" max="50" value="15">
+                        </div>
+                    </div>
+                    <div style="margin-top: 12px;">
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                            <input type="checkbox" id="show-margin-guides" checked style="cursor: pointer;">
+                            <span style="font-size: 13px; color: #64748b;">Show red margin guides on pages</span>
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="pdf-modal-actions">
+                    <button class="pdf-modal-btn-secondary" id="pdf-reset-btn">Reset to Defaults</button>
+                    <button class="pdf-modal-btn-primary" id="pdf-apply-btn">Apply & Close</button>
+                </div>
+            </div>
         </div>
     </div>
 

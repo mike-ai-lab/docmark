@@ -48,11 +48,11 @@ Each style works everywhere—in the preview, in PDF exports, and in HTML export
 
 #### PDF Import & Conversion
 - Import PDF documents and convert to editable Markdown
-- Automatic table detection and conversion
+- **Powerful table detection** - preserves complex nested tables
 - Structure preservation (headings, lists, paragraphs)
 - Multi-page PDF support
 - Preview before insertion
-- Intelligent spatial analysis for table extraction
+- Intelligent spatial analysis for accurate extraction
 
 #### PDF Export with Intelligence
 - Two export methods: quick jsPDF export or pixel-perfect browser print
@@ -201,9 +201,19 @@ npm run build
 ```
 
 ### Deploy
-The app is configured for production deployment. Build the app and upload the `dist/` directory to your web server.
 
-For detailed deployment instructions to **mimevents.com**, see [DEPLOY-TO-MIMEVENTS.md](DEPLOY-TO-MIMEVENTS.md).
+#### Deploy to Vercel (Recommended)
+```bash
+npm install -g vercel
+vercel --prod
+```
+
+The app includes serverless functions for PDF import. Vercel will automatically configure everything.
+
+For detailed instructions, see [VERCEL_DEPLOY.md](VERCEL_DEPLOY.md).
+
+#### Deploy to Other Hosts
+Build the app and upload the `dist/` directory to your web server. Note: PDF import requires serverless function support (Vercel, Netlify, AWS Lambda).
 
 ---
 
@@ -214,6 +224,7 @@ For detailed deployment instructions to **mimevents.com**, see [DEPLOY-TO-MIMEVE
 - **Build Tool**: Vite 6.4.1
 - **Styling**: Custom CSS with multiple theme support
 - **PDF Generation**: jsPDF 2.5.1
+- **PDF Import**: pdfjs-dist 4.10.38 (client-side)
 - **Syntax Highlighting**: highlight.js 11.9.0
 - **HTML Sanitization**: DOMPurify 3.2.5
 - **Storage**: storehouse-js (localStorage wrapper)

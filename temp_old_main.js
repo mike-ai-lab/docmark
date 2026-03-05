@@ -3,15 +3,6 @@ import * as monaco from 'monaco-editor';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
 import { setupValidationWizard } from './validation-wizard.js';
-// AI Assistant imports
-import AIManager from './ai/ai-manager.js';
-import AIPanelUI from './ai/ai-panel-ui.js';
-import AIChatUI from './ai/ai-chat-ui.js';
-// PDF Import
-import PDFImportUI from './pdf-import/pdf-import-ui.js';
-import { enhanceSelect, refreshEnhancedSelect } from './ui/custom-select.js';
-// TOC Styles for exports
-import { generateTocHtml } from './toc-styles.js';
 // DISABLED FOR DEPLOYMENT - Inspector and HTML Editor features not finished
 // import { initializeInspector, getInspector, getCurrentDoc } from './inspector-integration.js';
 // import { initInspectorPanel, showInspectorToggle, hideInspectorToggle } from './inspector-panel-ui.js';
@@ -20,17 +11,12 @@ const init = () => {
     let hasEdited = false;
     let scrollBarSync = false;
     let cursorSync = false;
-    let isUpdating = false; // Flag to prevent infinite update loop in edit mode
     let tocEnabled = false;
     let htmlPreviewMode = false; // Toggle for full HTML preview mode
     
     // Paper layout state (global within init scope)
     let paperLayoutActive = false;
     let paperLayoutPaginator = null;
-    
-    // Paper layout rendering stabilization guards
-    let isRenderingPaperLayout = false;      // Prevent re-entrant rendering
-    let paperLayoutRenderScheduled = false;  // Track if render already scheduled
     
     // HTML/CSS upload state
     let loadedCSSContent = null; // Store loaded CSS content
@@ -44,11 +30,6 @@ const init = () => {
     let undoHistoryIndex = -1;
     const MAX_UNDO_STEPS = 50;
     let isPerformingUndoRedo = false; // Flag to prevent saving during undo/redo
-    
-    // AI Assistant instances (will be initialized after editor)
-    let aiManager = null;
-    let aiPanelUI = null;
-    let aiChatUI = null;
 
     const localStorageNamespace = 'com.markdownlivepreview';
     const localStorageKey = 'last_state';
@@ -157,17 +138,17 @@ const init = () => {
         }
     };
     
-    // PDF Font Settings - configurable (Professional document standards)
+    // PDF Font Settings - configurable
     let pdfFontSettings = {
-        h1: 16,              // Main title (16pt - professional standard)
-        h2: 14,              // Section headings (14pt)
-        h3: 12,              // Subsection headings (12pt)
-        h4: 11,              // Minor headings (11pt)
-        paragraph: 10,       // Body text (10pt - standard for professional docs)
-        list: 10,            // List items (10pt - same as body)
-        blockquote: 10,      // Blockquotes (10pt)
-        code: 9,             // Code blocks (9pt - slightly smaller, monospace)
-        table: 9,            // Table text (9pt - compact for data)
+        h1: 10,
+        h2: 10,
+        h3: 10,
+        h4: 10,
+        paragraph: 8,
+        list: 8,
+        blockquote: 8,
+        code: 8,
+        table: 8,
         fontFamily: 'helvetica', // helvetica, times, courier
         tableBorders: 'horizontal', // all, horizontal, none
         tableBorderWeight: 0.15,
@@ -372,19 +353,7 @@ This web site is using ${"`"}markedjs/marked${"`"}.
                 hasEdited = true;
             }
             let value = editor.getValue();
-            
-            // Don't convert if we're updating from preview edit
-            if (!isUpdating) {
-                // Check if paper layout is active
-                if (paperLayoutActive) {
-                    // Re-render paper layout instead of normal convert
-                    handleContentChangeInPaperLayout();
-                } else {
-                    // Normal web layout - use convert
-                    convert(value);
-                }
-            }
-            
+            convert(value);
             saveLastContent(value);
             
             // Update TOC if visible
@@ -394,6 +363,11 @@ This web site is using ${"`"}markedjs/marked${"`"}.
             
             // Update status bar
             updateStatusBar();
+            
+            // Re-paginate if in paper layout mode
+            if (typeof paperLayoutActive !== 'undefined' && paperLayoutActive && typeof handleContentChangeInPaperLayout !== 'undefined') {
+                setTimeout(handleContentChangeInPaperLayout, 100);
+            }
         });
 
         // Scroll sync is now handled in the consolidated section at the bottom
@@ -701,9 +675,7 @@ This web site is using ${"`"}markedjs/marked${"`"}.
     };
 
     // Render markdown text as html with accurate line mapping
-    let convert = (markdown, options = {}) => {
-        // options.writeToDom: boolean (default: true)
-        const writeToDom = options.writeToDom === undefined ? true : !!options.writeToDom;
+    let convert = (markdown) => {
         // Check if HTML Preview Mode is enabled OR if content looks like a full HTML document
         const isFullHtmlDocument = markdown.trim().match(/^<!DOCTYPE\s+html>/i) || 
                                    markdown.trim().match(/^<html[\s>]/i);
@@ -991,38 +963,13 @@ This web site is using ${"`"}markedjs/marked${"`"}.
             }
         }
         
-        // ADD IDS TO HEADINGS FOR TOC LINKS TO WORK
-        // Parse the HTML and add IDs to all headings
-        const tempContainer = document.createElement('div');
-        tempContainer.innerHTML = finalHtml;
+        // Update the output
+        document.querySelector('#output').innerHTML = finalHtml;
         
-        const headings = tempContainer.querySelectorAll('h1, h2, h3, h4, h5, h6');
-        headings.forEach(heading => {
-            const text = heading.textContent.trim();
-            if (text) {
-                const id = text.toLowerCase()
-                    .replace(/[^\w\s-]/g, '')
-                    .replace(/\s+/g, '-')
-                    .replace(/-+/g, '-')
-                    .replace(/^-|-$/g, '');
-                heading.id = id;
-            }
-        });
-        
-        finalHtml = tempContainer.innerHTML;
-        
-        // Update the output (unless caller requested a dry run)
-        if (writeToDom) {
-            document.querySelector('#output').innerHTML = finalHtml;
-
-            // Apply edit mode if enabled
-            if (editModeEnabled) {
-                applyEditMode();
-            }
+        // Apply edit mode if enabled
+        if (editModeEnabled) {
+            applyEditMode();
         }
-
-        // Return the generated HTML so callers can use it without writing to DOM
-        return finalHtml;
     };
 
     // Cursor synchronization: highlight preview element based on editor cursor
@@ -2122,13 +2069,10 @@ let performBeautify = (content) => {
     let initStyleSelector = (settings) => {
         let selector = document.querySelector('#style-selector');
         if (!selector) return;
-
+        
         currentStyle = settings || 'github';
         selector.value = currentStyle;
-
-        // Enhance with custom dropdown UI
-        enhanceSelect(selector);
-
+        
         // Style information for tooltips
         const styleInfo = {
             github: {
@@ -2582,19 +2526,12 @@ let performBeautify = (content) => {
         const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
         const css = await getStyleCss(currentStyle, isDark);
         
-        // Generate TOC HTML if TOC is enabled
-        let tocHtml = '';
-        if (tocEnabled) {
-            const tocData = generateTocData();
-            tocHtml = generateTocHtml(tocData, currentStyle) || '';
-        }
-        
         // Style-specific configurations for paper layout
         let paperStyles = '';
         if (currentStyle === 'gitbook') {
             paperStyles = `
                 body {
-                    background-color: ${isDark ? '#040608' : '#f5f5f5'};
+                    background-color: ${isDark ? '#0d1117' : '#f5f5f5'};
                     padding: 40px 20px;
                 }
                 .paper-container {
@@ -2634,14 +2571,14 @@ let performBeautify = (content) => {
             // GitHub style
             paperStyles = `
                 body {
-                    background-color: ${isDark ? '#040608' : '#f6f8fa'};
+                    background-color: ${isDark ? '#0d1117' : '#f6f8fa'};
                     padding: 40px 20px;
                     margin: 0;
                 }
                 .paper-container {
                     max-width: 980px;
                     margin: 0 auto;
-                    background-color: ${isDark ? '#040608' : '#ffffff'};
+                    background-color: ${isDark ? '#0d1117' : '#ffffff'};
                     padding: 40px 50px;
                     box-shadow: 0 0 10px rgba(0, 0, 0, ${isDark ? '0.3' : '0.08'});
                     min-height: 100vh;
@@ -2685,7 +2622,6 @@ let performBeautify = (content) => {
 <body>
     <div class="paper-container">
         <div class="markdown-body">
-            ${tocHtml}
             ${outputElement.innerHTML}
         </div>
     </div>
@@ -2771,21 +2707,11 @@ let performBeautify = (content) => {
             // Show loading indicator
             showLoadingIndicator('Generating PDF...');
 
-            // Get page setup settings (includes margins from dropdown)
-            const layoutSettings = loadPdfLayoutSettings();
-            
-            // CRITICAL FIX: Set PDF engine margins to 0
-            // Puppeteer shrinks viewport when margins are applied, shifting coordinates
-            // We'll apply margins manually via CSS padding instead
-            const margins = {
-                top: '0mm',
-                right: '0mm',
-                bottom: '0mm',
-                left: '0mm'
-            };
+            // Get page setup settings (includes margins)
+            const pageSettings = loadPageSetupSettings();
+            const margins = pageSettings.margins || { top: 20, right: 20, bottom: 20, left: 20 };
 
-            console.log('[PDF Export] PDF engine margins set to 0 (manual margins via CSS)');
-            console.log('[PDF Export] User margins will be applied as padding:', layoutSettings.margins);
+            console.log('[PDF Export] Using margins:', margins);
 
             // Collect HTML with all styles (async - fetches CSS)
             const fullHtml = await collectHtmlForPuppeteer(outputElement);
@@ -2839,19 +2765,6 @@ let performBeautify = (content) => {
     // Helper function to collect HTML with inline styles for Puppeteer
     let collectHtmlForPuppeteer = async (outputElement) => {
         console.log('[PDF Export] Collecting HTML and CSS for Puppeteer...');
-        
-        // Load PDF layout settings
-        const layoutSettings = loadPdfLayoutSettings();
-        
-        // Generate TOC if enabled
-        let tocHtml = '';
-        if (tocEnabled) {
-            const tocData = generateTocData();
-            if (tocData && tocData.length > 0) {
-                tocHtml = generateTocHtml(tocData, currentStyle) || '';
-                console.log('[PDF Export] TOC generated for style:', currentStyle);
-            }
-        }
         
         // Get the current style CSS link
         const ghMarkdownLink = document.getElementById('gh-markdown-link');
@@ -2943,152 +2856,6 @@ ${fontLinkTags}
         /* Inline styles from page */
         ${inlineCss}
         
-        /* TOC Page Styling - Dedicated first page */
-        .toc-page-container {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            page-break-after: always;
-            break-after: page;
-            padding: 40px;
-            background: white;
-            min-height: 100vh;
-            box-sizing: border-box;
-        }
-        
-        .toc-page-content {
-            width: 100%;
-            max-width: 600px;
-            text-align: center;
-            page-break-inside: avoid;
-            break-inside: avoid;
-        }
-        
-        /* TOC Styling - Ensure proper list structure */
-        .toc-github,
-        .toc-gitbook,
-        .toc-vscode,
-        .toc-medium,
-        .toc-minimal,
-        .toc-notion,
-        .toc-latex {
-            page-break-inside: avoid;
-            break-inside: avoid;
-        }
-        
-        .toc-github ul,
-        .toc-gitbook ul,
-        .toc-vscode ul,
-        .toc-medium ul,
-        .toc-minimal ul,
-        .toc-notion ul,
-        .toc-latex ul {
-            list-style: none !important;
-            padding: 0 !important;
-            margin: 0 !important;
-        }
-        
-        .toc-github li,
-        .toc-gitbook li,
-        .toc-vscode li,
-        .toc-medium li,
-        .toc-minimal li,
-        .toc-notion li,
-        .toc-latex li {
-            display: list-item !important;
-            list-style: none !important;
-            margin: 0 !important;
-            padding: 0 !important;
-        }
-        
-        .toc-github a,
-        .toc-gitbook a,
-        .toc-vscode a,
-        .toc-medium a,
-        .toc-minimal a,
-        .toc-notion a,
-        .toc-latex a {
-            text-decoration: none !important;
-        }
-        
-        /* Content starts on page 2 */
-        .content-container {
-            page-break-before: avoid;
-        }
-        
-        /* Professional PDF spacing and typography */
-        .markdown-body {
-            line-height: 1.4 !important; /* Compact professional line spacing */
-            text-align: ${layoutSettings.textAlign} !important; /* User-defined alignment */
-        }
-        
-        .markdown-body h1 {
-            font-size: 16pt !important;
-            line-height: 1.3 !important;
-            margin-top: 12pt !important;
-            margin-bottom: 8pt !important;
-        }
-        
-        .markdown-body h2 {
-            font-size: 14pt !important;
-            line-height: 1.3 !important;
-            margin-top: 10pt !important;
-            margin-bottom: 6pt !important;
-        }
-        
-        .markdown-body h3 {
-            font-size: 12pt !important;
-            line-height: 1.3 !important;
-            margin-top: 8pt !important;
-            margin-bottom: 5pt !important;
-        }
-        
-        .markdown-body h4,
-        .markdown-body h5,
-        .markdown-body h6 {
-            font-size: 11pt !important;
-            line-height: 1.3 !important;
-            margin-top: 6pt !important;
-            margin-bottom: 4pt !important;
-        }
-        
-        .markdown-body p {
-            font-size: 10pt !important;
-            line-height: 1.4 !important;
-            margin-top: 0 !important;
-            margin-bottom: 6pt !important;
-        }
-        
-        .markdown-body ul,
-        .markdown-body ol {
-            font-size: 10pt !important;
-            line-height: 1.4 !important;
-            margin-top: 4pt !important;
-            margin-bottom: 6pt !important;
-            padding-left: 20pt !important;
-        }
-        
-        .markdown-body li {
-            margin-bottom: 2pt !important;
-        }
-        
-        .markdown-body blockquote {
-            font-size: 10pt !important;
-            line-height: 1.4 !important;
-            margin: 6pt 0 !important;
-            padding: 6pt 12pt !important;
-        }
-        
-        .markdown-body pre,
-        .markdown-body code {
-            font-size: 9pt !important;
-            line-height: 1.3 !important;
-        }
-        
-        .markdown-body hr {
-            margin: 8pt 0 !important;
-        }
-        
         /* Table overflow fixes for PDF export */
         table {
             width: 100% !important;
@@ -3097,7 +2864,6 @@ ${fontLinkTags}
             word-wrap: break-word !important;
             overflow-wrap: break-word !important;
             page-break-inside: auto !important;
-            font-size: 9pt !important;
         }
         
         table th,
@@ -3105,13 +2871,13 @@ ${fontLinkTags}
             word-wrap: break-word !important;
             overflow-wrap: break-word !important;
             white-space: normal !important;
-            padding: 4px 6px !important;
-            font-size: 9pt !important;
-            line-height: 1.3 !important;
+            padding: 6px 8px !important;
+            font-size: 11px !important;
+            line-height: 1.4 !important;
         }
         
         table thead th {
-            font-size: 9pt !important;
+            font-size: 11px !important;
             font-weight: 600 !important;
         }
         
@@ -3129,29 +2895,10 @@ ${fontLinkTags}
         
         /* Print-specific resets */
         @media print {
-            /* CRITICAL FIX: Manual margins via padding */
-            /* PDF engine margins are set to 0 to prevent viewport shrinking */
-            /* We apply margins manually using body padding */
-            @page {
-                size: A4;
-                margin: 0; /* Force 0 margins - we handle margins manually */
-            }
-            
-            html {
+            html, body {
                 margin: 0 !important;
                 padding: 0 !important;
                 background: white !important;
-            }
-            
-            body {
-                margin: 0 !important;
-                /* Apply user margins as padding - this keeps coordinate system intact */
-                padding-top: ${layoutSettings.margins.top}mm !important;
-                padding-right: ${layoutSettings.margins.right}mm !important;
-                padding-bottom: ${layoutSettings.margins.bottom}mm !important;
-                padding-left: ${layoutSettings.margins.left}mm !important;
-                background: white !important;
-                box-sizing: border-box !important;
             }
             
             /* Reset paper layout preview styles */
@@ -3200,8 +2947,7 @@ ${fontLinkTags}
     </style>
 </head>
 <body>
-    ${tocHtml ? `<div class="toc-page-container"><div class="toc-page-content">${tocHtml}</div></div>` : ''}
-    <div class="markdown-body content-container">
+    <div class="markdown-body">
         ${outputElement.innerHTML}
     </div>
 </body>
@@ -3575,11 +3321,7 @@ ${fontLinkTags}
         if (exportPdfButton) {
             exportPdfButton.addEventListener('click', (event) => {
                 event.preventDefault();
-                showConfirmDialog(
-                    'Export PDF',
-                    'Are you sure you want to export this document as PDF? Make sure the PDF server is running (node pdf-server.js).',
-                    exportPreviewToPdf
-                );
+                exportPreviewToPdf();
             });
         }
         
@@ -3588,11 +3330,7 @@ ${fontLinkTags}
         if (printPdfButton) {
             printPdfButton.addEventListener('click', (event) => {
                 event.preventDefault();
-                showConfirmDialog(
-                    'Print PDF',
-                    'Are you sure you want to print this document?',
-                    printPreviewToPdf
-                );
+                printPreviewToPdf();
             });
         }
         
@@ -3603,257 +3341,6 @@ ${fontLinkTags}
                 event.preventDefault();
                 exportPreviewToHtml();
             });
-        }
-        
-        // Setup PDF Settings Modal
-        setupPdfSettingsModal();
-    };
-    
-    // PDF Settings Modal Handler
-    let setupPdfSettingsModal = () => {
-        const modal = document.getElementById('pdf-settings-modal');
-        const openBtn = document.getElementById('pdf-settings-btn');
-        const closeBtn = document.getElementById('pdf-settings-modal-close');
-        const applyBtn = document.getElementById('pdf-apply-btn');
-        const resetBtn = document.getElementById('pdf-reset-btn');
-        
-        if (!modal || !openBtn) return;
-        
-        // Load saved settings
-        const savedSettings = loadPdfLayoutSettings();
-        
-        // Set initial values
-        document.getElementById('pdf-margin-top').value = savedSettings.margins.top;
-        document.getElementById('pdf-margin-right').value = savedSettings.margins.right;
-        document.getElementById('pdf-margin-bottom').value = savedSettings.margins.bottom;
-        document.getElementById('pdf-margin-left').value = savedSettings.margins.left;
-        
-        // Set active alignment - CLEAR ALL FIRST to fix the bug
-        const alignButtons = modal.querySelectorAll('.pdf-align-btn');
-        alignButtons.forEach(btn => btn.classList.remove('active')); // Clear all first
-        alignButtons.forEach(btn => {
-            if (btn.dataset.align === savedSettings.textAlign) {
-                btn.classList.add('active');
-            }
-        });
-        
-        // Set active page number position
-        const pageNumButtons = modal.querySelectorAll('.pdf-page-num-btn');
-        pageNumButtons.forEach(btn => btn.classList.remove('active'));
-        pageNumButtons.forEach(btn => {
-            if (btn.dataset.position === savedSettings.pageNumberPosition) {
-                btn.classList.add('active');
-            }
-        });
-        
-        // Open modal - refresh settings each time
-        openBtn.addEventListener('click', () => {
-            // Reload settings when opening modal
-            const currentSettings = loadPdfLayoutSettings();
-            
-            // Update margin inputs
-            document.getElementById('pdf-margin-top').value = currentSettings.margins.top;
-            document.getElementById('pdf-margin-right').value = currentSettings.margins.right;
-            document.getElementById('pdf-margin-bottom').value = currentSettings.margins.bottom;
-            document.getElementById('pdf-margin-left').value = currentSettings.margins.left;
-            
-            // Update alignment buttons - clear all first
-            alignButtons.forEach(btn => btn.classList.remove('active'));
-            alignButtons.forEach(btn => {
-                if (btn.dataset.align === currentSettings.textAlign) {
-                    btn.classList.add('active');
-                }
-            });
-            
-            // Update page number buttons - clear all first
-            pageNumButtons.forEach(btn => btn.classList.remove('active'));
-            pageNumButtons.forEach(btn => {
-                if (btn.dataset.position === currentSettings.pageNumberPosition) {
-                    btn.classList.add('active');
-                }
-            });
-            
-            modal.classList.add('active');
-        });
-        
-        // Close modal
-        const closeModal = () => {
-            modal.classList.remove('active');
-        };
-        
-        closeBtn.addEventListener('click', closeModal);
-        applyBtn.addEventListener('click', closeModal);
-        
-        // Close on overlay click
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) closeModal();
-        });
-        
-        // Alignment buttons
-        alignButtons.forEach(btn => {
-            btn.addEventListener('click', () => {
-                alignButtons.forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-                
-                const settings = loadPdfLayoutSettings();
-                settings.textAlign = btn.dataset.align;
-                savePdfLayoutSettings(settings);
-                
-                // Apply to preview immediately if paper layout is active
-                if (paperLayoutActive) {
-                    applyPdfSettingsToPreview();
-                }
-                
-                showMofuHelper(`Text alignment: ${btn.dataset.align}`);
-            });
-        });
-        
-        // Page number position buttons
-        pageNumButtons.forEach(btn => {
-            btn.addEventListener('click', () => {
-                pageNumButtons.forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-                
-                const settings = loadPdfLayoutSettings();
-                settings.pageNumberPosition = btn.dataset.position;
-                savePdfLayoutSettings(settings);
-                
-                // Apply to preview immediately if paper layout is active
-                if (paperLayoutActive) {
-                    applyPdfSettingsToPreview();
-                }
-                
-                showMofuHelper(`Page number position: ${btn.dataset.position}`);
-            });
-        });
-        
-        // Margin inputs
-        ['top', 'right', 'bottom', 'left'].forEach(side => {
-            const input = document.getElementById(`pdf-margin-${side}`);
-            if (input) {
-                input.addEventListener('change', () => {
-                    const settings = loadPdfLayoutSettings();
-                    const value = parseInt(input.value);
-                    settings.margins[side] = isNaN(value) ? 15 : value; // Allow 0, only default to 15 if NaN
-                    savePdfLayoutSettings(settings);
-                    
-                    // Apply to preview immediately if paper layout is active
-                    if (paperLayoutActive) {
-                        applyPdfSettingsToPreview();
-                    }
-                    
-                    showMofuHelper(`Margin updated: ${side} = ${settings.margins[side]}mm`);
-                });
-            }
-        });
-        
-        // Reset button
-        resetBtn.addEventListener('click', () => {
-            const defaults = { textAlign: 'left', pageNumberPosition: 'center', margins: { top: 15, right: 15, bottom: 15, left: 15 } };
-            savePdfLayoutSettings(defaults);
-            
-            document.getElementById('pdf-margin-top').value = 15;
-            document.getElementById('pdf-margin-right').value = 15;
-            document.getElementById('pdf-margin-bottom').value = 15;
-            document.getElementById('pdf-margin-left').value = 15;
-            
-            alignButtons.forEach(b => b.classList.remove('active'));
-            modal.querySelector('[data-align="left"]').classList.add('active');
-            
-            pageNumButtons.forEach(b => b.classList.remove('active'));
-            modal.querySelector('[data-position="center"]').classList.add('active');
-            
-            // Apply to preview immediately if paper layout is active
-            if (paperLayoutActive) {
-                applyPdfSettingsToPreview();
-            }
-            
-            showMofuHelper('Settings reset to defaults');
-        });
-    };
-    
-    // Apply PDF settings to paper layout preview
-    let applyPdfSettingsToPreview = () => {
-        const settings = loadPdfLayoutSettings();
-        const paperPages = document.querySelectorAll('.paper-page');
-        const paperContents = document.querySelectorAll('.paper-content');
-        const pageNumbers = document.querySelectorAll('.paper-page-number');
-        
-        if (paperPages.length === 0) return;
-        
-        // Convert mm to pixels: 1mm ≈ 3.78px at 96 DPI
-        const mmToPx = 3.78;
-        
-        paperPages.forEach(page => {
-            const pageContent = page.querySelector('.paper-content');
-            if (!pageContent) return;
-            
-            // Apply margins to CONTENT padding (not page padding)
-            pageContent.style.padding = `${settings.margins.top}mm ${settings.margins.right}mm ${settings.margins.bottom}mm ${settings.margins.left}mm`;
-            pageContent.style.textAlign = settings.textAlign || 'left';
-            
-            // Update visual margin guides using CSS custom properties
-            page.style.setProperty('--margin-top', `${settings.margins.top * mmToPx}px`);
-            page.style.setProperty('--margin-right', `${settings.margins.right * mmToPx}px`);
-            page.style.setProperty('--margin-bottom', `${settings.margins.bottom * mmToPx}px`);
-            page.style.setProperty('--margin-left', `${settings.margins.left * mmToPx}px`);
-            
-            // Show/hide margin guides
-            if (settings.showMarginGuides === false) {
-                page.classList.add('hide-margin-guides');
-            } else {
-                page.classList.remove('hide-margin-guides');
-            }
-        });
-        
-        // Apply page number positioning
-        pageNumbers.forEach(pageNum => {
-            pageNum.style.left = '';
-            pageNum.style.right = '';
-            pageNum.style.textAlign = '';
-            
-            if (settings.pageNumberPosition === 'left') {
-                pageNum.style.left = `${settings.margins.left * mmToPx}px`;
-                pageNum.style.right = 'auto';
-                pageNum.style.textAlign = 'left';
-            } else if (settings.pageNumberPosition === 'right') {
-                pageNum.style.right = `${settings.margins.right * mmToPx}px`;
-                pageNum.style.left = 'auto';
-                pageNum.style.textAlign = 'right';
-            } else {
-                pageNum.style.left = '0';
-                pageNum.style.right = '0';
-                pageNum.style.textAlign = 'center';
-            }
-        });
-        
-        console.log('✅ Applied PDF settings to preview:', settings);
-    };
-    
-    // Load PDF layout settings
-    let loadPdfLayoutSettings = () => {
-        try {
-            const raw = localStorage.getItem(localStorageNamespace + '.pdf_layout_settings');
-            if (raw) {
-                return JSON.parse(raw);
-            }
-        } catch (e) {
-            console.error('Failed to load PDF layout settings', e);
-        }
-        // Return defaults
-        return {
-            textAlign: 'left',
-            pageNumberPosition: 'center',
-            margins: { top: 15, right: 15, bottom: 15, left: 15 }
-        };
-    };
-    
-    // Save PDF layout settings
-    let savePdfLayoutSettings = (settings) => {
-        try {
-            localStorage.setItem(localStorageNamespace + '.pdf_layout_settings', JSON.stringify(settings));
-        } catch (e) {
-            console.error('Failed to save PDF layout settings', e);
         }
     };
 
@@ -3897,23 +3384,7 @@ ${fontLinkTags}
                     return;
                 }
                 
-                let content = editorInstance.getValue();
-                
-                // Add TOC at the beginning if enabled
-                if (tocEnabled) {
-                    const tocData = generateTocData();
-                    if (tocData.length > 0) {
-                        // Generate markdown TOC
-                        let tocMarkdown = '# Table of Contents\n\n';
-                        tocData.forEach(item => {
-                            const indent = '  '.repeat(item.level - 1);
-                            const link = `[${item.text}](#${item.id})`;
-                            tocMarkdown += `${indent}- ${link}\n`;
-                        });
-                        tocMarkdown += '\n---\n\n';
-                        content = tocMarkdown + content;
-                    }
-                }
+                const content = editorInstance.getValue();
                 
                 // Extract title from YAML front matter or first heading
                 let documentTitle = 'document';
@@ -4053,13 +3524,18 @@ ${fontLinkTags}
         const importHtmlButton = document.querySelector('#import-html-button');
         const importHtmlInput = document.querySelector('#import-html-input');
         
+        console.log('HTML Button:', importHtmlButton);
+        console.log('HTML Input:', importHtmlInput);
+        
         if (importHtmlButton && importHtmlInput) {
             importHtmlButton.addEventListener('click', (e) => {
                 e.preventDefault();
+                console.log('HTML button clicked!');
                 importHtmlInput.click();
             });
             
             importHtmlInput.addEventListener('change', async (event) => {
+                console.log('HTML file selected:', event.target.files[0]);
                 const file = event.target.files[0];
                 if (file) {
                     lastHtmlFilePath = file.name;
@@ -4103,6 +3579,8 @@ ${fontLinkTags}
                 // Reset input
                 event.target.value = '';
             });
+        } else {
+            console.error('HTML button or input not found!');
         }
     };
     
@@ -4111,19 +3589,24 @@ ${fontLinkTags}
         const importCssButton = document.querySelector('#import-css-button');
         const importCssInput = document.querySelector('#import-css-input');
         
+        console.log('CSS Button:', importCssButton);
+        console.log('CSS Input:', importCssInput);
+        
         if (importCssButton && importCssInput) {
             importCssButton.addEventListener('click', (e) => {
                 e.preventDefault();
+                console.log('CSS button clicked!');
                 importCssInput.click();
             });
             
             importCssInput.addEventListener('change', (event) => {
+                console.log('CSS file selected:', event.target.files[0]);
                 const file = event.target.files[0];
                 if (file) {
                     const reader = new FileReader();
                     reader.onload = (e) => {
                         loadedCSSContent = e.target.result;
-                        lastCssFilePath = file.name;
+                        console.log('CSS Content loaded:', loadedCSSContent.length, 'characters');
                         
                         // Get current HTML content
                         const currentContent = editorInstance ? editorInstance.getValue() : '';
@@ -4158,10 +3641,12 @@ ${fontLinkTags}
                             }
                             
                             // ALWAYS force re-render the preview to apply CSS
+                            console.log('Triggering preview update after CSS upload...');
                             if (editorInstance) {
                                 // Delay to ensure editor content is updated
                                 setTimeout(() => {
                                     const updatedContent = editorInstance.getValue();
+                                    console.log('Calling convert() with updated content...');
                                     convert(updatedContent);
                                 }, 150);
                             }
@@ -4179,6 +3664,8 @@ ${fontLinkTags}
                 // Reset input
                 event.target.value = '';
             });
+        } else {
+            console.error('CSS button or input not found!');
         }
     };
     
@@ -5478,49 +4965,24 @@ ${fontLinkTags}
         }
     };
     
-    // Setup TOC toolbar button
-    let setupTocButton = () => {
-        const tocButton = document.querySelector('#toc-toggle-btn');
-        if (!tocButton) return;
-        
-        // Load saved setting and update button state
-        const savedSetting = loadTocSettings();
-        if (savedSetting) {
-            tocButton.classList.add('active');
-        }
-        
-        tocButton.addEventListener('click', () => {
-            tocEnabled = !tocEnabled;
-            saveTocSettings(tocEnabled);
-            
-            // Update button state
-            if (tocEnabled) {
-                tocButton.classList.add('active');
-            } else {
-                tocButton.classList.remove('active');
-            }
-            
-            toggleToc();
-        });
-    };
-    
     let toggleToc = () => {
 
         tocVisible = tocEnabled;
         
         const panel = document.querySelector('#toc-panel');
         const container = document.querySelector('#container');
-        const tocButton = document.querySelector('#toc-toggle-btn');
+        
+
         
         if (tocVisible) {
+
             panel.classList.remove('hidden');
             container.classList.add('toc-visible');
-            if (tocButton) tocButton.classList.add('active');
             updateToc();
         } else {
+
             panel.classList.add('hidden');
             container.classList.remove('toc-visible');
-            if (tocButton) tocButton.classList.remove('active');
         }
         
         // Trigger Monaco editor resize
@@ -5618,51 +5080,47 @@ ${fontLinkTags}
     }
     
     // Handle contenteditable input and sync to editor
-    // Debounced handler for contenteditable input
-    let editDebounceTimer = null;
     const handleContentEditableInput = (element) => {
         if (!turndownService || !editor) return;
         
-        // Clear previous timer
-        if (editDebounceTimer) {
-            clearTimeout(editDebounceTimer);
+        // Get the source line number from data attribute
+        const sourceLine = element.getAttribute('data-source-line');
+        if (!sourceLine) return;
+        
+        const lineNumber = parseInt(sourceLine, 10);
+        if (isNaN(lineNumber)) return;
+        
+        // Convert edited HTML back to Markdown
+        const htmlContent = element.innerHTML;
+        let markdownContent = turndownService.turndown(htmlContent);
+        
+        // Handle heading levels
+        const tagName = element.tagName.toLowerCase();
+        if (tagName.match(/^h[1-6]$/)) {
+            const level = parseInt(tagName[1], 10);
+            const prefix = '#'.repeat(level);
+            // Ensure heading has proper prefix
+            if (!markdownContent.startsWith(prefix)) {
+                markdownContent = `${prefix} ${markdownContent}`;
+            }
         }
         
-        // Debounce to avoid too many updates
-        editDebounceTimer = setTimeout(() => {
-            // Set flag to prevent re-applying edit mode
-            isUpdating = true;
-            
-            try {
-                // Get all the preview HTML
-                const output = document.querySelector('#output');
-                if (!output) return;
-                
-                // Convert entire preview back to markdown
-                const fullMarkdown = turndownService.turndown(output.innerHTML);
-                
-                // Update the editor content
-                const model = editor.getModel();
-                if (!model) return;
-                
-                // Update without triggering change event
-                model.pushEditOperations(
-                    [],
-                    [{
-                        range: model.getFullModelRange(),
-                        text: fullMarkdown
-                    }],
-                    () => null
-                );
-                
-                console.log('✓ Bidirectional edit: Updated editor from preview');
-            } finally {
-                // Reset flag after render completes
-                setTimeout(() => {
-                    isUpdating = false;
-                }, 50);
-            }
-        }, 150); // 150ms debounce
+        // Handle blockquotes
+        if (tagName === 'blockquote') {
+            const lines = markdownContent.split('\n');
+            markdownContent = lines.map(line => line.startsWith('>') ? line : `> ${line}`).join('\n');
+        }
+        
+        // Update the editor at the specific line
+        const model = editor.getModel();
+        if (!model) return;
+        
+        const lineContent = model.getLineContent(lineNumber);
+        const range = new monaco.Range(lineNumber, 1, lineNumber, lineContent.length + 1);
+        
+        // Apply edit without triggering cursor sync
+        const edit = { range, text: markdownContent };
+        model.pushEditOperations([], [edit], () => null);
     };
     
     // Apply edit mode to preview elements
@@ -5672,14 +5130,11 @@ ${fontLinkTags}
         
         // Make block elements contenteditable
         const elements = output.querySelectorAll('h1, h2, h3, h4, h5, h6, p, li, blockquote');
-        console.log(`✓ Edit mode: Making ${elements.length} elements editable`);
-        
         elements.forEach(el => {
             el.setAttribute('contenteditable', 'true');
             
             // Store handler reference for later removal
             const inputHandler = (e) => {
-                console.log('✓ Edit mode: Input detected on', e.target.tagName);
                 handleContentEditableInput(e.target);
             };
             el._editModeInputHandler = inputHandler;
@@ -6229,42 +5684,6 @@ ${fontLinkTags}
     // Expose editor globally for testing
     window.editor = editor;
     
-    // Initialize AI Assistant
-    try {
-        aiManager = new AIManager(editor);
-        aiPanelUI = new AIPanelUI(aiManager);
-        aiChatUI = new AIChatUI(aiManager);
-        
-        // Setup AI Assistant button
-        const aiButton = document.getElementById('ai-assistant-button');
-        if (aiButton) {
-            aiButton.addEventListener('click', () => {
-                aiPanelUI.toggle();
-            });
-        }
-        
-        // Initialize PDF Import UI
-        const pdfImportUI = new PDFImportUI(editor);
-        console.log('✅ PDF Import UI initialized');
-        
-        // Keyboard shortcut: Ctrl+K to toggle AI panel
-        document.addEventListener('keydown', (e) => {
-            if (e.ctrlKey && e.key === 'k') {
-                e.preventDefault();
-                aiPanelUI.toggle();
-            }
-            // Ctrl+Shift+K to toggle chat
-            if (e.ctrlKey && e.shiftKey && e.key === 'K') {
-                e.preventDefault();
-                aiChatUI.toggle();
-            }
-        });
-        
-        console.log('✅ AI Assistant initialized');
-    } catch (error) {
-        console.error('Failed to initialize AI Assistant:', error);
-    }
-    
     if (lastContent) {
         presetValue(lastContent);
     } else {
@@ -6332,7 +5751,6 @@ ${fontLinkTags}
     setupMediaContextMenu();
     setupCheatSheetButton();
     setupTocCheckbox();
-    setupTocButton();
     setupValidationCheckbox();
     setupEditModeCheckbox();
     
@@ -7412,6 +6830,9 @@ ${fontLinkTags}
                 activeResizer.lastLeftRatio = newLeftWidth / (totalWidth - dividerWidth);
             }
         }
+        
+        // Update paper layout scale after resize
+        updatePaperScale();
     });
 
     document.addEventListener('mouseup', () => {
@@ -7428,9 +6849,6 @@ ${fontLinkTags}
                 htmlIframe.style.pointerEvents = 'auto';
             }
             
-            // Update paper layout scale once at the end of the drag
-            updatePaperScale();
-
             activeResizer = null;
         }
     });
@@ -7771,164 +7189,6 @@ ${fontLinkTags}
         });
     });
     
-    // Close button
-    const settingsCloseBtn = document.getElementById('settings-close-btn');
-    if (settingsCloseBtn) {
-        settingsCloseBtn.addEventListener('click', closeSettingsPanel);
-    }
-    
-    // ============================================================================
-    // AI SETTINGS INTEGRATION
-    // ============================================================================
-    
-    if (aiManager) {
-        const storage = aiManager.getStorage();
-        
-        // Load AI settings into UI
-        const loadAISettings = () => {
-            const settings = storage.getSettings();
-            
-            // API keys
-            const providers = ['openai', 'claude', 'cerebras', 'groq', 'mistral', 'openrouter', 'google', 'cohere', 'huggingface'];
-            providers.forEach(provider => {
-                const input = document.getElementById(`ai-key-${provider}`);
-                const apiKey = storage.getApiKey(provider);
-                if (input && apiKey) {
-                    input.value = apiKey;
-                }
-            });
-            
-            // Options
-            const streamingCheckbox = document.getElementById('ai-streaming-checkbox');
-            if (streamingCheckbox) streamingCheckbox.checked = settings.streaming !== false;
-            
-            const autosaveCheckbox = document.getElementById('ai-autosave-checkbox');
-            if (autosaveCheckbox) autosaveCheckbox.checked = settings.autoSave !== false;
-            
-            const tokenUsageCheckbox = document.getElementById('ai-token-usage-checkbox');
-            if (tokenUsageCheckbox) tokenUsageCheckbox.checked = settings.showTokenUsage === true;
-            
-            const chatHistoryCheckbox = document.getElementById('ai-chat-history-checkbox');
-            if (chatHistoryCheckbox) chatHistoryCheckbox.checked = settings.saveChatHistory !== false;
-        };
-        
-        // Show/Hide API Key toggle buttons
-        const toggleVisibilityButtons = document.querySelectorAll('.ai-toggle-visibility-btn');
-        toggleVisibilityButtons.forEach(btn => {
-            btn.addEventListener('click', () => {
-                const targetId = btn.dataset.target;
-                const input = document.getElementById(targetId);
-                
-                if (input) {
-                    if (input.type === 'password') {
-                        input.type = 'text';
-                        btn.classList.add('visible');
-                    } else {
-                        input.type = 'password';
-                        btn.classList.remove('visible');
-                    }
-                }
-            });
-        });
-        
-        // Save API keys on input
-        const providers = ['openai', 'claude', 'cerebras', 'groq', 'mistral', 'openrouter', 'google', 'cohere', 'huggingface'];
-        providers.forEach(provider => {
-            const input = document.getElementById(`ai-key-${provider}`);
-            if (input) {
-                input.addEventListener('change', (e) => {
-                    const key = e.target.value.trim();
-                    if (key) {
-                        storage.saveApiKey(provider, key);
-                    } else {
-                        storage.removeApiKey(provider);
-                    }
-                });
-            }
-        });
-        
-        // Test API key buttons
-        const testButtons = document.querySelectorAll('.ai-test-key-btn');
-        testButtons.forEach(btn => {
-            btn.addEventListener('click', async () => {
-                const provider = btn.dataset.provider;
-                const input = document.getElementById(`ai-key-${provider}`);
-                const apiKey = input ? input.value.trim() : null;
-                
-                if (!apiKey) {
-                    btn.textContent = 'No Key';
-                    btn.classList.add('error');
-                    setTimeout(() => {
-                        btn.textContent = 'Test';
-                        btn.classList.remove('error');
-                    }, 2000);
-                    return;
-                }
-                
-                btn.textContent = 'Testing...';
-                btn.classList.add('testing');
-                btn.disabled = true;
-                
-                try {
-                    const result = await aiManager.testProvider(provider, apiKey);
-                    
-                    if (result.success) {
-                        btn.textContent = 'Valid';
-                        btn.classList.remove('testing');
-                        btn.classList.add('success');
-                        storage.saveApiKey(provider, apiKey);
-                    } else {
-                        btn.textContent = 'Invalid';
-                        btn.classList.remove('testing');
-                        btn.classList.add('error');
-                    }
-                } catch (error) {
-                    btn.textContent = 'Error';
-                    btn.classList.remove('testing');
-                    btn.classList.add('error');
-                }
-                
-                setTimeout(() => {
-                    btn.textContent = 'Test';
-                    btn.classList.remove('testing', 'success', 'error');
-                    btn.disabled = false;
-                }, 2000);
-            });
-        });
-        
-        // Save options
-        const streamingCheckbox = document.getElementById('ai-streaming-checkbox');
-        if (streamingCheckbox) {
-            streamingCheckbox.addEventListener('change', (e) => {
-                storage.updateSettings({ streaming: e.target.checked });
-            });
-        }
-        
-        const autosaveCheckbox = document.getElementById('ai-autosave-checkbox');
-        if (autosaveCheckbox) {
-            autosaveCheckbox.addEventListener('change', (e) => {
-                storage.updateSettings({ autoSave: e.target.checked });
-            });
-        }
-        
-        const tokenUsageCheckbox = document.getElementById('ai-token-usage-checkbox');
-        if (tokenUsageCheckbox) {
-            tokenUsageCheckbox.addEventListener('change', (e) => {
-                storage.updateSettings({ showTokenUsage: e.target.checked });
-            });
-        }
-        
-        const chatHistoryCheckbox = document.getElementById('ai-chat-history-checkbox');
-        if (chatHistoryCheckbox) {
-            chatHistoryCheckbox.addEventListener('change', (e) => {
-                storage.updateSettings({ saveChatHistory: e.target.checked });
-            });
-        }
-        
-        // Load settings on init
-        loadAISettings();
-    }
-    
     // ============================================================================
     // HELP DOCUMENTATION
     // ============================================================================
@@ -7983,195 +7243,114 @@ ${fontLinkTags}
     };
     
     // Render content in paper layout
-    let lastPaginatedContent = '';
-    let lastPageCount = 0;
     const renderPaperLayout = () => {
-        console.log('[PAPER] renderPaperLayout called');
+        const outputDiv = document.querySelector('#output');
+        const previewWrapper = document.querySelector('#preview-wrapper');
         
-        // GUARD 1: Prevent re-entrant rendering
-        if (isRenderingPaperLayout) {
-            console.warn('[PAPER_LAYOUT] Render already in progress, skipping');
-            return;
-        }
-
-        // GUARD 2: Check if paper layout is still active
-        if (!paperLayoutActive) {
-            console.warn('[PAPER_LAYOUT] Not active, skipping');
-            return;
-        }
-
-        // Set rendering flag
-        isRenderingPaperLayout = true;
-        paperLayoutRenderScheduled = false;
-
-        try {
-            const outputDiv = document.querySelector('#output');
-            const previewWrapper = document.querySelector('#preview-wrapper');
+        if (!outputDiv || !previewWrapper) return;
+        
+        // Get the rendered HTML content
+        const htmlContent = outputDiv.innerHTML;
+        
+        // Create a temporary container to measure actual rendered heights
+        const tempContainer = document.createElement('div');
+        tempContainer.style.cssText = `
+            position: absolute;
+            top: -10000px;
+            left: -10000px;
+            width: ${794 - 160}px;
+            visibility: hidden;
+            font-size: 14px;
+            font-family: Inter, sans-serif;
+            line-height: 1.6;
+        `;
+        tempContainer.innerHTML = htmlContent;
+        document.body.appendChild(tempContainer);
+        
+        // Split content into pages based on actual element heights
+        const pages = [];
+        let currentPage = [];
+        let currentHeight = 0;
+        const maxPageHeight = 1123 - 160; // A4 height minus margins
+        
+        // Get all top-level elements
+        const elements = Array.from(tempContainer.children);
+        
+        elements.forEach((element) => {
+            const elementHeight = element.offsetHeight;
             
-            if (!outputDiv || !previewWrapper) return;
-            
-            // If editor is available, get the latest markdown and generate the preview HTML
-            // using convert in dry-run mode so we don't overwrite the current DOM until
-            // we build the paginated paper stack.
-            const markdownSource = (typeof editor !== 'undefined' && editor && typeof editor.getValue === 'function') ? editor.getValue() : null;
-            let htmlContent = outputDiv.innerHTML;
-            if (markdownSource) {
-                try {
-                    const generated = convert(markdownSource, { writeToDom: false });
-                    if (generated) htmlContent = generated;
-                } catch (e) {
-                    console.warn('[PAPER_LAYOUT] convert dry-run failed, falling back to DOM content', e);
-                    htmlContent = outputDiv.innerHTML;
-                }
-            }
-            if (!htmlContent) return;
-            
-            // Skip if content hasn't changed
-            if (htmlContent === lastPaginatedContent) {
-                return;
-            }
-            
-            // Get user's margin settings
-            const settings = loadPdfLayoutSettings();
-            const mmToPx = 3.78;
-            const topMargin = settings.margins.top * mmToPx;
-            const rightMargin = settings.margins.right * mmToPx;
-            const bottomMargin = settings.margins.bottom * mmToPx;
-            const leftMargin = settings.margins.left * mmToPx;
-            
-            // Calculate available content area
-            const pageWidth = 794; // A4 width in pixels
-            const pageHeight = 1123; // A4 height in pixels
-            const contentWidth = pageWidth - leftMargin - rightMargin;
-            const contentHeight = pageHeight - topMargin - bottomMargin - 60; // Reserve 60px for page number
-            
-            // Create a temporary container to measure actual rendered heights
-            const tempContainer = document.createElement('div');
-            tempContainer.style.cssText = `
-                position: absolute;
-                top: -10000px;
-                left: -10000px;
-                width: ${contentWidth}px;
-                visibility: hidden;
-                font-size: 14px;
-                font-family: Inter, sans-serif;
-                line-height: 1.6;
-            `;
-            tempContainer.innerHTML = htmlContent;
-            document.body.appendChild(tempContainer);
-            
-            // Split content into pages based on actual element heights
-            const pages = [];
-            let currentPage = [];
-            let currentHeight = 0;
-            const maxPageHeight = contentHeight;
-            
-            // Get all top-level elements
-            const elements = Array.from(tempContainer.children);
-            
-            elements.forEach((element) => {
-                // Measure height INCLUDING margins
-                const computedStyle = window.getComputedStyle(element);
-                const marginTop = parseFloat(computedStyle.marginTop) || 0;
-                const marginBottom = parseFloat(computedStyle.marginBottom) || 0;
-                const elementHeight = element.offsetHeight + marginTop + marginBottom;
-                
-                // If element would overflow current page
-                if (currentHeight + elementHeight > maxPageHeight && currentPage.length > 0) {
-                    // Start new page
+            // If element is too tall for a page, allow it to break
+            if (elementHeight > maxPageHeight * 0.8) {
+                // Large element - add to current page and start new page
+                if (currentPage.length > 0) {
                     pages.push(currentPage);
-                    currentPage = [element.cloneNode(true)];
-                    currentHeight = elementHeight;
-                } else if (elementHeight > maxPageHeight) {
-                    // Element is too tall for a single page - add to current page anyway
-                    // (will be clipped, but better than losing it entirely)
-                    if (currentPage.length > 0) {
-                        pages.push(currentPage);
-                        currentPage = [];
-                        currentHeight = 0;
-                    }
-                    pages.push([element.cloneNode(true)]);
+                    currentPage = [];
                     currentHeight = 0;
-                } else {
-                    // Fits on current page
-                    currentPage.push(element.cloneNode(true));
-                    currentHeight += elementHeight;
                 }
-            });
-            
-            // Add last page
-            if (currentPage.length > 0) {
+                // Add the large element to its own page
+                pages.push([element.cloneNode(true)]);
+            } else if (currentHeight + elementHeight > maxPageHeight && currentPage.length > 0) {
+                // Would overflow - start new page
                 pages.push(currentPage);
+                currentPage = [element.cloneNode(true)];
+                currentHeight = elementHeight;
+            } else {
+                // Fits on current page
+                currentPage.push(element.cloneNode(true));
+                currentHeight += elementHeight;
             }
+        });
+        
+        // Add last page
+        if (currentPage.length > 0) {
+            pages.push(currentPage);
+        }
+        
+        // Clean up temp container
+        document.body.removeChild(tempContainer);
+        
+        console.log(`📄 Paginated into ${pages.length} pages`);
+        
+        // Clear output and render pages
+        outputDiv.innerHTML = '';
+        outputDiv.classList.add('paper-layout-active');
+        previewWrapper.classList.add('paper-layout-active');
+        
+        // Create paper stack container
+        const paperStack = document.createElement('div');
+        paperStack.className = 'paper-stack';
+        paperStack.id = 'paper-stack';
+        
+        // Render each page
+        pages.forEach((pageElements, pageIndex) => {
+            const paperPage = document.createElement('div');
+            paperPage.className = 'paper-page';
             
-            // Clean up temp container
-            document.body.removeChild(tempContainer);
+            const paperContent = document.createElement('div');
+            paperContent.className = 'paper-content';
             
-            console.log(`📄 Paginated into ${pages.length} pages (content area: ${contentWidth}x${contentHeight}px)`);
-            
-            // Only update DOM if page count changed (prevents flashing)
-            if (pages.length === lastPageCount && outputDiv.classList.contains('paper-layout-active')) {
-                lastPaginatedContent = htmlContent;
-                return;
-            }
-            lastPageCount = pages.length;
-            lastPaginatedContent = htmlContent;
-            
-            // Clear output and render pages
-            outputDiv.innerHTML = '';
-            outputDiv.classList.add('paper-layout-active');
-            previewWrapper.classList.add('paper-layout-active');
-            
-            // Create paper stack container
-            const paperStack = document.createElement('div');
-            paperStack.className = 'paper-stack';
-            paperStack.id = 'paper-stack';
-            
-            // Render each page
-            pages.forEach((pageElements, pageIndex) => {
-                const paperPage = document.createElement('div');
-                paperPage.className = 'paper-page';
-                
-                const paperContent = document.createElement('div');
-                paperContent.className = 'paper-content';
-                
-                // Add elements to page
-                pageElements.forEach(element => {
-                    paperContent.appendChild(element);
-                });
-                
-                // Add page number
-                const pageNumber = document.createElement('div');
-                pageNumber.className = 'paper-page-number';
-                pageNumber.textContent = `Page ${pageIndex + 1}`;
-                
-                paperPage.appendChild(paperContent);
-                paperPage.appendChild(pageNumber);
-                paperStack.appendChild(paperPage);
+            // Add elements to page
+            pageElements.forEach(element => {
+                paperContent.appendChild(element);
             });
             
-            outputDiv.appendChild(paperStack);
-
-            // Re-apply edit mode handlers if enabled so inline editing works inside paginated pages
-            if (editModeEnabled) {
-                applyEditMode();
-            }
-
-            // Apply PDF settings to preview
-            applyPdfSettingsToPreview();
+            // Add page number
+            const pageNumber = document.createElement('div');
+            pageNumber.className = 'paper-page-number';
+            pageNumber.textContent = `Page ${pageIndex + 1}`;
             
-            // Update page count
-            updatePageCount(pages.length);
-            
-            // Apply current zoom
-            applyZoom(currentZoom);
-            
-            lastPaginationTime = Date.now();
-        } catch (error) {
-            console.error('[PAPER_LAYOUT] Render error:', error);
-        } finally {
-            isRenderingPaperLayout = false;
-        }
+            paperPage.appendChild(paperContent);
+            paperPage.appendChild(pageNumber);
+            paperStack.appendChild(paperPage);
+        });
+        
+        outputDiv.appendChild(paperStack);
+        
+        // Update page count
+        updatePageCount(pages.length);
+        
+        // Apply current zoom
+        applyZoom(currentZoom);
     };
     
     // Restore normal web layout
@@ -8360,27 +7539,10 @@ ${fontLinkTags}
             
             updatePageInfo();
             
-            // Update scale to fit the page
-            updatePaperScale();
-            
-            // Center and scroll to the active page
-            const activePage = pages[currentPageIndex];
+            // Scroll to top
             const previewWrapper = document.querySelector('#preview-wrapper');
-            
-            if (activePage && previewWrapper) {
-                // Wait for layout to settle
-                setTimeout(() => {
-                    const pageRect = activePage.getBoundingClientRect();
-                    const wrapperRect = previewWrapper.getBoundingClientRect();
-                    
-                    // Calculate scroll position to center the page
-                    const scrollTop = activePage.offsetTop - (wrapperRect.height - pageRect.height) / 2;
-                    
-                    previewWrapper.scrollTo({
-                        top: Math.max(0, scrollTop),
-                        behavior: 'smooth'
-                    });
-                }, 50);
+            if (previewWrapper) {
+                previewWrapper.scrollTop = 0;
             }
         };
         
@@ -8418,9 +7580,6 @@ ${fontLinkTags}
                 // Show all pages
                 const pages = paperStack.querySelectorAll('.paper-page');
                 pages.forEach(page => page.classList.remove('active-page'));
-                
-                // Update scale for flow mode
-                updatePaperScale();
                 
                 // Hide navigation buttons
                 if (prevPageBtn) prevPageBtn.style.display = 'none';
@@ -8617,42 +7776,11 @@ ${fontLinkTags}
     };
     
     // Re-paginate when content changes in paper layout mode
-    let paperLayoutDebounceTimer = null;
-    let lastPaginationTime = 0;
-    const MIN_PAGINATION_INTERVAL = 250; // Minimum time between paginations (debounce to avoid thrash while typing)
-    
     const handleContentChangeInPaperLayout = () => {
-        if (!paperLayoutActive) return;
-        
-        console.log('[PAPER] Content changed, scheduling render');
-        
-        // Clear any pending re-pagination
-        if (paperLayoutDebounceTimer) {
-            clearTimeout(paperLayoutDebounceTimer);
-        }
-        
-        // Check if enough time has passed since last pagination
-        const now = Date.now();
-        const timeSinceLastPagination = now - lastPaginationTime;
-        
-        if (timeSinceLastPagination < MIN_PAGINATION_INTERVAL) {
-            // Schedule for later
-            paperLayoutDebounceTimer = setTimeout(() => {
-                renderPaperLayout();
-                lastPaginationTime = Date.now();
-                paperLayoutDebounceTimer = null;
-            }, MIN_PAGINATION_INTERVAL - timeSinceLastPagination);
-        } else {
-            // Paginate immediately
+        if (paperLayoutActive) {
             renderPaperLayout();
-            lastPaginationTime = now;
         }
     };
-    
-    // Window resize handler for paper layout scaling
-    window.addEventListener('resize', () => {
-        updatePaperScale();
-    });
     
     // Initialize paper layout system
     setupPaperLayoutControls();
@@ -8660,4 +7788,11 @@ ${fontLinkTags}
 
 window.addEventListener("load", () => {
     init();
+});
+
+
+
+// Window resize handler for paper layout scaling
+window.addEventListener('resize', () => {
+    updatePaperScale();
 });
