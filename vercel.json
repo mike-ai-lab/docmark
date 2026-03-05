@@ -7,12 +7,35 @@
       "config": {
         "distDir": "dist"
       }
+    },
+    {
+      "src": "api/pdf-import.js",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "api/generate-pdf.js",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "api/health.js",
+      "use": "@vercel/node"
     }
   ],
   "routes": [
     {
-      "src": "/api/(.*)",
-      "dest": "/api/$1"
+      "src": "/api/pdf-import",
+      "dest": "/api/pdf-import.js",
+      "methods": ["POST", "OPTIONS"]
+    },
+    {
+      "src": "/api/generate-pdf",
+      "dest": "/api/generate-pdf.js",
+      "methods": ["POST", "OPTIONS"]
+    },
+    {
+      "src": "/api/health",
+      "dest": "/api/health.js",
+      "methods": ["GET", "OPTIONS"]
     },
     {
       "src": "/(.*)",
