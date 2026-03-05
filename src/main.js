@@ -2745,11 +2745,12 @@ let performBeautify = (content) => {
         }
 
         try {
-            console.log('[PDF Export] Using Puppeteer server at localhost:3000');
+            const serverUrl = window.location.origin;
+            console.log('[PDF Export] Using Puppeteer server at', serverUrl);
             
             // Check if server is running, if not, provide helpful instructions
             try {
-                const healthCheck = await fetch('http://localhost:3000/health', { 
+                const healthCheck = await fetch(serverUrl + '/health', { 
                     method: 'GET',
                     signal: AbortSignal.timeout(2000) // 2 second timeout
                 });
@@ -2796,7 +2797,7 @@ let performBeautify = (content) => {
             const filename = `DocMark_${styleName}_${timestamp}.pdf`;
 
             // Send to Puppeteer server
-            const response = await fetch('http://localhost:3000/generate-pdf', {
+            const response = await fetch(serverUrl + '/generate-pdf', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
