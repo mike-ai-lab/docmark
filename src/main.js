@@ -12,6 +12,8 @@ import PDFImportUI from './pdf-import/pdf-import-ui.js';
 import { enhanceSelect, refreshEnhancedSelect } from './ui/custom-select.js';
 // TOC Styles for exports
 import { generateTocHtml } from './toc-styles.js';
+// Documentation Mode
+import { documentationIntegration } from './documentation/documentation-integration.js';
 // DISABLED FOR DEPLOYMENT - Inspector and HTML Editor features not finished
 // import { initializeInspector, getInspector, getCurrentDoc } from './inspector-integration.js';
 // import { initInspectorPanel, showInspectorToggle, hideInspectorToggle } from './inspector-panel-ui.js';
@@ -8661,4 +8663,7 @@ ${fontLinkTags}
 
 window.addEventListener("load", () => {
     init();
+    
+    // Initialize documentation mode
+    documentationIntegration.initialize();
 });

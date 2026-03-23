@@ -79,6 +79,7 @@
     <link rel="stylesheet" type="text/css" href="./public/css/ai-assistant.css">
     <link rel="stylesheet" type="text/css" href="./src/ai/ai-preview.css">
     <link rel="stylesheet" type="text/css" href="./src/pdf-import/pdf-import.css">
+    <link rel="stylesheet" type="text/css" href="./public/css/documentation-style.css">
     <!-- <link rel="stylesheet" type="text/css" href="./src/code-paste-window.css"> -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css" id="hljs-light-theme">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css" id="hljs-dark-theme" disabled>
@@ -116,6 +117,16 @@
         </div>
         
         <div class="header-center">
+            <!-- Documentation Mode Toggle -->
+            <div class="button-group mode-toggle-group">
+                <div class="btn-item mode-toggle-btn active" id="single-file-mode-btn" title="Single File Mode">
+                    <a href="#">📄 Single File</a>
+                </div>
+                <div class="btn-item mode-toggle-btn" id="docs-mode-btn" title="Documentation Mode">
+                    <a href="#">📚 Documentation</a>
+                </div>
+            </div>
+
             <div class="button-group">
                 <div class="btn-item icon-btn" id="paste-button" title="Paste">
                     <a href="#">
@@ -172,6 +183,16 @@
             </div>
             
             <div class="button-group">
+                <!-- Upload Documentation Button (only visible in docs mode) -->
+                <button class="icon-button hidden" id="upload-docs-btn" title="Upload Documentation (.zip)">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="17 8 12 3 7 8"></polyline>
+                        <line x1="12" y1="3" x2="12" y2="15"></line>
+                    </svg>
+                </button>
+                <input type="file" id="upload-docs-input" accept=".zip" style="display: none;">
+                
                 <div class="btn-item icon-btn" id="autofix-validation-link" title="Auto-Fix Issues">
                     <a href="#">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
