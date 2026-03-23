@@ -46,35 +46,51 @@ export class DocumentationUI {
         docsLayout.id = 'docs-layout';
         docsLayout.className = 'docs-layout hidden';
         docsLayout.innerHTML = `
-            <!-- Left Sidebar -->
-            <div class="docs-sidebar">
-                <div class="docs-sidebar-header">
-                    <div class="docs-title" id="docs-title">Documentation</div>
-                    <input type="text" class="docs-search" id="docs-search" placeholder="Search docs...">
+            <!-- Placeholder Hint Banner (hidden by default) -->
+            <div class="docs-placeholder-hint hidden" id="docs-placeholder-hint">
+                <div class="docs-placeholder-hint-content">
+                    <div class="docs-placeholder-hint-icon">💡</div>
+                    <div class="docs-placeholder-hint-text">
+                        <strong>Template Mode:</strong> This is a placeholder template to help you get started. Upload your own documentation ZIP file to replace this content.
+                    </div>
                 </div>
-                <div class="docs-nav" id="docs-nav">
-                    <!-- Navigation will be inserted here -->
-                </div>
+                <button class="docs-placeholder-hint-action" id="docs-placeholder-upload-btn">
+                    📤 Upload Documentation
+                </button>
             </div>
 
-            <!-- Main Content -->
-            <div class="docs-content">
-                <div class="docs-breadcrumb" id="docs-breadcrumb">
-                    <!-- Breadcrumb will be inserted here -->
+            <!-- Documentation Content Wrapper -->
+            <div class="docs-content-wrapper">
+                <!-- Left Sidebar -->
+                <div class="docs-sidebar">
+                    <div class="docs-sidebar-header">
+                        <div class="docs-title" id="docs-title">Documentation</div>
+                        <input type="text" class="docs-search" id="docs-search" placeholder="Search docs...">
+                    </div>
+                    <div class="docs-nav" id="docs-nav">
+                        <!-- Navigation will be inserted here -->
+                    </div>
                 </div>
-                <div class="docs-page" id="docs-page">
-                    <!-- Page content will be rendered here -->
-                </div>
-                <div class="docs-navigation-footer" id="docs-footer">
-                    <!-- Previous/Next links will be inserted here -->
-                </div>
-            </div>
 
-            <!-- Right Sidebar TOC -->
-            <div class="docs-toc">
-                <div class="toc-title">On This Page</div>
-                <div class="toc-list" id="docs-toc-list">
-                    <!-- TOC will be inserted here -->
+                <!-- Main Content -->
+                <div class="docs-content">
+                    <div class="docs-breadcrumb" id="docs-breadcrumb">
+                        <!-- Breadcrumb will be inserted here -->
+                    </div>
+                    <div class="docs-page" id="docs-page">
+                        <!-- Page content will be rendered here -->
+                    </div>
+                    <div class="docs-navigation-footer" id="docs-footer">
+                        <!-- Previous/Next links will be inserted here -->
+                    </div>
+                </div>
+
+                <!-- Right Sidebar TOC -->
+                <div class="docs-toc">
+                    <div class="toc-title">On This Page</div>
+                    <div class="toc-list" id="docs-toc-list">
+                        <!-- TOC will be inserted here -->
+                    </div>
                 </div>
             </div>
         `;
@@ -91,6 +107,8 @@ export class DocumentationUI {
     cacheElements() {
         this.elements = {
             layout: document.getElementById('docs-layout'),
+            placeholderHint: document.getElementById('docs-placeholder-hint'),
+            placeholderUploadBtn: document.getElementById('docs-placeholder-upload-btn'),
             title: document.getElementById('docs-title'),
             search: document.getElementById('docs-search'),
             nav: document.getElementById('docs-nav'),
@@ -111,6 +129,16 @@ export class DocumentationUI {
                 this.handleSearch(e.target.value);
             });
         }
+
+        // Placeholder upload button
+        if (this.elements.placeholderUploadBtn) {
+            this.elements.placeholderUploadBtn.addEventListener('click', () => {
+                const uploadInput = document.getElementById('upload-docs-input');
+                if (uploadInput) {
+                    uploadInput.click();
+                }
+            });
+        }
     }
 
     /**
@@ -128,6 +156,30 @@ export class DocumentationUI {
     hide() {
         if (this.elements.layout) {
             this.elements.layout.classList.add('hidden');
+        }
+    }
+
+    /**
+     * Show placeholder hint banner
+     */
+    showPlaceholderHint() {
+        if (this.elements.placeholderHint) {
+            this.elements.placeholderHint.classList.remove('hidden');
+        }
+        if (this.elements.page) {
+            this.elements.page.classList.add('placeholder-template');
+        }
+    }
+
+    /**
+     * Hide placeholder hint banner
+     */
+    hidePlaceholderHint() {
+        if (this.elements.placeholderHint) {
+            this.elements.placeholderHint.classList.add('hidden');
+        }
+        if (this.elements.page) {
+            this.elements.page.classList.remove('placeholder-template');
         }
     }
 

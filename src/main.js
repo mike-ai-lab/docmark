@@ -14,6 +14,8 @@ import { enhanceSelect, refreshEnhancedSelect } from './ui/custom-select.js';
 import { generateTocHtml } from './toc-styles.js';
 // Documentation Mode
 import { documentationIntegration } from './documentation/documentation-integration.js';
+// Mermaid Diagrams
+import MermaidRenderer from './mermaid-renderer.js';
 // DISABLED FOR DEPLOYMENT - Inspector and HTML Editor features not finished
 // import { initializeInspector, getInspector, getCurrentDoc } from './inspector-integration.js';
 // import { initInspectorPanel, showInspectorToggle, hideInspectorToggle } from './inspector-panel-ui.js';
@@ -1016,6 +1018,16 @@ This web site is using ${"`"}markedjs/marked${"`"}.
         // Update the output (unless caller requested a dry run)
         if (writeToDom) {
             document.querySelector('#output').innerHTML = finalHtml;
+
+            // Render Mermaid diagrams
+            try {
+                const outputElement = document.querySelector('#output');
+                if (outputElement && MermaidRenderer) {
+                    MermaidRenderer.renderDebounced(outputElement);
+                }
+            } catch (error) {
+                console.error('❌ Mermaid rendering error:', error);
+            }
 
             // Apply edit mode if enabled
             if (editModeEnabled) {
@@ -4484,6 +4496,131 @@ ${fontLinkTags}
         }, 5000);
     };
 
+    // ----- NEW SIMPLE ADD DROPDOWN -----
+    let setupSimpleAddDropdown = () => {
+        const btn = document.getElementById('simple-add-btn');
+        const menu = document.getElementById('simple-dropdown-menu');
+        
+        if (!btn || !menu) return;
+        
+        // Toggle menu on button click
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const isOpen = menu.classList.contains('show');
+            
+            if (isOpen) {
+                menu.classList.remove('show');
+            } else {
+                // Position menu below button
+                const rect = btn.getBoundingClientRect();
+                menu.style.top = (rect.bottom + 5) + 'px';
+                menu.style.left = rect.left + 'px';
+                menu.classList.add('show');
+            }
+        });
+        
+        // Close menu when clicking outside
+        document.addEventListener('click', () => {
+            menu.classList.remove('show');
+        });
+        
+        // Setup media file input handler
+        const mediaInput = document.getElementById('insert-media-input');
+        if (mediaInput) {
+            mediaInput.addEventListener('change', (event) => {
+                const file = event.target.files[0];
+                if (!file) return;
+                
+                // Define supported formats
+                const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp'];
+                const videoExtensions = ['.mp4', '.webm', '.ogg', '.mov', '.avi', '.mkv'];
+                const fileName = file.name.toLowerCase();
+                
+                const isImage = imageExtensions.some(ext => fileName.endsWith(ext));
+                const isVideo = videoExtensions.some(ext => fileName.endsWith(ext));
+                const isSVG = fileName.endsWith('.svg');
+                
+                if (isSVG) {
+                    // Handle SVG
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        const svgContent = e.target.result;
+                        const singleLineSvg = svgContent
+                            .replace(/\r\n/g, '')
+                            .replace(/\n/g, '')
+                            .replace(/\r/g, '')
+                            .replace(/>\s+</g, '><')
+                            .trim();
+                        
+                        insertMediaAtCursor(singleLineSvg);
+                        showMofuHelper(`SVG converted to <strong>single-line format</strong>!`);
+                    };
+                    reader.readAsText(file);
+                } else if (isImage || isVideo) {
+                    // Handle images and videos - convert to base64
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        const base64Data = e.target.result;
+                        const cleanFileName = file.name.replace(/\.[^/.]+$/, '');
+                        
+                        let mediaCode;
+                        if (isImage) {
+                            mediaCode = `\n<div>\n<img src="${base64Data}" alt="${cleanFileName}" style="max-width: 100%; height: auto;" />\n</div>\n`;
+                        } else {
+                            mediaCode = `\n<div>\n<video controls style="max-width: 100%; height: auto;"><source src="${base64Data}" type="${file.type}">Your browser does not support the video tag.</video>\n</div>\n`;
+                        }
+                        
+                        insertMediaAtCursor(mediaCode);
+                        const mediaType = isImage ? 'Image' : 'Video';
+                        showMofuHelper(`${mediaType} converted to <strong>base64</strong> and embedded!`);
+                        
+                        // Auto-fold base64 content
+                        setTimeout(() => {
+                            editor.trigger('fold', 'editor.foldAll');
+                        }, 300);
+                    };
+                    reader.readAsDataURL(file);
+                } else {
+                    showMofuHelper('Unsupported file format. Please use images, videos, or SVG files.');
+                }
+                
+                // Reset input
+                event.target.value = '';
+            });
+        }
+        
+        // Handle menu item clicks
+        menu.addEventListener('click', (e) => {
+            const item = e.target.closest('.simple-dropdown-item');
+            if (!item) return;
+            
+            const action = item.getAttribute('data-action');
+            menu.classList.remove('show');
+            
+            // Trigger the appropriate action
+            switch(action) {
+                case 'header':
+                    insertHeaderTemplate();
+                    showMofuHelper('I\'ve added a <strong>header template</strong> for you!');
+                    break;
+                case 'footer':
+                    insertFooterTemplate();
+                    showMofuHelper('I\'ve added a <strong>footer template</strong> for you!');
+                    break;
+                case 'image':
+                    insertImageTemplate(); // Call the actual function
+                    break;
+                case 'media':
+                    if (mediaInput) mediaInput.click(); // Trigger file picker
+                    break;
+                case 'break':
+                    insertLineBreak();
+                    showMofuHelper('I\'ve inserted a <strong>page break</strong>!');
+                    break;
+            }
+        });
+    };
+
     // ----- Option 2: Insert formatting buttons -----
     let setupInsertHeaderButton = () => {
         const button = document.querySelector('#insert-header-button');
@@ -4525,7 +4662,17 @@ ${fontLinkTags}
         let selectedMedia = null;
         let selectedMediaContainer = null;
         
-        if (!contextMenu || !previewPane) return;
+        console.log('🔍 [MEDIA CONTEXT] Setup:', { 
+            contextMenu: contextMenu ? 'found' : 'NOT FOUND', 
+            previewPane: previewPane ? 'found' : 'NOT FOUND' 
+        });
+        
+        if (!contextMenu || !previewPane) {
+            console.error('❌ [MEDIA CONTEXT] Setup failed - missing elements!');
+            return;
+        }
+        
+        console.log('✅ [MEDIA CONTEXT] Setup complete - right-click on images to test');
         
         // Show context menu on right-click on images/videos
         previewPane.addEventListener('contextmenu', (e) => {
@@ -4535,7 +4682,7 @@ ${fontLinkTags}
             if (target.tagName === 'IMG' || target.tagName === 'VIDEO') {
                 e.preventDefault();
                 
-                console.log('Right-clicked on media:', target);
+                console.log('🔍 [MEDIA CONTEXT] Right-clicked on media:', target.tagName, target.src?.substring(0, 50));
                 
                 // Remove previous selection
                 document.querySelectorAll('.media-selected').forEach(el => {
@@ -4565,23 +4712,24 @@ ${fontLinkTags}
                 }
                 
                 selectedMediaContainer = container;
-                console.log('Media container:', selectedMediaContainer);
-                console.log('Container tag:', selectedMediaContainer?.tagName);
-                console.log('Container data-source-line:', selectedMediaContainer?.getAttribute('data-source-line'));
+                console.log('🔍 [MEDIA CONTEXT] Container:', selectedMediaContainer?.tagName, 'line:', selectedMediaContainer?.getAttribute('data-source-line'));
                 
                 // Position context menu
                 contextMenu.style.left = e.pageX + 'px';
                 contextMenu.style.top = e.pageY + 'px';
                 contextMenu.classList.add('active');
                 
+                console.log('🔍 [MEDIA CONTEXT] Menu positioned at:', e.pageX, e.pageY);
+                console.log('🔍 [MEDIA CONTEXT] Menu display:', window.getComputedStyle(contextMenu).display);
+                
                 // Check if can move up/down - find all media containers
                 const allMediaContainers = Array.from(previewPane.querySelectorAll('img, video'))
                     .map(media => media.closest('[data-source-line]') || media.parentElement)
                     .filter((container, index, self) => self.indexOf(container) === index); // Remove duplicates
                 
-                console.log('All media containers:', allMediaContainers.length);
+                console.log('🔍 [MEDIA CONTEXT] All media containers:', allMediaContainers.length);
                 const currentIndex = allMediaContainers.indexOf(selectedMediaContainer);
-                console.log('Current index:', currentIndex);
+                console.log('🔍 [MEDIA CONTEXT] Current index:', currentIndex);
                 
                 document.getElementById('media-move-up').classList.toggle('disabled', currentIndex <= 0);
                 document.getElementById('media-move-down').classList.toggle('disabled', currentIndex >= allMediaContainers.length - 1);
@@ -4628,50 +4776,53 @@ ${fontLinkTags}
         });
         
         // Delete Media
-        document.getElementById('media-delete').addEventListener('click', () => {
-            if (selectedMediaContainer && editor) {
-                const startLine = parseInt(selectedMediaContainer.getAttribute('data-source-line'));
-                if (startLine) {
-                    const model = editor.getModel();
-                    const firstLine = model.getLineContent(startLine);
-                    let endLine = startLine;
-                    
-                    console.log('Deleting media at line:', startLine);
-                    console.log('First line content:', firstLine);
-                    
-                    // Check if this is a <div> wrapped media or markdown image
-                    if (firstLine.trim().startsWith('<div>')) {
-                        // Find the closing </div>
-                        for (let i = startLine; i <= model.getLineCount(); i++) {
-                            const line = model.getLineContent(i);
-                            if (line.trim() === '</div>') {
-                                endLine = i;
-                                break;
+        const deleteBtn = document.getElementById('media-delete');
+        if (deleteBtn) {
+            deleteBtn.addEventListener('click', () => {
+                if (selectedMediaContainer && editor) {
+                    const startLine = parseInt(selectedMediaContainer.getAttribute('data-source-line'));
+                    if (startLine) {
+                        const model = editor.getModel();
+                        const firstLine = model.getLineContent(startLine);
+                        let endLine = startLine;
+                        
+                        console.log('Deleting media at line:', startLine);
+                        console.log('First line content:', firstLine);
+                        
+                        // Check if this is a <div> wrapped media or markdown image
+                        if (firstLine.trim().startsWith('<div>')) {
+                            // Find the closing </div>
+                            for (let i = startLine; i <= model.getLineCount(); i++) {
+                                const line = model.getLineContent(i);
+                                if (line.trim() === '</div>') {
+                                    endLine = i;
+                                    break;
+                                }
                             }
+                        } else if (firstLine.includes('![') || firstLine.includes('<img')) {
+                            // Single line markdown image or HTML img tag
+                            endLine = startLine;
                         }
-                    } else if (firstLine.includes('![') || firstLine.includes('<img')) {
-                        // Single line markdown image or HTML img tag
-                        endLine = startLine;
+                        
+                        console.log('Deleting lines', startLine, 'to', endLine);
+                        
+                        // Delete the lines (including the line after if it's empty)
+                        const nextLine = endLine + 1 <= model.getLineCount() ? model.getLineContent(endLine + 1) : '';
+                        const deleteEndLine = nextLine.trim() === '' ? endLine + 1 : endLine;
+                        
+                        editor.executeEdits('delete-media', [{
+                            range: new monaco.Range(startLine, 1, deleteEndLine + 1, 1),
+                            text: ''
+                        }]);
+                        
+                        if (selectedMedia) selectedMedia.classList.remove('media-selected');
+                        selectedMedia = null;
+                        selectedMediaContainer = null;
+                        showMofuHelper('Media deleted!');
                     }
-                    
-                    console.log('Deleting lines', startLine, 'to', endLine);
-                    
-                    // Delete the lines (including the line after if it's empty)
-                    const nextLine = endLine + 1 <= model.getLineCount() ? model.getLineContent(endLine + 1) : '';
-                    const deleteEndLine = nextLine.trim() === '' ? endLine + 1 : endLine;
-                    
-                    editor.executeEdits('delete-media', [{
-                        range: new monaco.Range(startLine, 1, deleteEndLine + 1, 1),
-                        text: ''
-                    }]);
-                    
-                    if (selectedMedia) selectedMedia.classList.remove('media-selected');
-                    selectedMedia = null;
-                    selectedMediaContainer = null;
-                    showMofuHelper('Media deleted!');
                 }
-            }
-        });
+            });
+        }
     };
     
     // Move media in editor
@@ -4823,6 +4974,8 @@ ${fontLinkTags}
                     range: new monaco.Range(adjustedStartLine, 1, adjustedEndLine + 2, 1),
                     text: ''
                 }]);
+                
+                // targetLine stays the same for folding
             } else {
                 // Moving DOWN: Delete from original first, then insert at adjusted target
                 
@@ -4839,7 +4992,42 @@ ${fontLinkTags}
                     range: new monaco.Range(adjustedTarget, 1, adjustedTarget, 1),
                     text: mediaContent
                 }]);
+                
+                // Store the final line number for folding
+                targetLine = adjustedTarget;
             }
+            
+            // Trigger folding for the moved image specifically
+            console.log('🔍 [MEDIA MOVE] Triggering folding for line:', targetLine);
+            console.log('🔍 [MEDIA MOVE] Media was', (endLine - startLine + 1), 'line(s)');
+            
+            setTimeout(() => {
+                const model = editor.getModel();
+                if (model) {
+                    // Force folding range update
+                    model.deltaDecorations([], []);
+                    console.log('🔍 [MEDIA MOVE] Folding ranges refreshed');
+                }
+                
+                // Fold the moved image
+                setTimeout(() => {
+                    // Check if it's a multi-line <div> wrapped media or single-line
+                    const numLines = endLine - startLine + 1;
+                    let foldLineNumber;
+                    
+                    if (numLines > 1) {
+                        // Multi-line: fold the <img> line inside the <div>
+                        foldLineNumber = targetLine + 1; // +1 because <div> is first, <img> is second
+                    } else {
+                        // Single-line: fold the <img> line itself
+                        foldLineNumber = targetLine;
+                    }
+                    
+                    console.log('🔍 [MEDIA MOVE] Attempting to fold line:', foldLineNumber);
+                    editor.trigger('fold', 'editor.fold', { lineNumber: foldLineNumber });
+                    console.log('✅ [MEDIA MOVE] Folded image at line:', foldLineNumber);
+                }, 100);
+            }, 100);
             
             showMofuHelper(`Media moved ${direction}!`);
         }
@@ -6327,6 +6515,7 @@ ${fontLinkTags}
     // initInspectorPanel();
     
     setupPdfSettingsButton();
+    setupSimpleAddDropdown(); // NEW simple dropdown
     setupInsertHeaderButton();
     setupInsertFooterButton();
     setupInsertImageButton();
@@ -8154,6 +8343,9 @@ ${fontLinkTags}
             });
             
             outputDiv.appendChild(paperStack);
+
+            // Render Mermaid diagrams in paper layout
+            MermaidRenderer.render(outputDiv);
 
             // Re-apply edit mode handlers if enabled so inline editing works inside paginated pages
             if (editModeEnabled) {

@@ -336,4 +336,20 @@ export class DocumentationManager {
             return paths;
         }
     }
+
+    /**
+     * Load placeholder template (for empty documentation mode)
+     */
+    loadPlaceholder(structure, files) {
+        this.state.structure = structure;
+        this.state.files = files;
+        this.state.currentPage = 'getting-started/README.md';
+        this.state.isActive = true;
+        this.state.hasSummary = false;
+        this.state.hasConfig = false;
+        this.state.config = this.parser.getDefaultConfig();
+        this.state.config.title = 'Documentation Template';
+        
+        console.log('✓ Placeholder template loaded');
+    }
 }

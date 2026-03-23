@@ -505,6 +505,8 @@ header a:hover {
   padding: 4px;
   border-radius: 10px;
   flex-shrink: 0;
+  overflow: visible; /* Allow dropdown to show outside */
+  position: relative; /* For z-index context */
 }
 
 .btn-item {
@@ -518,6 +520,74 @@ header a:hover {
   font-size: 12px;
   color: #475569;
 }
+
+/* NEW SIMPLE ADD BUTTON */
+.simple-add-btn {
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-weight: 500;
+  font-size: 12px;
+  color: #475569;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.simple-add-btn:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.simple-add-btn svg {
+  flex-shrink: 0;
+}
+
+/* NEW SIMPLE DROPDOWN MENU */
+.simple-dropdown-menu {
+  display: none;
+  position: fixed;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+  padding: 8px;
+  min-width: 180px;
+  z-index: 99999;
+}
+
+.simple-dropdown-menu.show {
+  display: block;
+}
+
+.simple-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border: none;
+  background: transparent;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  border-radius: 8px;
+  font-size: 13px;
+  color: #475569;
+  transition: all 0.2s;
+}
+
+.simple-dropdown-item:hover {
+  background: #f1f5f9;
+  color: #040608;
+}
+
+.simple-dropdown-item svg {
+  flex-shrink: 0;
+  opacity: 0.6;
+}
+
 
 .btn-item.icon-btn {
   padding: 8px 10px;
@@ -554,7 +624,8 @@ header a:hover {
   position: relative;
 }
 
-.dropdown-content {
+.dropdown-content,
+.dropdown-menu {
   display: none;
   position: absolute;
   top: 100%;
@@ -565,7 +636,7 @@ header a:hover {
   border-radius: 12px;
   box-shadow: 0 10px 40px rgba(0,0,0,0.15);
   min-width: 200px;
-  z-index: 1000;
+  z-index: 10000; /* Very high to ensure it shows above everything */
   padding: 8px;
 }
 
@@ -578,15 +649,25 @@ header a:hover {
   right: 0;
   height: 10px;
   background: transparent;
+  z-index: 999;
 }
 
-.dropdown:hover .dropdown-content,
-.dropdown-content:hover {
+/* Show dropdown on hover - works for both child and sibling */
+.dropdown:hover > .dropdown-content,
+.dropdown:hover > .dropdown-menu,
+.dropdown-content:hover,
+.dropdown-menu:hover {
+  display: block;
+}
+
+/* Also support when dropdown-menu is direct child of btn-item */
+.btn-item.dropdown:hover .dropdown-menu {
   display: block;
 }
 
 .dropdown-content a,
-.dropdown-content .dropdown-item {
+.dropdown-content .dropdown-item,
+.dropdown-menu .dropdown-item {
   display: block;
   padding: 10px 14px;
   color: #475569;
@@ -598,15 +679,22 @@ header a:hover {
   font-size: 13px;
 }
 
-.dropdown-content a:hover {
+.dropdown-content a:hover,
+.dropdown-menu .dropdown-item:hover {
   background: #f1f5f9;
   color: #040608;
 }
 
-.dropdown-content .dropdown-item {
+.dropdown-content .dropdown-item,
+.dropdown-menu .dropdown-item {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+.dropdown-menu .dropdown-item svg {
+  flex-shrink: 0;
+  opacity: 0.6;
 }
 
 .dropdown-content .dropdown-item input[type="checkbox"] {
@@ -1289,18 +1377,46 @@ footer {
   color: #60a5fa;
 }
 
-[data-theme="dark"] .dropdown-content {
+/* Dark theme for new simple button */
+[data-theme="dark"] .simple-add-btn {
+  color: #94a3b8;
+}
+
+[data-theme="dark"] .simple-add-btn:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: #e2e8f0;
+}
+
+[data-theme="dark"] .simple-dropdown-menu {
+  background: #1a1a1a;
+  border-color: #3d3d3d;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+}
+
+[data-theme="dark"] .simple-dropdown-item {
+  color: #94a3b8;
+}
+
+[data-theme="dark"] .simple-dropdown-item:hover {
+  background: #3d3d3d;
+  color: #e2e8f0;
+}
+
+[data-theme="dark"] .dropdown-content,
+[data-theme="dark"] .dropdown-menu {
   background: #040608;
   border-color: #3d3d3d;
   box-shadow: 0 10px 40px rgba(0,0,0,0.5);
 }
 
 [data-theme="dark"] .dropdown-content a,
-[data-theme="dark"] .dropdown-content .dropdown-item {
+[data-theme="dark"] .dropdown-content .dropdown-item,
+[data-theme="dark"] .dropdown-menu .dropdown-item {
   color: #94a3b8;
 }
 
-[data-theme="dark"] .dropdown-content a:hover {
+[data-theme="dark"] .dropdown-content a:hover,
+[data-theme="dark"] .dropdown-menu .dropdown-item:hover {
   background: #3d3d3d;
   color: #e2e8f0;
 }
@@ -6498,4 +6614,137 @@ footer {
 [data-theme="dark"] .pdf-modal-btn-secondary:hover {
   background: #040608;
   border-color: #475569;
+}
+
+
+/* ===== MERMAID DIAGRAM STYLES ===== */
+
+/* Mermaid container */
+#preview-wrapper .markdown-body .mermaid {
+  margin: 1.5em 0;
+  padding: 1em;
+  background: #f8f9fa;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  overflow-x: auto;
+  text-align: center;
+}
+
+#preview-wrapper .markdown-body .mermaid svg {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Dark theme mermaid container */
+[data-theme="dark"] #preview-wrapper .markdown-body .mermaid {
+  background: #1a1d23;
+  border-color: #3d3d3d;
+}
+
+/* Mermaid error state */
+.mermaid-error {
+  background: #fef2f2;
+  border: 2px solid #ef4444;
+  border-radius: 8px;
+  padding: 1.5em;
+  margin: 1.5em 0;
+  text-align: left;
+}
+
+.mermaid-error-title {
+  font-weight: 600;
+  color: #dc2626;
+  margin-bottom: 0.5em;
+  font-size: 1.1em;
+}
+
+.mermaid-error-message {
+  color: #991b1b;
+  margin-bottom: 1em;
+  font-family: monospace;
+  font-size: 0.9em;
+}
+
+.mermaid-error-code {
+  background: #ffffff;
+  border: 1px solid #fecaca;
+  border-radius: 4px;
+  padding: 1em;
+  overflow-x: auto;
+  margin: 0;
+}
+
+.mermaid-error-code code {
+  color: #374151;
+  font-family: 'Courier New', monospace;
+  font-size: 0.85em;
+}
+
+/* Dark theme error state */
+[data-theme="dark"] .mermaid-error {
+  background: #2d1a1a;
+  border-color: #f87171;
+}
+
+[data-theme="dark"] .mermaid-error-title {
+  color: #fca5a5;
+}
+
+[data-theme="dark"] .mermaid-error-message {
+  color: #fca5a5;
+}
+
+[data-theme="dark"] .mermaid-error-code {
+  background: #1a1d23;
+  border-color: #7f1d1d;
+}
+
+[data-theme="dark"] .mermaid-error-code code {
+  color: #e5e7eb;
+}
+
+/* Loading state (optional) */
+.mermaid-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100px;
+  color: #6b7280;
+  font-style: italic;
+}
+
+[data-theme="dark"] .mermaid-loading {
+  color: #9ca3af;
+}
+
+
+/* ===== HIDE MERMAID ERROR BANNERS ===== */
+
+/* Nuclear option: Hide ALL Mermaid error banners and overlays */
+#d2l-error-container,
+.mermaid-error-notification,
+[id^="d2l-"],
+[id*="error"],
+[class*="mermaid"][class*="error"][class*="banner"],
+.error-icon,
+div[style*="position: fixed"][style*="z-index"],
+body > div[style*="position: fixed"],
+body > div[style*="z-index: 9999"],
+body > div[style*="z-index: 10000"] {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  position: absolute !important;
+  left: -99999px !important;
+  top: -99999px !important;
+  width: 0 !important;
+  height: 0 !important;
+  overflow: hidden !important;
+}
+
+/* Prevent any overlay from appearing */
+body::after,
+body::before {
+  content: none !important;
 }
