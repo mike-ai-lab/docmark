@@ -38,11 +38,29 @@ function hexToHsl(hex) {
   return `hsl(${Math.round(h * 360)}, ${Math.round(s * 100)}%, ${Math.round(l * 100)}%)`;
 }
 
-// Initialize workflow mode toggle state
+// Initialize workflow mode toggle state and reload mode
 document.addEventListener('DOMContentLoaded', () => {
-  chrome.storage.local.get(['workflowModeEnabled'], (result) => {
+  chrome.storage.local.get(['workflowModeEnabled', 'reloadMode'], (result) => {
     const toggle = document.getElementById('workflow-mode-toggle');
     toggle.checked = result.workflowModeEnabled || false;
+    
+    const modeSelect = document.getElementById('reload-mode-select');
+    modeSelect.value = result.reloadMode || 'soft';
+  });
+});
+
+// Handle reload mode selection
+document.getElementById('reload-mode-select').addEventListener('change', async (e) => {
+  const mode = e.target.value;
+  await chrome.storage.local.set({ reloadMode: mode });
+  
+  // Update floating button color in all tabs
+  const tabs = await chrome.tabs.query({});
+  tabs.forEach(tab => {
+    chrome.tabs.sendMessage(tab.id, {
+      action: 'updateReloadMode',
+      mode: mode
+    }).catch(() => {});
   });
 });
 
@@ -138,7 +156,7 @@ document.getElementById('hsl-container').addEventListener('click', () => {
   copyToClipboard(document.getElementById('hsl-value').textContent);
 });
 
-// Hot Reload: Hard refresh + clear cache for current tab
+// Hot Reload: Uses the selected reload mode
 document.getElementById('hot-reload-btn').addEventListener('click', async () => {
   try {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
@@ -148,29 +166,41 @@ document.getElementById('hot-reload-btn').addEventListener('click', async () => 
       return;
     }
 
-    // Extract the origin (protocol + hostname + port) from the tab URL
+    // Get the current reload mode
+    const result = await chrome.storage.local.get(['reloadMode']);
+    const mode = result.reloadMode || 'soft';
     const url = new URL(tab.url);
     const origins = [url.origin];
 
-    // Clear cache for the current tab's origin
-    await chrome.browsingData.removeCache({
-      origins: origins
-    });
-
-    // Also clear other storage types that might affect dev workflow
-    await chrome.browsingData.remove({
-      origins: origins
-    }, {
-      cacheStorage: true,
-      serviceWorkers: true
-    });
-
-    // Hard reload the page (bypass cache)
-    await chrome.tabs.reload(tab.id, { bypassCache: true });
+    if (mode === 'soft') {
+      // Quick refresh: Just reload
+      await chrome.tabs.reload(tab.id, { bypassCache: false });
+    } else if (mode === 'medium') {
+      // Fresh assets: Clear HTTP cache only (gets fresh HTML/CSS/JS)
+      await chrome.browsingData.removeCache({
+        origins: origins
+      });
+      await chrome.tabs.reload(tab.id, { bypassCache: true });
+    } else if (mode === 'hard') {
+      // Deep clean: Clear cache + service workers
+      // Still preserves localStorage and IndexedDB (API keys, embeddings, chats)
+      await chrome.browsingData.removeCache({
+        origins: origins
+      });
+      await chrome.browsingData.remove({
+        origins: origins
+      }, {
+        cacheStorage: true,
+        serviceWorkers: true
+        // localStorage and indexedDB NOT included - preserves API keys and data
+      });
+      await chrome.tabs.reload(tab.id, { bypassCache: true });
+    }
 
     // Show feedback
     const msg = document.getElementById('copy-message');
-    msg.textContent = 'Hot reloaded!';
+    const modeNames = { soft: 'quick', medium: 'fresh', hard: 'deep' };
+    msg.textContent = `Reloaded (${modeNames[mode]})!`;
     msg.classList.remove('hidden');
     setTimeout(() => {
       msg.classList.add('hidden');
@@ -183,7 +213,7 @@ document.getElementById('hot-reload-btn').addEventListener('click', async () => 
   }
 });
 
-// Clear Cache: Clear all cache for current tab's origin
+// Clear Cache: Clear HTTP cache only (preserves localStorage and IndexedDB)
 document.getElementById('clear-cache-btn').addEventListener('click', async () => {
   try {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
@@ -197,7 +227,55 @@ document.getElementById('clear-cache-btn').addEventListener('click', async () =>
     const url = new URL(tab.url);
     const origins = [url.origin];
 
-    // Clear comprehensive cache data
+    // Clear HTTP cache and cache storage only
+    // This gets fresh HTML/CSS/JS files
+    await chrome.browsingData.removeCache({
+      origins: origins
+    });
+
+    await chrome.browsingData.remove({
+      origins: origins
+    }, {
+      cacheStorage: true,
+      serviceWorkers: true
+      // localStorage and indexedDB NOT included - preserves API keys and data
+    });
+
+    // Show feedback
+    const msg = document.getElementById('copy-message');
+    msg.textContent = 'Old files cleared!';
+    msg.classList.remove('hidden');
+    setTimeout(() => {
+      msg.classList.add('hidden');
+      msg.textContent = 'Copied to clipboard!';
+    }, 1500);
+
+  } catch (err) {
+    console.error('Clear cache failed:', err);
+    alert('Clear cache failed: ' + err.message);
+  }
+});
+
+// Nuclear Clear: Clear EVERYTHING including localStorage and IndexedDB
+document.getElementById('nuclear-btn').addEventListener('click', async () => {
+  // Confirm before nuclear clear
+  if (!confirm('⚠️ WARNING: This will delete ALL your data including:\n\n- API keys\n- Embeddings and models\n- Chat history\n- All saved settings\n\nAre you sure you want to continue?')) {
+    return;
+  }
+
+  try {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    
+    if (!tab || !tab.url) {
+      alert('No active tab found');
+      return;
+    }
+
+    // Extract the origin from the tab URL
+    const url = new URL(tab.url);
+    const origins = [url.origin];
+
+    // Clear EVERYTHING
     await chrome.browsingData.removeCache({
       origins: origins
     });
@@ -213,15 +291,15 @@ document.getElementById('clear-cache-btn').addEventListener('click', async () =>
 
     // Show feedback
     const msg = document.getElementById('copy-message');
-    msg.textContent = 'Cache cleared!';
+    msg.textContent = '💥 Everything reset!';
     msg.classList.remove('hidden');
     setTimeout(() => {
       msg.classList.add('hidden');
       msg.textContent = 'Copied to clipboard!';
-    }, 1500);
+    }, 2000);
 
   } catch (err) {
-    console.error('Clear cache failed:', err);
-    alert('Clear cache failed: ' + err.message);
+    console.error('Nuclear clear failed:', err);
+    alert('Nuclear clear failed: ' + err.message);
   }
 });
