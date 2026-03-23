@@ -20,7 +20,7 @@
   line-height: 1.4;
   margin-top: 24px;
   margin-bottom: 12px;
-  color: #1a1a1a;
+  color: #040608;
   text-transform: uppercase;
   letter-spacing: 2px;
 }
@@ -83,7 +83,7 @@
   background-color: #e8e8d0;
   border: 1px dashed #8b8b7a;
   font-family: inherit;
-  color: #1a1a1a;
+  color: #040608;
 }
 
 .markdown-body pre {
@@ -217,7 +217,7 @@
 /* Dark Theme */
 [data-theme="dark"] .markdown-body {
   color: #d4d4d4;
-  background-color: #1e1e1e;
+  background-color: #040608;
 }
 
 [data-theme="dark"] .markdown-body h1,
@@ -246,20 +246,20 @@
 }
 
 [data-theme="dark"] .markdown-body code {
-  background-color: #2d2d2d;
+  background-color: #040608;
   border-color: #505050;
   color: #e0e0e0;
 }
 
 [data-theme="dark"] .markdown-body pre {
-  background-color: #2d2d2d;
+  background-color: #040608;
   border-color: #505050;
 }
 
 [data-theme="dark"] .markdown-body blockquote {
   color: #a0a0a0;
   border-left-color: #d4d4d4;
-  background-color: #2d2d2d;
+  background-color: #040608;
 }
 
 [data-theme="dark"] .markdown-body table {
@@ -276,7 +276,7 @@
 }
 
 [data-theme="dark"] .markdown-body table th {
-  background-color: #2d2d2d;
+  background-color: #040608;
   border-bottom-color: #d4d4d4;
 }
 
@@ -286,10 +286,10 @@
 
 [data-theme="dark"] .markdown-body hr::before {
   color: #d4d4d4;
-  background-color: #1e1e1e;
+  background-color: #040608;
 }
 
 [data-theme="dark"] .markdown-body img {
   border-color: #d4d4d4;
-  background-color: #2d2d2d;
+  background-color: #040608;
 }

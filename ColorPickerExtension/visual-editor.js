@@ -146,7 +146,7 @@
         right: 20px;
         width: 320px;
         max-height: 80vh;
-        background: #1e1e1e;
+        background: #040608;
         border: 2px solid #444;
         border-radius: 8px;
         box-shadow: 0 8px 32px rgba(0,0,0,0.5);

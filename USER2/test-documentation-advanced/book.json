@@ -1,0 +1,11 @@
+{
+  "title": "Advanced Documentation",
+  "description": "Complete guide with SUMMARY.md and config",
+  "author": "DocMark Team",
+  "language": "en",
+  "links": {
+    "sidebar": {
+      "GitHub": "https://github.com/example/repo"
+    }
+  }
+}

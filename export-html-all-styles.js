@@ -230,7 +230,7 @@ function verifyTocColors() {
                  tocSection.includes('color: #37352f') || // Notion dark text
                  tocSection.includes('color: rgba(41, 41, 41') || // Medium dark text
                  tocSection.includes('color: #64748b')) && // Minimal gray text
-                (tocSection.includes('background: #1e1e1e') || 
+                (tocSection.includes('background: #040608') || 
                  tocSection.includes('data-theme="dark"'));
             
             if (hasDarkTextOnDarkBg) {

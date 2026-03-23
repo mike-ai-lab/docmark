@@ -156,35 +156,25 @@ export class DocumentationIntegration {
      * Switch to documentation mode
      */
     activateDocumentationMode() {
-        // Hide single file editor
-        const singleFileLayout = document.querySelector('.split-container');
+        const singleFileLayout = document.getElementById('container');
         if (singleFileLayout) {
             singleFileLayout.classList.add('hidden');
         }
 
-        // Show documentation layout
         this.ui.show();
-
-        console.log('Documentation mode activated');
     }
 
     /**
      * Switch to single file mode
      */
     activateSingleFileMode() {
-        // Show single file editor
-        const singleFileLayout = document.querySelector('.split-container');
+        const singleFileLayout = document.getElementById('container');
         if (singleFileLayout) {
             singleFileLayout.classList.remove('hidden');
         }
 
-        // Hide documentation layout
         this.ui.hide();
-
-        // Deactivate manager
         this.manager.deactivate();
-
-        console.log('Single file mode activated');
     }
 
     /**
@@ -194,6 +184,11 @@ export class DocumentationIntegration {
         const result = await this.manager.loadFromZip(zipFile);
         
         if (result.success) {
+            // Set documentation title from config
+            if (result.config && result.config.title) {
+                this.ui.setTitle(result.config.title);
+            }
+            
             // Render navigation
             this.ui.renderNavigation(this.manager.getStructure());
             
@@ -202,6 +197,14 @@ export class DocumentationIntegration {
             
             // Switch to documentation mode
             this.activateDocumentationMode();
+            
+            // Log info
+            console.log('📚 Documentation loaded:', {
+                pages: result.pageCount,
+                hasSummary: result.hasSummary,
+                hasConfig: result.hasConfig,
+                title: result.config.title
+            });
         }
 
         return result;

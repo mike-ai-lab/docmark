@@ -4,6 +4,7 @@
  */
 
 import JSZip from 'jszip';
+import { DocumentationParser } from './documentation-parser.js';
 
 export class DocumentationManager {
     constructor() {
@@ -14,8 +15,12 @@ export class DocumentationManager {
             currentPage: null,          // active file path
             assets: new Map(),          // path -> blob (images, etc)
             config: {},                 // documentation config
-            metadata: {}                // title, description, etc
+            metadata: {},               // title, description, etc
+            hasSummary: false,          // whether SUMMARY.md exists
+            hasConfig: false            // whether config file exists
         };
+        
+        this.parser = new DocumentationParser();
     }
 
     /**
@@ -23,14 +28,59 @@ export class DocumentationManager {
      */
     async loadFromZip(zipFile) {
         try {
-            // We'll implement ZIP extraction in next step
             console.log('Loading ZIP file:', zipFile.name);
             
             // Extract files
             const extracted = await this.extractZip(zipFile);
             
-            // Parse structure
-            this.state.structure = this.buildNavigationTree(extracted.files);
+            // Check for special files
+            const hasSummary = this.state.files.has('SUMMARY.md');
+            const hasConfig = this.state.files.has('book.json') || this.state.files.has('config.json');
+            
+            this.state.hasSummary = hasSummary;
+            this.state.hasConfig = hasConfig;
+            
+            // Parse config if exists
+            if (hasConfig) {
+                const configPath = this.state.files.has('book.json') ? 'book.json' : 'config.json';
+                const configContent = this.state.files.get(configPath);
+                this.state.config = this.parser.parseConfig(configContent);
+                console.log('✓ Loaded config:', this.state.config.title);
+            } else {
+                this.state.config = this.parser.getDefaultConfig();
+            }
+            
+            // Build structure from SUMMARY.md or auto-generate
+            if (hasSummary) {
+                const summaryContent = this.state.files.get('SUMMARY.md');
+                const validation = this.parser.validateSummary(summaryContent);
+                
+                if (validation.valid) {
+                    this.state.structure = this.parser.parseSummary(summaryContent);
+                    console.log('✓ Using SUMMARY.md for navigation');
+                    
+                    // Debug: Verify all paths in SUMMARY exist in files
+                    console.log('🔍 [MANAGER] Verifying SUMMARY.md paths...');
+                    const summaryPaths = this.extractAllPaths(this.state.structure);
+                    const filePaths = Array.from(this.state.files.keys());
+                    console.log('🔍 [MANAGER] SUMMARY paths:', summaryPaths);
+                    console.log('🔍 [MANAGER] Available files:', filePaths);
+                    
+                    summaryPaths.forEach(path => {
+                        if (!this.state.files.has(path)) {
+                            console.warn(`⚠️ [MANAGER] SUMMARY references missing file: ${path}`);
+                        } else {
+                            console.log(`✓ [MANAGER] Found file: ${path}`);
+                        }
+                    });
+                } else {
+                    console.warn('Invalid SUMMARY.md, auto-generating structure');
+                    this.state.structure = this.buildNavigationTree(extracted.files);
+                }
+            } else {
+                this.state.structure = this.buildNavigationTree(extracted.files);
+                console.log('✓ Auto-generated navigation structure');
+            }
             
             // Set first page as active
             this.state.currentPage = this.findFirstPage();
@@ -41,7 +91,10 @@ export class DocumentationManager {
             return {
                 success: true,
                 pageCount: this.state.files.size,
-                structure: this.state.structure
+                structure: this.state.structure,
+                hasSummary: hasSummary,
+                hasConfig: hasConfig,
+                config: this.state.config
             };
         } catch (error) {
             console.error('Failed to load documentation:', error);
@@ -67,20 +120,28 @@ export class DocumentationManager {
             // Skip directories
             if (zipEntry.dir) continue;
             
+            // Normalize path to use forward slashes (Unix-style)
+            const normalizedPath = path.replace(/\\/g, '/');
+            
             // Skip hidden files and system files
-            if (path.startsWith('.') || path.includes('/.')) continue;
+            if (normalizedPath.startsWith('.') || normalizedPath.includes('/.') || normalizedPath.startsWith('__MACOSX')) continue;
             
             // Check file type
-            if (path.endsWith('.md')) {
+            if (normalizedPath.endsWith('.md')) {
                 // Markdown file
                 const content = await zipEntry.async('text');
-                files.set(path, content);
-                console.log('Loaded markdown:', path);
-            } else if (this.isAsset(path)) {
+                files.set(normalizedPath, content);
+                console.log('Loaded markdown:', normalizedPath);
+            } else if (normalizedPath.endsWith('.json') && (normalizedPath === 'book.json' || normalizedPath === 'config.json')) {
+                // Config file
+                const content = await zipEntry.async('text');
+                files.set(normalizedPath, content);
+                console.log('Loaded config:', normalizedPath);
+            } else if (this.isAsset(normalizedPath)) {
                 // Asset file (image, css, etc)
                 const blob = await zipEntry.async('blob');
-                assets.set(path, blob);
-                console.log('Loaded asset:', path);
+                assets.set(normalizedPath, blob);
+                console.log('Loaded asset:', normalizedPath);
             }
         }
         
@@ -88,7 +149,7 @@ export class DocumentationManager {
         this.state.files = files;
         this.state.assets = assets;
         
-        console.log(`Extracted ${files.size} markdown files, ${assets.size} assets`);
+        console.log(`Extracted ${files.size} files, ${assets.size} assets`);
         
         return { files, assets };
     }
@@ -112,8 +173,15 @@ export class DocumentationManager {
             children: []
         };
 
-        // Convert Map to array of paths
-        const paths = Array.from(files.keys()).sort();
+        // Convert Map to array of paths, excluding config files
+        const paths = Array.from(files.keys())
+            .filter(path => {
+                // Exclude config files and SUMMARY.md from navigation
+                return !path.endsWith('book.json') && 
+                       !path.endsWith('config.json') && 
+                       path !== 'SUMMARY.md';
+            })
+            .sort();
         
         // Build tree structure
         paths.forEach(path => {
@@ -127,7 +195,7 @@ export class DocumentationManager {
      * Add a file path to the tree structure
      */
     addPathToTree(tree, path) {
-        const parts = path.split('/');
+        const parts = path.split('/').filter(p => p); // Remove empty parts
         let current = tree;
 
         parts.forEach((part, index) => {
@@ -207,9 +275,65 @@ export class DocumentationManager {
     }
 
     /**
-     * Get all file paths
+     * Get all file paths (excluding config files)
      */
     getAllPaths() {
-        return Array.from(this.state.files.keys());
+        return Array.from(this.state.files.keys()).filter(path => {
+            // Exclude config files and SUMMARY.md
+            return !path.endsWith('book.json') && 
+                   !path.endsWith('config.json') && 
+                   path !== 'SUMMARY.md';
+        });
+    }
+    
+    /**
+     * Extract all paths from navigation structure in order
+     * For SUMMARY.md: preserves exact order from structure
+     * For auto-generated: depth-first traversal
+     */
+    extractAllPaths(node, paths = []) {
+        // Process children in order (preserves SUMMARY.md order)
+        if (node.children) {
+            node.children.forEach(child => {
+                // If it's a file, add its path
+                if (child.type === 'file' && child.path) {
+                    paths.push(child.path);
+                }
+                // If it's a folder with a path (like README.md), add it
+                else if (child.type === 'folder' && child.path) {
+                    paths.push(child.path);
+                }
+                
+                // Recurse into children (for nested items)
+                if (child.children) {
+                    this.extractAllPaths(child, paths);
+                }
+            });
+        }
+        
+        return paths;
+    }
+    
+    /**
+     * Get ordered paths (respects SUMMARY.md order if available)
+     */
+    getOrderedPaths() {
+        if (this.state.hasSummary && this.state.structure) {
+            // Use SUMMARY.md order
+            const orderedPaths = this.extractAllPaths(this.state.structure);
+            console.log('🔍 [MANAGER] Using SUMMARY.md order:');
+            orderedPaths.forEach((path, index) => {
+                console.log(`  ${index + 1}. ${path}`);
+            });
+            return orderedPaths;
+        } else {
+            // Use file system order
+            const paths = this.getAllPaths();
+            console.log('🔍 [MANAGER] Using file system order:');
+            paths.forEach((path, index) => {
+                console.log(`  ${index + 1}. ${path}`);
+            });
+            return paths;
+        }
     }
 }

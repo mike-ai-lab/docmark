@@ -272,9 +272,9 @@ This web site is using ${"`"}markedjs/marked${"`"}.
         inherit: true,
         rules: [],
         colors: {
-            'editor.background': '#1A1A1A',
+            'editor.background': '#040608',
             'editor.selectionBackground': '#add6ff',
-            'editor.lineHighlightBackground': '#1A1A1A'
+            'editor.lineHighlightBackground': '#040608'
         }
     });
 
@@ -1202,7 +1202,7 @@ This web site is using ${"`"}markedjs/marked${"`"}.
         
         // Theme-aware colors
         const colors = isDark ? {
-            bg: '#1e1e1e',
+            bg: '#040608',
             text: '#e0e0e0',
             border: '#333',
             contextText: '#999',
@@ -1259,7 +1259,7 @@ This web site is using ${"`"}markedjs/marked${"`"}.
             }
             #diff-editor-container {
                 scrollbar-width: thin;
-                scrollbar-color: ${isDark ? '#444 #1e1e1e' : '#ccc #ffffff'};
+                scrollbar-color: ${isDark ? '#444 #040608' : '#ccc #ffffff'};
             }
         `;
         diffContainer.appendChild(scrollbarStyle);
@@ -2228,7 +2228,7 @@ let performBeautify = (content) => {
             
             // Get current theme colors
             const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-            const bgColor = isDark ? '#1e1e1e' : '#ffffff';
+            const bgColor = isDark ? '#040608' : '#ffffff';
             const textColor = isDark ? '#e0e0e0' : '#333333';
             const borderColor = isDark ? '#404040' : '#ddd';
             const mutedColor = isDark ? '#a0a0a0' : '#666666';
@@ -2602,7 +2602,7 @@ let performBeautify = (content) => {
                 .paper-container {
                     max-width: 860px;
                     margin: 0 auto;
-                    background-color: ${isDark ? '#1a1a1a' : '#ffffff'};
+                    background-color: ${isDark ? '#040608' : '#ffffff'};
                     padding: 50px 70px;
                     box-shadow: 0 0 20px rgba(0, 0, 0, ${isDark ? '0.5' : '0.1'});
                     min-height: 100vh;
@@ -2615,13 +2615,13 @@ let performBeautify = (content) => {
         } else if (currentStyle === 'vscode') {
             paperStyles = `
                 body {
-                    background-color: ${isDark ? '#1e1e1e' : '#f3f3f3'};
+                    background-color: ${isDark ? '#040608' : '#f3f3f3'};
                     padding: 40px 20px;
                 }
                 .paper-container {
                     max-width: 900px;
                     margin: 0 auto;
-                    background-color: ${isDark ? '#1e1e1e' : '#ffffff'};
+                    background-color: ${isDark ? '#040608' : '#ffffff'};
                     padding: 40px 50px;
                     box-shadow: 0 0 15px rgba(0, 0, 0, ${isDark ? '0.4' : '0.1'});
                     min-height: 100vh;
@@ -4276,7 +4276,7 @@ ${fontLinkTags}
         body {
             margin: 0;
             padding: 20px;
-            background-color: ${isDark ? '#1E1E1E' : '#ffffff'};
+            background-color: ${isDark ? '#040608' : '#ffffff'};
             color: ${isDark ? '#e6edf3' : '#24292f'};
         }
         .markdown-body {

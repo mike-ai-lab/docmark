@@ -238,7 +238,7 @@ body.dark-mode #import-pdf-button:hover {
 /* Dark mode support */
 body.dark-mode .pdf-preview-modal .modal-content,
 body.dark-mode .loading-modal .modal-content {
-  background: #2d2d2d;
+  background: #040608;
   color: #e0e0e0;
 }
 
@@ -248,14 +248,14 @@ body.dark-mode .pdf-preview-modal .modal-footer {
 }
 
 body.dark-mode .markdown-preview {
-  background: #1e1e1e;
+  background: #040608;
 }
 
 body.dark-mode .markdown-preview pre,
 body.dark-mode .import-stats {
-  background: #2d2d2d;
+  background: #040608;
 }
 
 body.dark-mode .page-checkboxes {
-  background: #1e1e1e;
+  background: #040608;
 }

@@ -108,7 +108,7 @@ const maxPageHeight = contentHeight;
   overflow: visible; /* CHANGED from hidden to visible */
   font-size: 14px;
   line-height: 1.6;
-  color: #1e1e1e;
+  color: #040608;
   box-sizing: border-box; /* ADDED */
 }
 ```
