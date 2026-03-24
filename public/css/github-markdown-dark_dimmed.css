@@ -10,7 +10,7 @@
   margin: 0;
   font-weight: 400;
   color: #d1d7e0;
-  background-color: #040608;
+  background-color: #020405;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
   font-size: 16px;
   line-height: 1.5;
@@ -391,7 +391,7 @@
 }
 
 .markdown-body .color-bg-default {
-  background-color: #040608 !important;
+  background-color: #020405 !important;
 }
 
 .markdown-body .mb-0 {
@@ -666,7 +666,7 @@
 }
 
 .markdown-body table tr {
-  background-color: #040608;
+  background-color: #020405;
   border-top: 1px solid #3d444db3;
 }
 
@@ -861,7 +861,7 @@
 .markdown-body .csv-data .blob-num {
   padding: 10px 0.5rem 9px;
   text-align: right;
-  background: #040608;
+  background: #020405;
   border: 0;
 }
 
@@ -924,7 +924,7 @@
 }
 
 .markdown-body .Box {
-  background-color: #040608;
+  background-color: #020405;
   border-color: #3d444d;
   border-radius: 0.375rem;
   border-style: solid;

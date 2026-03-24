@@ -274,9 +274,9 @@ This web site is using ${"`"}markedjs/marked${"`"}.
         inherit: true,
         rules: [],
         colors: {
-            'editor.background': '#040608',
+            'editor.background': '#020405',
             'editor.selectionBackground': '#add6ff',
-            'editor.lineHighlightBackground': '#040608'
+            'editor.lineHighlightBackground': '#020405'
         }
     });
 
@@ -1214,7 +1214,7 @@ This web site is using ${"`"}markedjs/marked${"`"}.
         
         // Theme-aware colors
         const colors = isDark ? {
-            bg: '#040608',
+            bg: '#020405',
             text: '#e0e0e0',
             border: '#333',
             contextText: '#999',
@@ -1271,7 +1271,7 @@ This web site is using ${"`"}markedjs/marked${"`"}.
             }
             #diff-editor-container {
                 scrollbar-width: thin;
-                scrollbar-color: ${isDark ? '#444 #040608' : '#ccc #ffffff'};
+                scrollbar-color: ${isDark ? '#444 #020405' : '#ccc #ffffff'};
             }
         `;
         diffContainer.appendChild(scrollbarStyle);
@@ -2240,7 +2240,7 @@ let performBeautify = (content) => {
             
             // Get current theme colors
             const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-            const bgColor = isDark ? '#040608' : '#ffffff';
+            const bgColor = isDark ? '#020405' : '#ffffff';
             const textColor = isDark ? '#e0e0e0' : '#333333';
             const borderColor = isDark ? '#404040' : '#ddd';
             const mutedColor = isDark ? '#a0a0a0' : '#666666';
@@ -2608,13 +2608,13 @@ let performBeautify = (content) => {
         if (currentStyle === 'gitbook') {
             paperStyles = `
                 body {
-                    background-color: ${isDark ? '#040608' : '#f5f5f5'};
+                    background-color: ${isDark ? '#020405' : '#f5f5f5'};
                     padding: 40px 20px;
                 }
                 .paper-container {
                     max-width: 860px;
                     margin: 0 auto;
-                    background-color: ${isDark ? '#040608' : '#ffffff'};
+                    background-color: ${isDark ? '#020405' : '#ffffff'};
                     padding: 50px 70px;
                     box-shadow: 0 0 20px rgba(0, 0, 0, ${isDark ? '0.5' : '0.1'});
                     min-height: 100vh;
@@ -2627,13 +2627,13 @@ let performBeautify = (content) => {
         } else if (currentStyle === 'vscode') {
             paperStyles = `
                 body {
-                    background-color: ${isDark ? '#040608' : '#f3f3f3'};
+                    background-color: ${isDark ? '#020405' : '#f3f3f3'};
                     padding: 40px 20px;
                 }
                 .paper-container {
                     max-width: 900px;
                     margin: 0 auto;
-                    background-color: ${isDark ? '#040608' : '#ffffff'};
+                    background-color: ${isDark ? '#020405' : '#ffffff'};
                     padding: 40px 50px;
                     box-shadow: 0 0 15px rgba(0, 0, 0, ${isDark ? '0.4' : '0.1'});
                     min-height: 100vh;
@@ -2648,14 +2648,14 @@ let performBeautify = (content) => {
             // GitHub style
             paperStyles = `
                 body {
-                    background-color: ${isDark ? '#040608' : '#f6f8fa'};
+                    background-color: ${isDark ? '#020405' : '#f6f8fa'};
                     padding: 40px 20px;
                     margin: 0;
                 }
                 .paper-container {
                     max-width: 980px;
                     margin: 0 auto;
-                    background-color: ${isDark ? '#040608' : '#ffffff'};
+                    background-color: ${isDark ? '#020405' : '#ffffff'};
                     padding: 40px 50px;
                     box-shadow: 0 0 10px rgba(0, 0, 0, ${isDark ? '0.3' : '0.08'});
                     min-height: 100vh;
@@ -3622,6 +3622,9 @@ ${fontLinkTags}
         
         // Setup PDF Settings Modal
         setupPdfSettingsModal();
+        
+        // Setup Shared Buttons
+        setupSharedButtons();
     };
     
     // PDF Settings Modal Handler
@@ -3785,6 +3788,83 @@ ${fontLinkTags}
             
             showMofuHelper('Settings reset to defaults');
         });
+    };
+    
+    // Setup shared buttons (visible in both single file and documentation modes)
+    let setupSharedButtons = () => {
+        // PDF Settings button (shared)
+        const pdfSettingsBtnShared = document.getElementById('pdf-settings-btn-shared');
+        if (pdfSettingsBtnShared) {
+            pdfSettingsBtnShared.addEventListener('click', () => {
+                // Trigger the original PDF settings button
+                const originalBtn = document.getElementById('pdf-settings-btn');
+                if (originalBtn) {
+                    originalBtn.click();
+                }
+            });
+        }
+        
+        // Export PDF button (shared)
+        const exportPdfBtnShared = document.getElementById('export-pdf-button-shared');
+        if (exportPdfBtnShared) {
+            exportPdfBtnShared.addEventListener('click', () => {
+                // Trigger the original export PDF button
+                const originalBtn = document.getElementById('export-pdf-button');
+                if (originalBtn) {
+                    originalBtn.click();
+                }
+            });
+        }
+        
+        // Print PDF button (shared)
+        const printPdfBtnShared = document.getElementById('print-pdf-button-shared');
+        if (printPdfBtnShared) {
+            printPdfBtnShared.addEventListener('click', () => {
+                // Trigger the original print PDF button
+                const originalBtn = document.getElementById('print-pdf-button');
+                if (originalBtn) {
+                    originalBtn.click();
+                }
+            });
+        }
+        
+        // Export HTML button (shared)
+        const exportHtmlBtnShared = document.getElementById('export-html-button-shared');
+        if (exportHtmlBtnShared) {
+            exportHtmlBtnShared.addEventListener('click', () => {
+                // Trigger the original export HTML button
+                const originalBtn = document.getElementById('export-html-button');
+                if (originalBtn) {
+                    originalBtn.click();
+                }
+            });
+        }
+        
+        // AI Assistant button (shared)
+        const aiAssistantBtnShared = document.getElementById('ai-assistant-button-shared');
+        if (aiAssistantBtnShared) {
+            aiAssistantBtnShared.addEventListener('click', () => {
+                // Trigger the original AI assistant button
+                const originalBtn = document.getElementById('ai-assistant-button');
+                if (originalBtn) {
+                    originalBtn.click();
+                }
+            });
+        }
+        
+        // Settings button (shared)
+        const settingsBtnShared = document.getElementById('settings-button-shared');
+        if (settingsBtnShared) {
+            settingsBtnShared.addEventListener('click', () => {
+                // Trigger the original settings button
+                const originalBtn = document.getElementById('settings-button');
+                if (originalBtn) {
+                    originalBtn.click();
+                }
+            });
+        }
+        
+        console.log('✅ Shared buttons initialized');
     };
     
     // Apply PDF settings to paper layout preview
@@ -4288,7 +4368,7 @@ ${fontLinkTags}
         body {
             margin: 0;
             padding: 20px;
-            background-color: ${isDark ? '#040608' : '#ffffff'};
+            background-color: ${isDark ? '#020405' : '#ffffff'};
             color: ${isDark ? '#e6edf3' : '#24292f'};
         }
         .markdown-body {

@@ -95,7 +95,7 @@
 
 /* Dark theme support */
 [data-theme="dark"] .ai-preview-controls-bar {
-    background: #040608;
+    background: #020405;
     border-color: #334155;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
 }

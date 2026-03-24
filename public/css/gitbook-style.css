@@ -225,7 +225,7 @@
 /* Dark Theme */
 [data-theme="dark"] .markdown-body {
   color: #c9d1d9;
-  background-color: #040608;
+  background-color: #020405;
 }
 
 [data-theme="dark"] .markdown-body h1,
@@ -273,7 +273,7 @@
 }
 
 [data-theme="dark"] .markdown-body table tr {
-  background-color: #040608;
+  background-color: #020405;
   border-top-color: #21262d;
 }
 

@@ -365,7 +365,7 @@
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    background: #040608;
+    background: #020405;
     padding: 15px;
     border-radius: 6px;
     min-width: 280px;
@@ -528,7 +528,7 @@
 
 /* Light theme support - FORCE DARK MODALS */
 [data-theme="light"] .inspector-modal-content {
-    background: #040608 !important;
+    background: #020405 !important;
     color: #eee !important;
     border-color: #444 !important;
 }
@@ -569,7 +569,7 @@
 /* Context Menu System */
 .inspector-context-menu {
     position: fixed;
-    background: #040608;
+    background: #020405;
     border: 1px solid #444;
     border-radius: 6px;
     padding: 4px;
@@ -654,7 +654,7 @@
 
 /* Light theme */
 [data-theme="light"] .inspector-context-menu {
-    background: #040608 !important;
+    background: #020405 !important;
     border-color: #444 !important;
     color: #eee !important;
 }

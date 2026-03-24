@@ -21,7 +21,7 @@
   line-height: 1.4;
   margin-top: 32px;
   margin-bottom: 16px;
-  color: #040608;
+  color: #020405;
 }
 
 .markdown-body h1 {
@@ -165,7 +165,7 @@
 .markdown-body table th {
   font-weight: 600;
   background-color: #f1f3f5;
-  color: #040608;
+  color: #020405;
 }
 
 /* Horizontal Rule */
@@ -189,7 +189,7 @@
 /* Strong and Emphasis */
 .markdown-body strong {
   font-weight: 600;
-  color: #040608;
+  color: #020405;
 }
 
 .markdown-body em {

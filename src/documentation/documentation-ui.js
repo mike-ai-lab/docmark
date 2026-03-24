@@ -46,19 +46,6 @@ export class DocumentationUI {
         docsLayout.id = 'docs-layout';
         docsLayout.className = 'docs-layout hidden';
         docsLayout.innerHTML = `
-            <!-- Placeholder Hint Banner (hidden by default) -->
-            <div class="docs-placeholder-hint hidden" id="docs-placeholder-hint">
-                <div class="docs-placeholder-hint-content">
-                    <div class="docs-placeholder-hint-icon">💡</div>
-                    <div class="docs-placeholder-hint-text">
-                        <strong>Template Mode:</strong> This is a placeholder template to help you get started. Upload your own documentation ZIP file to replace this content.
-                    </div>
-                </div>
-                <button class="docs-placeholder-hint-action" id="docs-placeholder-upload-btn">
-                    📤 Upload Documentation
-                </button>
-            </div>
-
             <!-- Documentation Content Wrapper -->
             <div class="docs-content-wrapper">
                 <!-- Left Sidebar -->
@@ -107,8 +94,6 @@ export class DocumentationUI {
     cacheElements() {
         this.elements = {
             layout: document.getElementById('docs-layout'),
-            placeholderHint: document.getElementById('docs-placeholder-hint'),
-            placeholderUploadBtn: document.getElementById('docs-placeholder-upload-btn'),
             title: document.getElementById('docs-title'),
             search: document.getElementById('docs-search'),
             nav: document.getElementById('docs-nav'),
@@ -129,16 +114,6 @@ export class DocumentationUI {
                 this.handleSearch(e.target.value);
             });
         }
-
-        // Placeholder upload button
-        if (this.elements.placeholderUploadBtn) {
-            this.elements.placeholderUploadBtn.addEventListener('click', () => {
-                const uploadInput = document.getElementById('upload-docs-input');
-                if (uploadInput) {
-                    uploadInput.click();
-                }
-            });
-        }
     }
 
     /**
@@ -156,30 +131,6 @@ export class DocumentationUI {
     hide() {
         if (this.elements.layout) {
             this.elements.layout.classList.add('hidden');
-        }
-    }
-
-    /**
-     * Show placeholder hint banner
-     */
-    showPlaceholderHint() {
-        if (this.elements.placeholderHint) {
-            this.elements.placeholderHint.classList.remove('hidden');
-        }
-        if (this.elements.page) {
-            this.elements.page.classList.add('placeholder-template');
-        }
-    }
-
-    /**
-     * Hide placeholder hint banner
-     */
-    hidePlaceholderHint() {
-        if (this.elements.placeholderHint) {
-            this.elements.placeholderHint.classList.add('hidden');
-        }
-        if (this.elements.page) {
-            this.elements.page.classList.remove('placeholder-template');
         }
     }
 
@@ -212,10 +163,18 @@ export class DocumentationUI {
             
             html += `<div class="nav-section">`;
             html += `<div class="nav-folder ${hasChildren ? 'has-children' : ''}" data-folder-id="${folderId}" data-path="${path}">`;
-            html += `<span class="nav-icon">${hasChildren ? '📁' : '📄'}</span>`;
+            html += `<span class="nav-icon">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    ${hasChildren ? '<path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>' : '<path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path><polyline points="13 2 13 9 20 9"></polyline>'}
+                </svg>
+            </span>`;
             html += `<span>${safeName}</span>`;
             if (hasChildren) {
-                html += `<span class="nav-toggle">▼</span>`;
+                html += `<span class="nav-toggle">
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="6 9 12 15 18 9"></polyline>
+                    </svg>
+                </span>`;
             }
             html += `</div>`;
 
@@ -232,7 +191,12 @@ export class DocumentationUI {
             const path = node.path || '';
             console.log(`🔍 [UI] Building file: "${node.name}" (path: "${path}")`);
             html += `<div class="nav-file" data-path="${path}">`;
-            html += `<span class="nav-icon">📄</span>`;
+            html += `<span class="nav-icon">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path>
+                    <polyline points="13 2 13 9 20 9"></polyline>
+                </svg>
+            </span>`;
             html += `<span>${safeName}</span>`;
             html += `</div>`;
         } else if (node.name === 'root') {
@@ -297,7 +261,10 @@ export class DocumentationUI {
                         const isHidden = children.style.display === 'none';
                         children.style.display = isHidden ? 'block' : 'none';
                         if (toggle) {
-                            toggle.textContent = isHidden ? '▼' : '▶';
+                            const svg = toggle.querySelector('svg');
+                            if (svg) {
+                                svg.style.transform = isHidden ? 'rotate(0deg)' : 'rotate(-90deg)';
+                            }
                         }
                         console.log(`🔍 [UI] Toggled children: ${isHidden ? 'shown' : 'hidden'}`);
                     }

@@ -7,13 +7,13 @@ I've added comprehensive dark theme support for the entire Documentation Mode in
 ## 🎨 What's Styled:
 
 ### 1. **Layout & Background**
-- Main layout background: `#040608`
-- Content areas: `#040608`
-- Panels: `#040608
+- Main layout background: `#020405`
+- Content areas: `#020405`
+- Panels: `#020405
 `
 
 ### 2. **Left Sidebar (Navigation)**
-- Background: `#040608
+- Background: `#020405
 `
 - Border: `#3a3a3a`
 - Title text: `#e0e0e0`
@@ -24,25 +24,25 @@ I've added comprehensive dark theme support for the entire Documentation Mode in
   - Active: `#3498db` (blue highlight)
 
 ### 3. **Main Content Area**
-- Background: `#040608`
-- Breadcrumb: `#040608
+- Background: `#020405`
+- Breadcrumb: `#020405
 ` with `#888` text
 - Headings: `#f0f0f0`
 - Paragraphs: `#b0b0b0`
 - Links: `#5dade2` (light blue)
-- Code blocks: `#040608` with border
+- Code blocks: `#020405` with border
 - Inline code: `#2a2a2a` background
 - Tables: Dark borders and backgrounds
 - Blockquotes: Dark borders
 
 ### 4. **Footer Navigation (Prev/Next)**
-- Background: `#040608
+- Background: `#020405
 `
-- Buttons: `#040608` with `#3a3a3a` borders
+- Buttons: `#020405` with `#3a3a3a` borders
 - Hover: Blue highlight
 
 ### 5. **Right Sidebar (TOC)**
-- Background: `#040608
+- Background: `#020405
 `
 - Border: `#3a3a3a`
 - Items: `#888` default, `#3498db` on hover/active
@@ -70,9 +70,9 @@ I've added comprehensive dark theme support for the entire Documentation Mode in
 
 ```css
 /* Backgrounds */
---bg-darkest: #040608;
---bg-dark: #040608;
---bg-panel: #040608
+--bg-darkest: #020405;
+--bg-dark: #020405;
+--bg-panel: #020405
 ;
 --bg-hover: #333;
 --bg-code: #2a2a2a;

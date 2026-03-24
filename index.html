@@ -125,14 +125,27 @@
             <!-- Documentation Mode Toggle -->
             <div class="button-group mode-toggle-group">
                 <div class="btn-item mode-toggle-btn active" id="single-file-mode-btn" title="Single File Mode">
-                    <a href="#">📄 Single File</a>
+                    <a href="#">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                            <polyline points="14 2 14 8 20 8"></polyline>
+                        </svg>
+                        Single File
+                    </a>
                 </div>
                 <div class="btn-item mode-toggle-btn" id="docs-mode-btn" title="Documentation Mode">
-                    <a href="#">📚 Documentation</a>
+                    <a href="#">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+                            <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+                        </svg>
+                        Documentation
+                    </a>
                 </div>
             </div>
 
-            <div class="button-group">
+            <!-- Editor-only buttons (hidden in docs mode) -->
+            <div class="button-group editor-only-buttons">
                 <div class="btn-item icon-btn" id="paste-button" title="Paste">
                     <a href="#">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -187,17 +200,75 @@
                 </div>
             </div>
             
-            <div class="button-group">
-                <!-- Upload Documentation Button (only visible in docs mode) -->
-                <button class="icon-button hidden" id="upload-docs-btn" title="Upload Documentation (.zip)">
+            <!-- Documentation-only buttons (hidden in editor mode) -->
+            <div class="button-group docs-only-buttons hidden">
+                <button class="icon-button" id="upload-docs-btn" title="Upload Documentation (.zip)">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                         <polyline points="17 8 12 3 7 8"></polyline>
                         <line x1="12" y1="3" x2="12" y2="15"></line>
                     </svg>
                 </button>
+                <button class="icon-button" id="delete-docs-btn" title="Delete Documentation">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M3 6h18"></path>
+                        <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
+                        <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
+                        <line x1="10" y1="11" x2="10" y2="17"></line>
+                        <line x1="14" y1="11" x2="14" y2="17"></line>
+                    </svg>
+                </button>
                 <input type="file" id="upload-docs-input" accept=".zip" style="display: none;">
+            </div>
+            
+            <!-- Shared buttons (visible in both modes) -->
+            <div class="button-group shared-buttons">
+                <button class="icon-button" id="pdf-settings-btn-shared" title="PDF Settings">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="3"></circle>
+                        <path d="M12 1v6m0 6v6"></path>
+                        <path d="M5.64 5.64l4.24 4.24m4.24 4.24l4.24 4.24"></path>
+                        <path d="M18.36 5.64l-4.24 4.24m-4.24 4.24l-4.24 4.24"></path>
+                    </svg>
+                </button>
                 
+                <button class="icon-button" id="export-pdf-button-shared" title="Export PDF">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                        <polyline points="14 2 14 8 20 8"></polyline>
+                        <text x="9" y="16" font-size="6" font-weight="bold" fill="currentColor">PDF</text>
+                    </svg>
+                </button>
+                <button class="icon-button" id="print-pdf-button-shared" title="Print to PDF">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="6 9 6 2 18 2 18 9"></polyline>
+                        <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+                        <rect x="6" y="14" width="12" height="8"></rect>
+                    </svg>
+                </button>
+                <button class="icon-button" id="export-html-button-shared" title="Export HTML">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="16 18 22 12 16 6"></polyline>
+                        <polyline points="8 6 2 12 8 18"></polyline>
+                    </svg>
+                </button>
+                <button class="icon-button" id="ai-assistant-button-shared" title="AI Assistant">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7h1a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v1a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-1H2a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h1a7 7 0 0 1 7-7h1V5.73c-.6-.34-1-.99-1-1.73a2 2 0 0 1 2-2Z"/>
+                        <path d="M14 22v-4a2 2 0 0 0-2-2h-0a2 2 0 0 0-2 2v4"/>
+                    </svg>
+                </button>
+                <button class="icon-button" id="settings-button-shared" title="Settings">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="3"></circle>
+                        <path d="M12 1v6m0 6v6m-6-6h6m6 0h6"></path>
+                        <path d="M19.07 4.93l-4.24 4.24m0 5.66l4.24 4.24M4.93 4.93l4.24 4.24m0 5.66l-4.24 4.24"></path>
+                    </svg>
+                </button>
+            </div>
+            
+            <!-- Editor-only buttons -->
+            <div class="button-group editor-only-buttons">
                 <div class="btn-item icon-btn" id="autofix-validation-link" title="Auto-Fix Issues">
                     <a href="#">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -276,7 +347,8 @@
                 </div>
             </div>
             
-            <div class="button-group">
+            <!-- Editor-only buttons -->
+            <div class="button-group editor-only-buttons">
                 <button class="icon-button" id="pdf-settings-btn" title="PDF Settings">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <circle cx="12" cy="12" r="3"></circle>

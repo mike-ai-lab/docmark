@@ -56,7 +56,7 @@
 .code-paste-header h3 {
     font-size: 14px;
     font-weight: 600;
-    color: #040608;
+    color: #020405;
     margin: 0;
 }
 
@@ -82,7 +82,7 @@
 
 .code-paste-btn:hover {
     background: #cbd5e1;
-    color: #040608;
+    color: #020405;
 }
 
 .code-paste-btn:active {
@@ -113,7 +113,7 @@
     font-size: 12px;
     font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
     resize: none;
-    color: #040608;
+    color: #020405;
     background: #ffffff;
     line-height: 1.5;
 }
@@ -149,7 +149,7 @@
 .code-paste-action-btn:hover {
     background: #f1f5f9;
     border-color: #cbd5e1;
-    color: #040608;
+    color: #020405;
 }
 
 .code-paste-action-btn:active {
@@ -217,7 +217,7 @@
     margin: 0;
     padding: 16px;
     background: #f8fafc;
-    color: #040608;
+    color: #020405;
     font-size: 11px;
     line-height: 1.5;
     overflow-x: auto;
@@ -246,13 +246,13 @@
 
 /* Dark theme support */
 [data-theme="dark"] .code-paste-window {
-    background: #040608;
+    background: #020405;
     border-color: #334155;
     box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
 }
 
 [data-theme="dark"] .code-paste-header {
-    background: #040608;
+    background: #020405;
     border-bottom-color: #334155;
 }
 
@@ -271,7 +271,7 @@
 }
 
 [data-theme="dark"] .code-paste-input {
-    background: #040608;
+    background: #020405;
     border-color: #334155;
     color: #f1f5f9;
 }
@@ -309,12 +309,12 @@
 }
 
 [data-theme="dark"] .code-paste-preview {
-    background: #040608;
+    background: #020405;
     border-top-color: #334155;
 }
 
 [data-theme="dark"] .code-paste-iframe {
-    background: #040608;
+    background: #020405;
 }
 
 [data-theme="dark"] .code-paste-empty {
@@ -328,7 +328,7 @@
 }
 
 [data-theme="dark"] .code-paste-preview pre {
-    background: #040608;
+    background: #020405;
     color: #e2e8f0;
 }
 

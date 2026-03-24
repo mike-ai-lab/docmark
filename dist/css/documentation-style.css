@@ -331,12 +331,12 @@
    ============================================ */
 
 [data-theme="dark"] .docs-layout {
-    background: #040608;
+    background: #020405;
 }
 
 /* Dark Mode - Sidebar */
 [data-theme="dark"] .docs-sidebar {
-    background: #040608
+    background: #020405
 ;
     border-right-color: #3a3a3a;
 }
@@ -350,7 +350,7 @@
 }
 
 [data-theme="dark"] .docs-search {
-    background: #040608;
+    background: #020405;
     border-color: #3a3a3a;
     color: #e0e0e0;
 }
@@ -397,11 +397,11 @@
 
 /* Dark Mode - Main Content */
 [data-theme="dark"] .docs-content {
-    background: #040608;
+    background: #020405;
 }
 
 [data-theme="dark"] .docs-breadcrumb {
-    background: #040608
+    background: #020405
 ;
     border-bottom-color: #3a3a3a;
     color: #888;
@@ -439,7 +439,7 @@
 }
 
 [data-theme="dark"] .docs-page pre {
-    background: #040608;
+    background: #020405;
     border: 1px solid #3a3a3a;
 }
 
@@ -464,7 +464,7 @@
 }
 
 [data-theme="dark"] .docs-page tr:hover {
-    background: #040608
+    background: #020405
 ;
 }
 
@@ -474,13 +474,13 @@
 
 /* Dark Mode - Footer Navigation */
 [data-theme="dark"] .docs-navigation-footer {
-    background: #040608
+    background: #020405
 ;
     border-top-color: #3a3a3a;
 }
 
 [data-theme="dark"] .nav-link {
-    background: #040608;
+    background: #020405;
     border-color: #3a3a3a;
     color: #e0e0e0;
 }
@@ -493,7 +493,7 @@
 
 /* Dark Mode - TOC */
 [data-theme="dark"] .docs-toc {
-    background: #040608
+    background: #020405
 ;
     border-left-color: #3a3a3a;
 }

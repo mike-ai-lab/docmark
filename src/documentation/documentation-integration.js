@@ -5,11 +5,13 @@
 
 import { DocumentationManager } from './documentation-manager.js';
 import { DocumentationUI } from './documentation-ui.js';
+import { documentationHeader } from './documentation-header.js';
 
 export class DocumentationIntegration {
     constructor() {
         this.manager = new DocumentationManager();
         this.ui = new DocumentationUI(this.manager);
+        this.header = documentationHeader;
         this.isInitialized = false;
     }
 
@@ -22,11 +24,17 @@ export class DocumentationIntegration {
         // Initialize UI
         this.ui.initialize();
 
+        // Initialize header
+        this.header.initialize();
+
         // Setup mode toggle buttons
         this.setupModeToggle();
 
         // Setup upload button
         this.setupUploadButton();
+
+        // Setup delete button
+        this.setupDeleteButton();
 
         this.isInitialized = true;
         console.log('Documentation mode initialized');
@@ -54,8 +62,8 @@ export class DocumentationIntegration {
             singleModeBtn.classList.add('active');
             docsModeBtn.classList.remove('active');
             
-            // Hide upload button
-            if (uploadBtn) uploadBtn.classList.add('hidden');
+            // Show editor buttons, hide docs buttons
+            this.header.showEditorButtons();
         });
 
         // Switch to documentation mode
@@ -74,8 +82,8 @@ export class DocumentationIntegration {
             docsModeBtn.classList.add('active');
             singleModeBtn.classList.remove('active');
             
-            // Show upload button
-            if (uploadBtn) uploadBtn.classList.remove('hidden');
+            // Show docs buttons, hide editor buttons
+            this.header.showDocsButtons();
         });
 
         console.log('Mode toggle buttons configured');
@@ -118,20 +126,18 @@ export class DocumentationIntegration {
                 const result = await this.loadDocumentation(file);
                 
                 if (result.success) {
-                    // Hide placeholder hint when real documentation is loaded
-                    this.ui.hidePlaceholderHint();
-                    
-                    alert(`✅ Documentation loaded!\n${result.pageCount} pages found.`);
+                    // Show success toast
+                    this.header.showToast(`Documentation loaded: ${result.pageCount} pages`, 'success');
                     
                     // Switch to docs mode
                     const docsModeBtn = document.getElementById('docs-mode-btn');
                     if (docsModeBtn) docsModeBtn.click();
                 } else {
-                    alert('❌ Failed to load documentation:\n' + result.error);
+                    this.header.showToast(`Failed to load documentation: ${result.error}`, 'error');
                 }
             } catch (error) {
                 console.error('Upload error:', error);
-                alert('❌ Error: ' + error.message);
+                this.header.showToast(`Error: ${error.message}`, 'error');
             } finally {
                 // Reset upload button
                 uploadBtn.disabled = false;
@@ -141,6 +147,51 @@ export class DocumentationIntegration {
         });
 
         console.log('Upload button configured');
+    }
+
+    /**
+     * Setup delete documentation button
+     */
+    setupDeleteButton() {
+        const deleteBtn = document.getElementById('delete-docs-btn');
+
+        if (!deleteBtn) {
+            console.warn('Delete button not found');
+            return;
+        }
+
+        deleteBtn.addEventListener('click', () => {
+            // Show confirmation modal
+            this.header.showDeleteConfirmation(() => {
+                // Clear documentation
+                this.clearDocumentation();
+                
+                // Show success toast
+                this.header.showToast('Documentation deleted successfully', 'success');
+            });
+        });
+
+        console.log('Delete button configured');
+    }
+
+    /**
+     * Clear documentation and show empty state
+     */
+    clearDocumentation() {
+        // Clear manager state
+        this.manager.state.isActive = false;
+        this.manager.state.files.clear();
+        this.manager.state.structure = null;
+        this.manager.state.currentPage = null;
+
+        // Clear UI
+        this.ui.elements.nav.innerHTML = '<div style="padding: 20px; text-align: center; color: #94a3b8;">No documentation loaded</div>';
+        this.ui.elements.page.innerHTML = '<div style="padding: 48px; text-align: center; color: #94a3b8;"><h2>No Documentation</h2><p>Upload a ZIP file to get started</p></div>';
+        this.ui.elements.breadcrumb.innerHTML = '';
+        this.ui.elements.footer.innerHTML = '';
+        this.ui.elements.tocList.innerHTML = '';
+
+        console.log('✓ Documentation cleared');
     }
 
     /**
@@ -273,7 +324,7 @@ export class DocumentationIntegration {
         const placeholderFiles = new Map([
             ['getting-started/README.md', `# Getting Started
 
-Welcome to your documentation! 📚
+Welcome to your documentation!
 
 This is a placeholder template to help you get started. You can:
 
@@ -293,7 +344,7 @@ This is a placeholder template to help you get started. You can:
             
             ['getting-started/introduction.md', `# Introduction
 
-## Welcome! 👋
+## Welcome
 
 This is a placeholder page to demonstrate the documentation mode.
 
@@ -322,7 +373,7 @@ To replace this placeholder with your own documentation:
             
             ['getting-started/quick-start.md', `# Quick Start
 
-## 5-Minute Setup ⚡
+## 5-Minute Setup
 
 Get your documentation up and running in minutes!
 
@@ -372,11 +423,11 @@ Define your navigation structure:
 1. Compress your folder into a ZIP file
 2. Click the upload button
 3. Select your ZIP file
-4. Done! 🎉`],
+4. Done!`],
             
             ['guides/README.md', `# Guides
 
-## Documentation Guides 📖
+## Documentation Guides
 
 Learn how to make the most of your documentation.
 
@@ -399,7 +450,7 @@ Learn how to make the most of your documentation.
             
             ['guides/basic-usage.md', `# Basic Usage
 
-## Writing Documentation 📝
+## Writing Documentation
 
 ### Markdown Basics
 
@@ -443,13 +494,13 @@ function hello() {
 
 | Feature | Status |
 |---------|--------|
-| Navigation | ✅ |
-| Search | 🚧 |
-| TOC | ✅ |`],
+| Navigation | Active |
+| Search | In Progress |
+| TOC | Active |`],
             
             ['guides/advanced-features.md', `# Advanced Features
 
-## Power User Tips 🚀
+## Power User Tips
 
 ### Custom Navigation
 
@@ -502,7 +553,7 @@ Add a \`book.json\` file to customize:
             
             ['api/README.md', `# API Reference
 
-## API Documentation 🔌
+## API Documentation
 
 Complete reference for all API endpoints and methods.
 
@@ -528,7 +579,7 @@ This section contains detailed API documentation including:
             
             ['api/overview.md', `# API Overview
 
-## REST API Reference 📡
+## REST API Reference
 
 ### Base URL
 
@@ -608,9 +659,6 @@ The API uses standard HTTP status codes:
 
         // Render first page
         this.ui.renderCurrentPage();
-
-        // Show placeholder hint banner
-        this.ui.showPlaceholderHint();
 
         console.log('✓ Loaded placeholder template');
     }

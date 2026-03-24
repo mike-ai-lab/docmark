@@ -212,7 +212,7 @@
 /* Dark mode support */
 [data-theme="dark"] .markdown-body {
     color: #cccccc;
-    background-color: #040608;
+    background-color: #020405;
 }
 
 [data-theme="dark"] .markdown-body h1,
@@ -221,7 +221,7 @@
 }
 
 [data-theme="dark"] .markdown-body pre {
-    background-color: #040608;
+    background-color: #020405;
     border: 1px solid #3c3c3c;
 }
 

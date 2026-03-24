@@ -206,7 +206,7 @@ function generateGitbookToc(tocData) {
 }
 
 function generateVscodeToc(tocData) {
-    let html = '<div class="toc-vscode" style="background: #040608; color: #cccccc; font-family: \'IBM Plex Mono\', monospace; padding: 20px; border-radius: 4px; width: 100%;">';
+    let html = '<div class="toc-vscode" style="background: #020405; color: #cccccc; font-family: \'IBM Plex Mono\', monospace; padding: 20px; border-radius: 4px; width: 100%;">';
     html += '<h2 style="color: #969696; font-size: 11px; text-transform: uppercase; margin: 0 0 15px 0; letter-spacing: 1px; text-align: center;">Outline</h2>';
     html += '<ul style="list-style: none; padding: 0; margin: 0;">';
     
