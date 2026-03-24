@@ -64,7 +64,7 @@ body {
   width: 250px;
   margin: 0;
   padding: 15px;
-  background-color: #f9f9f9;
+  background-color: #ffffff;
   color: #333;
 }
 

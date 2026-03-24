@@ -51,7 +51,7 @@
 }
 
 .ai-close-btn {
-    background: #f1f5f9;
+    background: #f7f7f7;
     border: none;
     color: #64748b;
     width: 28px;
@@ -586,7 +586,7 @@
 
 [data-theme="dark"] .ai-modal-close:hover {
     background: #5a6370;
-    color: #f1f5f9;
+    color: #f7f7f7;
 }
 
 [data-theme="dark"] .ai-modal-body label {
@@ -738,7 +738,7 @@
 }
 
 .ai-chat-control-btn:hover {
-    background: #f1f5f9;
+    background: #f7f7f7;
     color: #020405;
 }
 
@@ -1009,7 +1009,7 @@
 
 .ai-toggle-visibility-btn {
     padding: 8px;
-    background: #f1f5f9;
+    background: #f7f7f7;
     border: 1px solid #e2e8f0;
     border-radius: 6px;
     color: #64748b;
@@ -1033,7 +1033,7 @@
 
 .ai-test-key-btn {
     padding: 8px 16px;
-    background: #f1f5f9;
+    background: #f7f7f7;
     border: 1px solid #e2e8f0;
     border-radius: 6px;
     font-size: 12px;
@@ -1272,7 +1272,7 @@
 }
 
 .message-action-btn:hover {
-    background: #f1f5f9;
+    background: #f7f7f7;
     color: #020405;
     border-color: #cbd5e1;
 }
@@ -1536,7 +1536,7 @@
 }
 
 .ai-chat-context-btn {
-    background: #f1f5f9;
+    background: #f7f7f7;
     border: 1px solid #e2e8f0;
     color: #64748b;
     width: 38px;
@@ -1624,7 +1624,7 @@
 }
 
 .message-context summary:hover {
-    background: #f1f5f9;
+    background: #f7f7f7;
 }
 
 .context-content {

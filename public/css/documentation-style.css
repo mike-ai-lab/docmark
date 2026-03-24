@@ -77,10 +77,11 @@
 }
 
 .docs-title {
-    font-size: 18px;
-    font-weight: 600;
-    color: #2c3e50;
+    font-size: 20px;
+    font-weight: 300;
+    color: #f7f7f7;
     margin-bottom: 12px;
+    letter-spacing: -0.01em;
 }
 
 .docs-search {
@@ -110,32 +111,37 @@
 }
 
 .nav-folder {
-    padding: 8px 12px;
+    padding: 12px;
     cursor: pointer;
-    border-radius: 6px;
+    border-radius: 8px;
+    border: 1px solid transparent;
     display: flex;
     align-items: center;
     gap: 8px;
-    font-weight: 500;
-    color: #2c3e50;
-    transition: background 0.2s;
+    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif;
+    font-weight: 700;
+    font-size: 15px;
+    color: #f7f7f7;
+    transition: all 0.2s;
     user-select: none;
     position: relative;
 }
 
 .nav-folder:hover {
-    background: #f0f0f0;
+    background: rgba(0, 0, 0, 0.02);
+    border-color: rgba(37, 99, 235, 0.4);
 }
 
 .nav-folder.active {
-    background: #3498db;
-    color: white;
-    font-weight: 600;
+    background: transparent;
+    border-color: rgba(37, 99, 235, 0.4);
+    color: #2563eb;
+    font-weight: 700;
 }
 
 .nav-folder.active .nav-icon,
 .nav-folder.active .nav-toggle {
-    color: white;
+    color: #2563eb;
 }
 
 .nav-icon {
@@ -175,27 +181,32 @@
 }
 
 .nav-file {
-    padding: 6px 12px;
+    padding: 10px 12px;
     cursor: pointer;
-    border-radius: 6px;
+    border-radius: 8px;
+    border: 1px solid transparent;
     display: flex;
     align-items: center;
     gap: 8px;
-    font-size: 14px;
+    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif;
+    font-size: 15px;
+    font-weight: 500;
     color: #555;
     transition: all 0.2s;
     user-select: none;
 }
 
 .nav-file:hover {
-    background: #f0f0f0;
-    color: #2c3e50;
+    background: rgba(0, 0, 0, 0.02);
+    border-color: rgba(37, 99, 235, 0.4);
+    color: #f7f7f7;
 }
 
 .nav-file.active {
-    background: #3498db;
-    color: white;
-    font-weight: 500;
+    background: transparent;
+    border-color: rgba(37, 99, 235, 0.4);
+    color: #2563eb;
+    font-weight: 700;
 }
 
 /* Main Content Area */
@@ -209,11 +220,32 @@
 
 .docs-breadcrumb {
     padding: 16px 32px;
-    background: #f9f9f9;
+    background: #ffffff;
     border-bottom: 1px solid #e0e0e0;
-    font-size: 14px;
+    font-size: 11px;
     color: #666;
-    flex: 0 0 auto; /* Don't flex, just take natural height */
+    flex: 0 0 auto;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    font-weight: 900;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.docs-breadcrumb strong {
+    color: #2563eb;
+    font-weight: 900;
+}
+
+.docs-breadcrumb::before {
+    content: '';
+    display: inline-block;
+    width: 32px;
+    height: 1px;
+    background: currentColor;
+    opacity: 0.5;
+    margin-right: 8px;
 }
 
 .docs-page {
@@ -222,56 +254,102 @@
 }
 
 .docs-page h1 {
-    font-size: 32px;
-    color: #2c3e50;
-    margin-bottom: 16px;
-    font-weight: 600;
+    font-size: 48px;
+    color: #f7f7f7;
+    margin-bottom: 24px;
+    font-weight: 300;
+    line-height: 1.2;
+    letter-spacing: -0.02em;
 }
 
 .docs-page h2 {
-    font-size: 24px;
+    font-size: 32px;
     color: #34495e;
-    margin-top: 32px;
-    margin-bottom: 12px;
-    font-weight: 600;
+    margin-top: 48px;
+    margin-bottom: 20px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
 }
 
 .docs-page h3 {
-    font-size: 20px;
+    font-size: 24px;
     color: #34495e;
-    margin-top: 24px;
-    margin-bottom: 10px;
-    font-weight: 600;
+    margin-top: 32px;
+    margin-bottom: 16px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
 }
 
 .docs-page p {
-    line-height: 1.7;
+    line-height: 1.8;
     color: #555;
-    margin-bottom: 16px;
+    margin-bottom: 20px;
+    font-size: 16px;
+    letter-spacing: 0.01em;
+    font-weight: 400;
 }
 
 .docs-page ul, .docs-page ol {
-    margin-bottom: 16px;
+    margin-bottom: 20px;
     padding-left: 24px;
 }
 
 .docs-page li {
-    line-height: 1.7;
+    line-height: 1.8;
     color: #555;
     margin-bottom: 8px;
+    font-size: 16px;
+    letter-spacing: 0.01em;
+    font-weight: 400;
 }
 
 .docs-page code {
     background: #f5f5f5;
-    padding: 2px 6px;
-    border-radius: 3px;
-    font-family: 'Courier New', monospace;
+    padding: 3px 8px;
+    border-radius: 4px;
+    border: 1px solid #e5e7eb;
+    font-family: 'JetBrains Mono', 'Monaco', 'Menlo', 'Courier New', monospace;
     font-size: 14px;
-    color: #e74c3c;
+    color: #2563eb;
+    font-weight: 600;
+}
+
+/* Style bold text with blue in light mode */
+.docs-page h1 strong,
+.docs-page h1 b {
+    font-weight: 700;
+    color: #2563eb;
+}
+
+.docs-page h2 strong,
+.docs-page h2 b,
+.docs-page h3 strong,
+.docs-page h3 b {
+    color: #2563eb;
+    font-weight: 900;
+}
+
+.docs-page p strong,
+.docs-page p b,
+.docs-page li strong,
+.docs-page li b {
+    color: #2563eb;
+    font-weight: 700;
+}
+
+.docs-page a {
+    color: #2563eb;
+    text-decoration: none;
+    transition: opacity 0.2s;
+    font-weight: 600;
+}
+
+.docs-page a:hover {
+    opacity: 0.8;
 }
 
 .docs-page pre {
-    background: #2c3e50;
+    background: #f7f7f7;
     color: #ecf0f1;
     padding: 16px;
     border-radius: 8px;
@@ -287,7 +365,7 @@
 
 .docs-navigation-footer {
     padding: 24px 48px;
-    background: #f9f9f9;
+    background: #ffffff;
     border-top: 1px solid #e0e0e0;
     flex: 0 0 auto; /* Don't flex, just take natural height */
     margin-bottom: 60px; /* Space above status bar */
@@ -302,16 +380,37 @@
 }
 
 .nav-link {
-    padding: 10px 20px;
+    flex: 1;
+    padding: 24px;
     background: white;
-    border: 1px solid #ddd;
-    border-radius: 6px;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
     cursor: pointer;
     transition: all 0.2s;
     text-decoration: none;
-    color: #2c3e50;
+    color: #f7f7f7;
     font-size: 14px;
     white-space: nowrap;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.nav-link-label {
+    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif;
+    font-size: 10px;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.25em;
+    color: #9ca3af;
+}
+
+.nav-link-title {
+    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif;
+    font-size: 16px;
+    font-weight: 700;
+    color: #111827;
+    transition: color 0.2s;
 }
 
 .nav-link.nav-prev {
@@ -323,9 +422,11 @@
 }
 
 .nav-link:hover {
-    background: #3498db;
-    color: white;
-    border-color: #3498db;
+    border-color: rgba(37, 99, 235, 0.4);
+}
+
+.nav-link:hover .nav-link-title {
+    color: #2563eb;
 }
 
 /* Right Sidebar - TOC */
@@ -339,12 +440,12 @@
 }
 
 .toc-title {
-    font-size: 12px;
-    font-weight: 600;
+    font-size: 10px;
+    font-weight: 900;
     color: #999;
     text-transform: uppercase;
     margin-bottom: 12px;
-    letter-spacing: 0.5px;
+    letter-spacing: 1.5px;
 }
 
 .toc-list {
@@ -352,7 +453,7 @@
 }
 
 .toc-item {
-    padding: 6px 0;
+    padding: 8px 0;
     font-size: 14px;
     color: #666;
     cursor: pointer;
@@ -360,12 +461,12 @@
 }
 
 .toc-item:hover {
-    color: #3498db;
+    color: #2563eb;
 }
 
 .toc-item.active {
-    color: #3498db;
-    font-weight: 500;
+    color: #2563eb;
+    font-weight: 700;
 }
 
 /* Hidden state */
@@ -379,7 +480,7 @@
 
 [data-theme="dark"] .docs-layout {
     background: #020405;
-    color: #f1f5f9;
+    color: #f7f7f7;
 }
 
 /* Dark Mode - Sidebar */
@@ -404,16 +505,16 @@
 }
 
 [data-theme="dark"] .docs-title {
-    color: #f1f5f9;
+    color: #f7f7f7;
     font-weight: 300;
-    font-size: 18px;
+    font-size: 20px;
     letter-spacing: -0.01em;
 }
 
 [data-theme="dark"] .docs-search {
     background: rgba(255, 255, 255, 0.03);
     border-color: rgba(255, 255, 255, 0.1);
-    color: #f1f5f9;
+    color: #f7f7f7;
     font-size: 13px;
 }
 
@@ -429,21 +530,21 @@
 /* Dark Mode - Navigation */
 [data-theme="dark"] .nav-folder {
     color: rgba(241, 245, 249, 0.7);
-    font-weight: 400;
-    font-size: 14px;
+    font-weight: 700;
+    font-size: 15px;
 }
 
 [data-theme="dark"] .nav-folder:hover {
-    background: rgba(255, 255, 255, 0.05);
+    background: rgba(255, 255, 255, 0.02);
+    border-color: rgba(37, 99, 235, 0.4);
     color: rgba(241, 245, 249, 1);
 }
 
 [data-theme="dark"] .nav-folder.active {
     background: transparent;
+    border-color: rgba(37, 99, 235, 0.4);
     color: #2563eb;
-    font-weight: 500;
-    border-left: 2px solid #2563eb;
-    padding-left: 10px;
+    font-weight: 700;
 }
 
 [data-theme="dark"] .nav-toggle {
@@ -452,20 +553,21 @@
 
 [data-theme="dark"] .nav-file {
     color: rgba(241, 245, 249, 0.6);
-    font-size: 13px;
+    font-size: 15px;
+    font-weight: 500;
 }
 
 [data-theme="dark"] .nav-file:hover {
-    background: rgba(255, 255, 255, 0.05);
+    background: rgba(255, 255, 255, 0.02);
+    border-color: rgba(37, 99, 235, 0.4);
     color: rgba(241, 245, 249, 1);
 }
 
 [data-theme="dark"] .nav-file.active {
     background: transparent;
+    border-color: rgba(37, 99, 235, 0.4);
     color: #2563eb;
-    font-weight: 500;
-    border-left: 2px solid #2563eb;
-    padding-left: 10px;
+    font-weight: 700;
 }
 
 /* Dark Mode - Main Content */
@@ -477,7 +579,7 @@
     background: #040608;
     border-bottom-color: rgba(255, 255, 255, 0.05);
     color: rgba(241, 245, 249, 0.4);
-    font-size: 10px;
+    font-size: 11px;
     text-transform: uppercase;
     letter-spacing: 1.5px;
     font-weight: 900;
@@ -523,11 +625,12 @@
 }
 
 [data-theme="dark"] .docs-page h1 {
-    color: #f1f5f9;
+    color: #f7f7f7;
     font-weight: 300;
-    font-size: 36px;
-    line-height: 1.3;
+    font-size: 48px;
+    line-height: 1.2;
     letter-spacing: -0.02em;
+    margin-bottom: 24px;
 }
 
 /* Automatically style bold/strong text in h1 with blue */
@@ -545,21 +648,21 @@
 [data-theme="dark"] .docs-page h4,
 [data-theme="dark"] .docs-page h5,
 [data-theme="dark"] .docs-page h6 {
-    color: #f1f5f9;
+    color: #f7f7f7;
     font-weight: 700;
     letter-spacing: -0.01em;
 }
 
 [data-theme="dark"] .docs-page h2 {
-    font-size: 28px;
+    font-size: 32px;
     margin-top: 48px;
-    margin-bottom: 16px;
+    margin-bottom: 20px;
 }
 
 [data-theme="dark"] .docs-page h3 {
-    font-size: 22px;
+    font-size: 24px;
     margin-top: 32px;
-    margin-bottom: 12px;
+    margin-bottom: 16px;
 }
 
 /* Style bold text in headings with blue */
@@ -591,9 +694,10 @@
 [data-theme="dark"] .docs-page li {
     color: rgba(241, 245, 249, 0.9);
     line-height: 1.8;
-    font-size: 14px;
+    font-size: 16px;
     letter-spacing: 0.01em;
     font-weight: 400;
+    margin-bottom: 20px;
 }
 
 /* Style bold text in paragraphs with blue */
@@ -627,7 +731,7 @@
     border: 1px solid rgba(255, 255, 255, 0.1);
     color: #2563eb;
     font-family: 'JetBrains Mono', 'Monaco', 'Menlo', 'Courier New', monospace;
-    font-size: 12px;
+    font-size: 14px;
     padding: 3px 8px;
     border-radius: 4px;
     font-weight: 600;
@@ -645,7 +749,7 @@
     background: transparent;
     border: none;
     padding: 0;
-    color: #f1f5f9;
+    color: #f7f7f7;
     font-weight: 400;
 }
 
@@ -685,18 +789,24 @@
 }
 
 [data-theme="dark"] .nav-link {
-    background: rgba(255, 255, 255, 0.03);
+    background: transparent;
     border-color: rgba(255, 255, 255, 0.1);
-    color: #f1f5f9;
-    font-size: 13px;
-    font-weight: 500;
+}
+
+[data-theme="dark"] .nav-link-label {
+    color: rgba(241, 245, 249, 0.4);
+}
+
+[data-theme="dark"] .nav-link-title {
+    color: #f7f7f7;
 }
 
 [data-theme="dark"] .nav-link:hover {
-    background: #2563eb;
-    color: white;
-    border-color: #2563eb;
-    transform: translateY(-1px);
+    border-color: rgba(37, 99, 235, 0.4);
+}
+
+[data-theme="dark"] .nav-link:hover .nav-link-title {
+    color: #2563eb;
 }
 
 /* Dark Mode - TOC */
@@ -715,8 +825,9 @@
 
 [data-theme="dark"] .toc-item {
     color: rgba(241, 245, 249, 0.6);
-    font-size: 13px;
+    font-size: 14px;
     transition: all 0.2s;
+    padding: 8px 0;
 }
 
 [data-theme="dark"] .toc-item:hover {
@@ -1016,7 +1127,7 @@
 }
 
 .docs-delete-modal-btn-cancel {
-    background: #f1f5f9;
+    background: #f7f7f7;
     color: #475569;
 }
 
@@ -1038,7 +1149,7 @@
 }
 
 [data-theme="dark"] .docs-delete-modal-title {
-    color: #f1f5f9;
+    color: #f7f7f7;
 }
 
 [data-theme="dark"] .docs-delete-modal-body {

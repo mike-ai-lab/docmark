@@ -2045,6 +2045,7 @@ let performBeautify = (content) => {
     // ----- preview CSS loader (switch github-markdown css) -----
     const PREVIEW_CSS_LIGHT = 'css/github-markdown-light.css?v=1.12.0';
     const PREVIEW_CSS_DARK = 'css/github-markdown-dark_dimmed.css?v=1.12.0';
+    const PREVIEW_CSS_DOCMARK = 'css/docmark-style.css?v=1.0.0';
     const PREVIEW_CSS_GITBOOK = 'css/gitbook-style.css?v=1.12.0';
     const PREVIEW_CSS_VSCODE = 'css/vscode-style.css?v=1.12.0';
     const PREVIEW_CSS_NOTION = 'css/notion-style.css?v=1.12.0';
@@ -2053,7 +2054,7 @@ let performBeautify = (content) => {
     const PREVIEW_CSS_MINIMAL = 'css/minimal-style.css?v=1.12.0';
     const PREVIEW_CSS_TYPEWRITER = 'css/typewriter-style.css?v=1.12.0';
 
-    let currentStyle = 'github'; // default style
+    let currentStyle = 'docmark'; // default style - DocMark branding
 
     let setPreviewCss = (useDark, style = currentStyle) => {
         const link = document.getElementById('gh-markdown-link');
@@ -2075,7 +2076,9 @@ let performBeautify = (content) => {
     };
 
     let getStyleHref = (useDark, style) => {
-        if (style === 'gitbook') {
+        if (style === 'docmark') {
+            return PREVIEW_CSS_DOCMARK;
+        } else if (style === 'gitbook') {
             return PREVIEW_CSS_GITBOOK;
         } else if (style === 'vscode') {
             return PREVIEW_CSS_VSCODE;
@@ -2137,7 +2140,7 @@ let performBeautify = (content) => {
         let selector = document.querySelector('#style-selector');
         if (!selector) return;
 
-        currentStyle = settings || 'github';
+        currentStyle = settings || 'docmark';
         selector.value = currentStyle;
 
         // Enhance with custom dropdown UI
@@ -2145,7 +2148,23 @@ let performBeautify = (content) => {
 
         // Style information for tooltips
         const styleInfo = {
+            docmark: {
+                name: 'DocMark Style',
+                description: 'Official DocMark branding style',
+                fonts: 'Plus Jakarta Sans',
+                textSize: '16px body, 48px H1',
+                features: 'Blue accents, premium typography, modern design',
+                bestFor: 'All content types - default DocMark experience'
+            },
             github: {
+                name: 'GitHub Style',
+                description: 'Traditional, balanced, professional',
+                fonts: 'System Sans-serif',
+                textSize: '16px body, 2em H1',
+                features: 'Full table borders, gray header backgrounds',
+                bestFor: 'Documentation, README files, general content'
+            },
+            gitbook: {
                 name: 'GitHub Style',
                 description: 'Traditional, balanced, professional',
                 fonts: 'System Sans-serif',
@@ -2557,7 +2576,9 @@ let performBeautify = (content) => {
 
     let getStyleCss = async (style, isDark) => {
         let cssUrl;
-        if (style === 'gitbook') {
+        if (style === 'docmark') {
+            cssUrl = PREVIEW_CSS_DOCMARK;
+        } else if (style === 'gitbook') {
             cssUrl = PREVIEW_CSS_GITBOOK;
         } else if (style === 'vscode') {
             cssUrl = PREVIEW_CSS_VSCODE;
@@ -3939,7 +3960,8 @@ ${fontLinkTags}
         return {
             textAlign: 'left',
             pageNumberPosition: 'center',
-            margins: { top: 15, right: 15, bottom: 15, left: 15 }
+            margins: { top: 15, right: 15, bottom: 15, left: 15 },
+            showMarginGuides: false  // Default to hidden
         };
     };
     
@@ -6275,7 +6297,7 @@ ${fontLinkTags}
 
     let loadStyleSettings = () => {
         let last = Storehouse.getItem(localStorageNamespace, localStorageStyleKey);
-        return last || 'github'; // default to github style
+        return last || 'docmark'; // default to DocMark style
     };
 
     let saveStyleSettings = (settings) => {
@@ -8405,7 +8427,7 @@ ${fontLinkTags}
                 paperPage.className = 'paper-page';
                 
                 const paperContent = document.createElement('div');
-                paperContent.className = 'paper-content';
+                paperContent.className = 'paper-content markdown-body';
                 
                 // Add elements to page
                 pageElements.forEach(element => {

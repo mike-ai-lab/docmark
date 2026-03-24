@@ -469,14 +469,24 @@ export class DocumentationUI {
         
         if (prevPath) {
             const prevName = this.getPageTitle(prevPath);
-            html += `<a href="#" class="nav-link nav-prev" data-path="${prevPath}">← Previous: ${prevName}</a>`;
+            html += `
+                <a href="#" class="nav-link nav-prev" data-path="${prevPath}">
+                    <span class="nav-link-label">← Previous</span>
+                    <span class="nav-link-title">${prevName}</span>
+                </a>
+            `;
         } else {
             html += '<span></span>'; // Spacer
         }
         
         if (nextPath) {
             const nextName = this.getPageTitle(nextPath);
-            html += `<a href="#" class="nav-link nav-next" data-path="${nextPath}">Next: ${nextName} →</a>`;
+            html += `
+                <a href="#" class="nav-link nav-next" data-path="${nextPath}">
+                    <span class="nav-link-label">Next →</span>
+                    <span class="nav-link-title">${nextName}</span>
+                </a>
+            `;
         }
         
         html += '</div>';

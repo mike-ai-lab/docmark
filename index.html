@@ -23,6 +23,7 @@
 
           var PREVIEW_CSS_LIGHT = './public/css/github-markdown-light.css?v=1.12.0';
           var PREVIEW_CSS_DARK = './public/css/github-markdown-dark_dimmed.css?v=1.12.0';
+          var PREVIEW_CSS_DOCMARK = './public/css/docmark-style.css?v=1.0.0';
           var PREVIEW_CSS_GITBOOK = './public/css/gitbook-style.css?v=1.12.0';
           var PREVIEW_CSS_VSCODE = './public/css/vscode-style.css?v=1.12.0';
           var PREVIEW_CSS_NOTION = './public/css/notion-style.css?v=1.12.0';
@@ -32,10 +33,12 @@
           var PREVIEW_CSS_TYPEWRITER = './public/css/typewriter-style.css?v=1.12.0';
           
           var styleRaw = localStorage.getItem(BOOT_STYLE_KEY);
-          var style = styleRaw || 'github';
+          var style = styleRaw || 'docmark';
           
           var href;
-          if (style === 'gitbook') {
+          if (style === 'docmark') {
+            href = PREVIEW_CSS_DOCMARK;
+          } else if (style === 'gitbook') {
             href = PREVIEW_CSS_GITBOOK;
           } else if (style === 'vscode') {
             href = PREVIEW_CSS_VSCODE;
@@ -897,6 +900,7 @@
                             <label>
                                 <span>Style:</span>
                                 <select id="style-selector">
+                                    <option value="docmark">DocMark</option>
                                     <option value="github">GitHub</option>
                                     <option value="gitbook">GitBook</option>
                                     <option value="vscode">VSCode</option>

@@ -611,7 +611,7 @@ async function exportAll() {
         ul, ol { margin: 0 0 16px 0; padding-left: 2em; }
         li { margin-bottom: 8px; }
         code {
-            background-color: ${isDark ? '#161b22' : '#f6f8fa'};
+            background-color: ${isDark ? '#090b0c' : '#f6f8fa'};
             padding: 2px 6px;
             border-radius: 3px;
             font-family: 'IBM Plex Mono', monospace;
@@ -650,7 +650,7 @@ async function exportAll() {
             text-align: left;
         }
         th {
-            background-color: ${isDark ? '#161b22' : '#f6f8fa'};
+            background-color: ${isDark ? '#090b0c' : '#f6f8fa'};
             font-weight: 600;
         }
     </style>

@@ -147,7 +147,7 @@
 }
 
 .code-paste-action-btn:hover {
-    background: #f1f5f9;
+    background: #f7f7f7;
     border-color: #cbd5e1;
     color: #020405;
 }
@@ -257,7 +257,7 @@
 }
 
 [data-theme="dark"] .code-paste-header h3 {
-    color: #f1f5f9;
+    color: #f7f7f7;
 }
 
 [data-theme="dark"] .code-paste-btn {
@@ -267,13 +267,13 @@
 
 [data-theme="dark"] .code-paste-btn:hover {
     background: #475569;
-    color: #f1f5f9;
+    color: #f7f7f7;
 }
 
 [data-theme="dark"] .code-paste-input {
     background: #020405;
     border-color: #334155;
-    color: #f1f5f9;
+    color: #f7f7f7;
 }
 
 [data-theme="dark"] .code-paste-input:focus {
@@ -294,7 +294,7 @@
 [data-theme="dark"] .code-paste-action-btn:hover {
     background: #475569;
     border-color: #64748b;
-    color: #f1f5f9;
+    color: #f7f7f7;
 }
 
 [data-theme="dark"] .code-paste-clear {
