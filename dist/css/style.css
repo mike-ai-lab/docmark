@@ -6300,6 +6300,24 @@ footer {
   flex-shrink: 0;
 }
 
+/* Margin guide overlay - shows exact content boundaries */
+.paper-page::after {
+  content: '';
+  position: absolute;
+  pointer-events: none;
+  z-index: 10;
+  border: 2px solid #ef4444;
+  opacity: 0.8;
+  top: var(--margin-top, 0);
+  left: var(--margin-left, 0);
+  right: var(--margin-right, 0);
+  bottom: var(--margin-bottom, 0);
+}
+
+.paper-page.hide-margin-guides::after {
+  display: none;
+}
+
 /* Page content area (clipping container) */
 .paper-content {
   box-sizing: border-box;

@@ -3650,6 +3650,7 @@ ${fontLinkTags}
         const closeBtn = document.getElementById('pdf-settings-modal-close');
         const applyBtn = document.getElementById('pdf-apply-btn');
         const resetBtn = document.getElementById('pdf-reset-btn');
+        const showGuidesCheckbox = document.getElementById('show-margin-guides');
         
         if (!modal || !openBtn) return;
         
@@ -3661,6 +3662,11 @@ ${fontLinkTags}
         document.getElementById('pdf-margin-right').value = savedSettings.margins.right;
         document.getElementById('pdf-margin-bottom').value = savedSettings.margins.bottom;
         document.getElementById('pdf-margin-left').value = savedSettings.margins.left;
+        
+        // Set margin guides checkbox
+        if (showGuidesCheckbox) {
+            showGuidesCheckbox.checked = savedSettings.showMarginGuides !== false;
+        }
         
         // Set active alignment - CLEAR ALL FIRST to fix the bug
         const alignButtons = modal.querySelectorAll('.pdf-align-btn');
@@ -3690,6 +3696,11 @@ ${fontLinkTags}
             document.getElementById('pdf-margin-right').value = currentSettings.margins.right;
             document.getElementById('pdf-margin-bottom').value = currentSettings.margins.bottom;
             document.getElementById('pdf-margin-left').value = currentSettings.margins.left;
+            
+            // Update margin guides checkbox
+            if (showGuidesCheckbox) {
+                showGuidesCheckbox.checked = currentSettings.showMarginGuides !== false;
+            }
             
             // Update alignment buttons - clear all first
             alignButtons.forEach(btn => btn.classList.remove('active'));
@@ -3781,15 +3792,35 @@ ${fontLinkTags}
             }
         });
         
+        // Margin guides checkbox
+        if (showGuidesCheckbox) {
+            showGuidesCheckbox.addEventListener('change', () => {
+                const settings = loadPdfLayoutSettings();
+                settings.showMarginGuides = showGuidesCheckbox.checked;
+                savePdfLayoutSettings(settings);
+                
+                // Re-render paper layout immediately if active
+                if (paperLayoutActive) {
+                    renderPaperLayout();
+                }
+                
+                showMofuHelper(showGuidesCheckbox.checked ? 'Margin guides shown' : 'Margin guides hidden');
+            });
+        }
+        
         // Reset button
         resetBtn.addEventListener('click', () => {
-            const defaults = { textAlign: 'left', pageNumberPosition: 'center', margins: { top: 15, right: 15, bottom: 15, left: 15 } };
+            const defaults = { textAlign: 'left', pageNumberPosition: 'center', margins: { top: 15, right: 15, bottom: 15, left: 15 }, showMarginGuides: true };
             savePdfLayoutSettings(defaults);
             
             document.getElementById('pdf-margin-top').value = 15;
             document.getElementById('pdf-margin-right').value = 15;
             document.getElementById('pdf-margin-bottom').value = 15;
             document.getElementById('pdf-margin-left').value = 15;
+            
+            if (showGuidesCheckbox) {
+                showGuidesCheckbox.checked = true;
+            }
             
             alignButtons.forEach(b => b.classList.remove('active'));
             modal.querySelector('[data-align="left"]').classList.add('active');
@@ -3956,7 +3987,7 @@ ${fontLinkTags}
             textAlign: 'left',
             pageNumberPosition: 'center',
             margins: { top: 15, right: 15, bottom: 15, left: 15 },
-            showMarginGuides: false  // Default to hidden
+            showMarginGuides: true  // Default to shown
         };
     };
     
