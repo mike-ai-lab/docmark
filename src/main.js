@@ -376,8 +376,8 @@ This web site is using ${"`"}markedjs/marked${"`"}.
             if (!isUpdating) {
                 // Check if paper layout is active
                 if (paperLayoutActive) {
-                    // Re-render paper layout (will be implemented in Phase 2)
-                    console.log('[Paper Layout] Content changed - re-render pending Phase 2');
+                    // Re-render paper layout
+                    renderPaperLayout();
                 } else {
                     // Normal web layout - use convert
                     convert(value);
@@ -3733,9 +3733,9 @@ ${fontLinkTags}
                 settings.textAlign = btn.dataset.align;
                 savePdfLayoutSettings(settings);
                 
-                // Apply to preview immediately if paper layout is active
+                // Re-render paper layout immediately if active
                 if (paperLayoutActive) {
-                    applyPdfSettingsToPreview();
+                    renderPaperLayout();
                 }
                 
                 showMofuHelper(`Text alignment: ${btn.dataset.align}`);
@@ -3752,9 +3752,9 @@ ${fontLinkTags}
                 settings.pageNumberPosition = btn.dataset.position;
                 savePdfLayoutSettings(settings);
                 
-                // Apply to preview immediately if paper layout is active
+                // Re-render paper layout immediately if active
                 if (paperLayoutActive) {
-                    applyPdfSettingsToPreview();
+                    renderPaperLayout();
                 }
                 
                 showMofuHelper(`Page number position: ${btn.dataset.position}`);
@@ -3771,9 +3771,9 @@ ${fontLinkTags}
                     settings.margins[side] = isNaN(value) ? 15 : value; // Allow 0, only default to 15 if NaN
                     savePdfLayoutSettings(settings);
                     
-                    // Apply to preview immediately if paper layout is active
+                    // Re-render paper layout immediately if active
                     if (paperLayoutActive) {
-                        applyPdfSettingsToPreview();
+                        renderPaperLayout();
                     }
                     
                     showMofuHelper(`Margin updated: ${side} = ${settings.margins[side]}mm`);
@@ -3797,9 +3797,9 @@ ${fontLinkTags}
             pageNumButtons.forEach(b => b.classList.remove('active'));
             modal.querySelector('[data-position="center"]').classList.add('active');
             
-            // Apply to preview immediately if paper layout is active
+            // Re-render paper layout immediately if active
             if (paperLayoutActive) {
-                applyPdfSettingsToPreview();
+                renderPaperLayout();
             }
             
             showMofuHelper('Settings reset to defaults');
@@ -8232,10 +8232,234 @@ ${fontLinkTags}
     // PAPER LAYOUT & LINE-BASED PAGINATION SYSTEM (NEW)
     // ============================================================================
     
-    // Placeholder for new line-based pagination system
-    // Will be implemented in Phase 2
+    // Render content in paper layout with line-based pagination
+    const renderPaperLayout = () => {
+        if (!paperLayoutActive) return;
+        
+        const outputDiv = document.querySelector('#output');
+        const previewWrapper = document.querySelector('#preview-wrapper');
+        
+        if (!outputDiv || !previewWrapper) return;
+        
+        // Get markdown content
+        const markdownSource = (typeof editor !== 'undefined' && editor && typeof editor.getValue === 'function') 
+            ? editor.getValue() 
+            : '';
+        
+        if (!markdownSource) {
+            outputDiv.innerHTML = '<div class="paper-stack"><div class="paper-page"><div class="paper-content">No content</div></div></div>';
+            return;
+        }
+        
+        // Get PDF settings
+        const settings = loadPdfLayoutSettings();
+        const PX_SCALE = 3.7795275591; // 1mm ≈ 3.78px at 96 DPI
+        
+        // Safety padding (invisible to user - protects header/footer)
+        const SAFETY_TOP = 15;    // mm
+        const SAFETY_BOTTOM = 15;  // mm
+        const SAFETY_LEFT = 10;    // mm
+        const SAFETY_RIGHT = 10;   // mm
+        
+        // Actual margins used (user setting + safety padding)
+        const actualTopMargin = (settings.margins.top + SAFETY_TOP) * PX_SCALE;
+        const actualBottomMargin = (settings.margins.bottom + SAFETY_BOTTOM) * PX_SCALE;
+        const actualLeftMargin = (settings.margins.left + SAFETY_LEFT) * PX_SCALE;
+        const actualRightMargin = (settings.margins.right + SAFETY_RIGHT) * PX_SCALE;
+        
+        // Page dimensions (A4 at 96 DPI)
+        const pageWidth = 794;   // 210mm in pixels
+        const pageHeight = 1123; // 297mm in pixels
+        
+        // Calculate content area
+        const contentWidth = pageWidth - actualLeftMargin - actualRightMargin;
+        const contentHeight = pageHeight - actualTopMargin - actualBottomMargin;
+        
+        // Create measurement probe to get exact line height
+        const probe = document.createElement('div');
+        probe.style.cssText = `
+            visibility: hidden;
+            position: absolute;
+            width: ${contentWidth}px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+            font-size: 14px;
+            line-height: 1.6;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        `;
+        probe.textContent = markdownSource;
+        document.body.appendChild(probe);
+        
+        const styles = window.getComputedStyle(probe);
+        const lineHeight = parseFloat(styles.lineHeight);
+        const totalContentHeight = probe.offsetHeight;
+        document.body.removeChild(probe);
+        
+        // Line-based calculation (prevents partial lines)
+        const linesPerPage = Math.floor(contentHeight / lineHeight);
+        const exactContentHeight = linesPerPage * lineHeight;
+        const pageCount = Math.max(1, Math.ceil(totalContentHeight / exactContentHeight));
+        
+        console.log(`[Pagination] ${pageCount} pages, ${linesPerPage} lines/page, ${lineHeight.toFixed(2)}px line height`);
+        console.log(`[Pagination] Margins: top=${actualTopMargin}px, bottom=${actualBottomMargin}px, left=${actualLeftMargin}px, right=${actualRightMargin}px`);
+        
+        // Clear and render
+        outputDiv.innerHTML = '';
+        outputDiv.classList.add('paper-layout-active');
+        previewWrapper.classList.add('paper-layout-active');
+        
+        const paperStack = document.createElement('div');
+        paperStack.className = 'paper-stack';
+        paperStack.id = 'paper-stack';
+        
+        for (let i = 0; i < pageCount; i++) {
+            const page = document.createElement('div');
+            page.className = 'paper-page';
+            page.style.width = `${pageWidth}px`;
+            page.style.height = `${pageHeight}px`;
+            
+            // Set CSS custom properties for margin guides
+            page.style.setProperty('--margin-top', `${actualTopMargin}px`);
+            page.style.setProperty('--margin-right', `${actualRightMargin}px`);
+            page.style.setProperty('--margin-bottom', `${actualBottomMargin}px`);
+            page.style.setProperty('--margin-left', `${actualLeftMargin}px`);
+            
+            // Show/hide margin guides based on settings
+            if (settings.showMarginGuides === false) {
+                page.classList.add('hide-margin-guides');
+            }
+            
+            // Page header (document title)
+            const header = document.createElement('div');
+            header.className = 'paper-page-header';
+            header.textContent = 'Document';
+            header.style.cssText = `
+                position: absolute;
+                top: 10mm;
+                left: 50%;
+                transform: translateX(-50%);
+                font-size: 10px;
+                color: #64748b;
+                font-weight: 500;
+                text-align: center;
+                white-space: nowrap;
+                pointer-events: none;
+            `;
+            
+            // Content clipping area - FIXED POSITION, NEVER MOVES
+            const contentClip = document.createElement('div');
+            contentClip.className = 'paper-content';
+            contentClip.style.cssText = `
+                position: absolute;
+                top: ${actualTopMargin}px;
+                left: ${actualLeftMargin}px;
+                width: ${contentWidth}px;
+                height: ${exactContentHeight}px;
+                overflow: hidden;
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+                font-size: 14px;
+                line-height: 1.6;
+                white-space: pre-wrap;
+                word-wrap: break-word;
+                text-align: ${settings.textAlign || 'left'};
+            `;
+            
+            // Content with offset for this page - ONLY THIS MOVES
+            const content = document.createElement('div');
+            content.style.transform = `translateY(-${i * exactContentHeight}px)`;
+            content.textContent = markdownSource;
+            
+            contentClip.appendChild(content);
+            
+            // Page number
+            const pageNum = document.createElement('div');
+            pageNum.className = 'paper-page-number';
+            pageNum.textContent = `${i + 1}`;
+            pageNum.style.cssText = `
+                position: absolute;
+                bottom: 10mm;
+                font-size: 9px;
+                color: #94a3b8;
+                font-weight: 500;
+                text-align: center;
+                white-space: nowrap;
+                pointer-events: none;
+            `;
+            
+            // Position page number based on settings
+            if (settings.pageNumberPosition === 'left') {
+                pageNum.style.left = `${actualLeftMargin}px`;
+                pageNum.style.textAlign = 'left';
+            } else if (settings.pageNumberPosition === 'right') {
+                pageNum.style.right = `${actualRightMargin}px`;
+                pageNum.style.textAlign = 'right';
+            } else {
+                pageNum.style.left = '50%';
+                pageNum.style.transform = 'translateX(-50%)';
+            }
+            
+            page.appendChild(header);
+            page.appendChild(contentClip);
+            page.appendChild(pageNum);
+            paperStack.appendChild(page);
+        }
+        
+        outputDiv.appendChild(paperStack);
+        
+        console.log(`✅ Rendered ${pageCount} pages in paper layout`);
+    };
     
-    console.log('✅ Paper layout system ready (Phase 2 pending)');
+    // Restore normal web layout
+    const restoreWebLayout = () => {
+        const outputDiv = document.querySelector('#output');
+        const previewWrapper = document.querySelector('#preview-wrapper');
+        
+        if (!outputDiv || !previewWrapper) return;
+        
+        outputDiv.classList.remove('paper-layout-active');
+        previewWrapper.classList.remove('paper-layout-active');
+        
+        // Re-render markdown content
+        if (editor && typeof editor.getValue === 'function') {
+            const markdown = editor.getValue();
+            convert(markdown);
+        }
+        
+        console.log('✅ Restored web layout');
+    };
+    
+    // Toggle paper layout
+    const togglePaperLayout = () => {
+        paperLayoutActive = !paperLayoutActive;
+        
+        const statusLayoutMode = document.getElementById('status-layout-mode');
+        
+        if (paperLayoutActive) {
+            // Activate paper layout
+            renderPaperLayout();
+            
+            if (statusLayoutMode) statusLayoutMode.textContent = 'Paper Layout';
+            
+            showMofuHelper('Paper Layout activated! Content flows naturally across pages.');
+        } else {
+            // Deactivate paper layout
+            restoreWebLayout();
+            
+            if (statusLayoutMode) statusLayoutMode.textContent = 'Web Layout';
+            
+            showMofuHelper('Web Layout restored!');
+        }
+    };
+    
+    // Make status bar layout mode clickable to toggle
+    const statusLayoutMode = document.getElementById('status-layout-mode');
+    if (statusLayoutMode) {
+        statusLayoutMode.style.cursor = 'pointer';
+        statusLayoutMode.title = 'Click to toggle layout mode';
+        statusLayoutMode.addEventListener('click', togglePaperLayout);
+    }
+    
+    console.log('✅ Paper layout system initialized');
 };
 
 window.addEventListener("load", () => {

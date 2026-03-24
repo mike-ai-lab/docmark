@@ -485,7 +485,6 @@ header a:hover {
   gap: 12px;
   align-items: center;
   flex: 1;
-  justify-content: center;
   overflow-x: auto;
   overflow-y: hidden;
   padding: 0 8px;
@@ -496,6 +495,23 @@ header a:hover {
 
 .header-center::-webkit-scrollbar {
   display: none;
+}
+
+/* Mode toggle stays fixed at the left */
+.mode-toggle-group {
+  flex-shrink: 0;
+  margin-right: auto; /* Push everything else to the right */
+  order: -1; /* Ensure it's always first */
+}
+
+/* Create a wrapper effect for remaining buttons */
+.header-center > .button-group:not(.mode-toggle-group) {
+  flex-shrink: 0;
+}
+
+/* Hidden button groups completely removed from flow */
+.button-group.hidden {
+  display: none !important;
 }
 
 .button-group {
@@ -6261,6 +6277,49 @@ footer {
 [data-theme="dark"] .paper-content pre {
   background: #020405;
   border-color: #020405;
+}
+
+/* ============================================================================
+   NEW LINE-BASED PAGINATION SYSTEM
+   ============================================================================ */
+
+/* Paper stack container */
+.paper-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  padding: 20px;
+}
+
+/* Individual paper page */
+.paper-page {
+  background: white;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  position: relative;
+  flex-shrink: 0;
+}
+
+/* Page content area (clipping container) */
+.paper-content {
+  box-sizing: border-box;
+}
+
+/* Page header and footer */
+.paper-page-header,
+.paper-page-number {
+  pointer-events: none;
+  user-select: none;
+}
+
+/* Dark theme overrides for new system */
+[data-theme="dark"] .paper-stack {
+  background: transparent;
+}
+
+[data-theme="dark"] .paper-page {
+  background: #1e1e1e;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.6);
 }
 
 [data-theme="dark"] .paper-content code {

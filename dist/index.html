@@ -1,0 +1,1304 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+    <meta http-equiv="content-language" content="en">
+    <meta http-equiv="content-script-type" content="text/javascript">
+    <meta http-equiv="content-style-type" content="text/css">
+    <meta name="description" content="This is the online markdown editor with live preview.">
+    
+    <!-- Google Fonts - Inter (must use <link> not @import for proper loading) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+    <script>
+      (function(){
+        try {
+          var BOOT_THEME_KEY = 'com.markdownlivepreview_theme';
+          var BOOT_STYLE_KEY = 'com.markdownlivepreview.style_settings';
+          var raw = localStorage.getItem(BOOT_THEME_KEY);
+          var useDark = raw === 'dark';
+          document.documentElement.setAttribute('data-theme', useDark ? 'dark' : 'light');
+
+          var PREVIEW_CSS_LIGHT = './public/css/github-markdown-light.css?v=1.12.0';
+          var PREVIEW_CSS_DARK = './public/css/github-markdown-dark_dimmed.css?v=1.12.0';
+          var PREVIEW_CSS_DOCMARK = './public/css/docmark-style.css?v=1.0.0';
+          var PREVIEW_CSS_GITBOOK = './public/css/gitbook-style.css?v=1.12.0';
+          var PREVIEW_CSS_VSCODE = './public/css/vscode-style.css?v=1.12.0';
+          var PREVIEW_CSS_NOTION = './public/css/notion-style.css?v=1.12.0';
+          var PREVIEW_CSS_MEDIUM = './public/css/medium-style.css?v=1.12.0';
+          var PREVIEW_CSS_LATEX = './public/css/latex-style.css?v=1.12.0';
+          var PREVIEW_CSS_MINIMAL = './public/css/minimal-style.css?v=1.12.0';
+          var PREVIEW_CSS_TYPEWRITER = './public/css/typewriter-style.css?v=1.12.0';
+          
+          var styleRaw = localStorage.getItem(BOOT_STYLE_KEY);
+          var style = styleRaw || 'docmark';
+          
+          var href;
+          if (style === 'docmark') {
+            href = PREVIEW_CSS_DOCMARK;
+          } else if (style === 'gitbook') {
+            href = PREVIEW_CSS_GITBOOK;
+          } else if (style === 'vscode') {
+            href = PREVIEW_CSS_VSCODE;
+          } else if (style === 'notion') {
+            href = PREVIEW_CSS_NOTION;
+          } else if (style === 'medium') {
+            href = PREVIEW_CSS_MEDIUM;
+          } else if (style === 'latex') {
+            href = PREVIEW_CSS_LATEX;
+          } else if (style === 'minimal') {
+            href = PREVIEW_CSS_MINIMAL;
+          } else if (style === 'typewriter') {
+            href = PREVIEW_CSS_TYPEWRITER;
+          } else {
+            href = useDark ? PREVIEW_CSS_DARK : PREVIEW_CSS_LIGHT;
+          }
+
+          var link = document.createElement('link');
+          link.id = 'gh-markdown-link';
+          link.rel = 'stylesheet';
+          link.type = 'text/css';
+          link.href = href;
+          document.head.appendChild(link);
+          
+          // Set highlight.js theme based on dark mode
+          setTimeout(function() {
+            var lightTheme = document.getElementById('hljs-light-theme');
+            var darkTheme = document.getElementById('hljs-dark-theme');
+            if (lightTheme && darkTheme) {
+              lightTheme.disabled = useDark;
+              darkTheme.disabled = !useDark;
+            }
+          }, 0);
+        } catch (e) {
+          // ignore — app will correct theme after load
+        }
+      })();
+    </script>
+    <!-- <link rel="stylesheet" type="text/css" href="./src/code-paste-window.css"> -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css" id="hljs-light-theme">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css" id="hljs-dark-theme" disabled>
+    <link rel="icon" type="image/png" href="./favicon.png">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/turndown@7.1.2/dist/turndown.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked@11.1.1/marked.min.js"></script>
+    <script>
+      // Make hljs and TurndownService available globally for the module
+      window.hljs = hljs;
+      window.TurndownService = TurndownService;
+    </script>
+    <!-- <script type="module" src="./src/code-paste-window.js"></script> -->
+    <title>Markdown Live Preview</title>
+    <script type="module" crossorigin src="./assets/index-8EPI46ak.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/index-BI0mjw5U.css">
+  </head>
+
+  <body>
+
+    <header>
+        <div class="header-left">
+            <div class="mofu-header-widget" id="mofu-nav-trigger">
+                <div class="mofu-head" id="mofu-canvas">
+                    <div class="mofu-face-features" id="mofu-features">
+                        <div class="mofu-eyes-row">
+                            <div class="mofu-dot"></div>
+                            <div class="mofu-dot"></div>
+                        </div>
+                        <div class="mofu-smile" id="mofu-mouth"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="brand">
+                <a href="/">
+                    <div class="brand-title">DocMark</div>
+                    <div class="brand-subtitle">Markdown & Docs Engine</div>
+                </a>
+            </div>
+        </div>
+        
+        <div class="header-center">
+            <!-- Documentation Mode Toggle -->
+            <div class="button-group mode-toggle-group">
+                <div class="btn-item mode-toggle-btn active" id="single-file-mode-btn" title="Single File Mode">
+                    <a href="#">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                            <polyline points="14 2 14 8 20 8"></polyline>
+                        </svg>
+                        Single File
+                    </a>
+                </div>
+                <div class="btn-item mode-toggle-btn" id="docs-mode-btn" title="Documentation Mode">
+                    <a href="#">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+                            <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+                        </svg>
+                        Documentation
+                    </a>
+                </div>
+            </div>
+
+            <!-- Editor-only buttons (hidden in docs mode) -->
+            <div class="button-group editor-only-buttons">
+                <div class="btn-item icon-btn" id="paste-button" title="Paste">
+                    <a href="#">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect width="8" height="4" x="8" y="2" rx="1" ry="1"/>
+                            <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>
+                        </svg>
+                    </a>
+                </div>
+                <div class="btn-item icon-btn" id="copy-button" title="Copy">
+                    <a href="#">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect width="14" height="14" x="8" y="8" rx="2" ry="2"/>
+                            <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>
+                        </svg>
+                    </a>
+                </div>
+                <div class="btn-item icon-btn" id="undo-button" title="Undo">
+                    <a href="#">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M3 7v6h6"/>
+                            <path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/>
+                        </svg>
+                    </a>
+                </div>
+                <div class="btn-item icon-btn" id="redo-button" title="Redo">
+                    <a href="#">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 7v6h-6"/>
+                            <path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6 2.3l3 2.7"/>
+                        </svg>
+                    </a>
+                </div>
+                <div class="btn-item icon-btn" id="beautify-button" title="Beautify">
+                    <a href="#">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/>
+                            <path d="M5 3v4"/>
+                            <path d="M19 17v4"/>
+                            <path d="M3 5h4"/>
+                            <path d="M17 19h4"/>
+                        </svg>
+                    </a>
+                </div>
+                <div class="btn-item icon-btn" id="clear-button" title="Clear">
+                    <a href="#">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M3 6h18"/>
+                            <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/>
+                            <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
+                        </svg>
+                    </a>
+                </div>
+            </div>
+            
+            <!-- Documentation-only buttons (hidden in editor mode) -->
+            <div class="button-group docs-only-buttons hidden">
+                <button class="icon-button" id="upload-docs-btn" title="Upload Documentation (.zip)">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="17 8 12 3 7 8"></polyline>
+                        <line x1="12" y1="3" x2="12" y2="15"></line>
+                    </svg>
+                </button>
+                <button class="icon-button" id="delete-docs-btn" title="Delete Documentation">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M3 6h18"></path>
+                        <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
+                        <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
+                        <line x1="10" y1="11" x2="10" y2="17"></line>
+                        <line x1="14" y1="11" x2="14" y2="17"></line>
+                    </svg>
+                </button>
+                <input type="file" id="upload-docs-input" accept=".zip" style="display: none;">
+            </div>
+            
+            <!-- Shared buttons (visible in both modes) -->
+            <div class="button-group shared-buttons">
+                <button class="icon-button" id="pdf-settings-btn-shared" title="PDF Settings">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="3"></circle>
+                        <path d="M12 1v6m0 6v6"></path>
+                        <path d="M5.64 5.64l4.24 4.24m4.24 4.24l4.24 4.24"></path>
+                        <path d="M18.36 5.64l-4.24 4.24m-4.24 4.24l-4.24 4.24"></path>
+                    </svg>
+                </button>
+                
+                <button class="icon-button" id="export-pdf-button-shared" title="Export PDF">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                        <polyline points="14 2 14 8 20 8"></polyline>
+                        <text x="9" y="16" font-size="6" font-weight="bold" fill="currentColor">PDF</text>
+                    </svg>
+                </button>
+                <button class="icon-button" id="print-pdf-button-shared" title="Print to PDF">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="6 9 6 2 18 2 18 9"></polyline>
+                        <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+                        <rect x="6" y="14" width="12" height="8"></rect>
+                    </svg>
+                </button>
+                <button class="icon-button" id="export-html-button-shared" title="Export HTML">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="16 18 22 12 16 6"></polyline>
+                        <polyline points="8 6 2 12 8 18"></polyline>
+                    </svg>
+                </button>
+                <button class="icon-button" id="ai-assistant-button-shared" title="AI Assistant">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7h1a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v1a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-1H2a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h1a7 7 0 0 1 7-7h1V5.73c-.6-.34-1-.99-1-1.73a2 2 0 0 1 2-2Z"/>
+                        <path d="M14 22v-4a2 2 0 0 0-2-2h-0a2 2 0 0 0-2 2v4"/>
+                    </svg>
+                </button>
+                <button class="icon-button" id="settings-button-shared" title="Settings">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="3"></circle>
+                        <path d="M12 1v6m0 6v6m-6-6h6m6 0h6"></path>
+                        <path d="M19.07 4.93l-4.24 4.24m0 5.66l4.24 4.24M4.93 4.93l4.24 4.24m0 5.66l-4.24 4.24"></path>
+                    </svg>
+                </button>
+            </div>
+            
+            <!-- Editor-only buttons -->
+            <div class="button-group editor-only-buttons">
+                <div class="btn-item icon-btn" id="autofix-validation-link" title="Auto-Fix Issues">
+                    <a href="#">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M20 6 9 17l-5-5"/>
+                            <path d="M12 2v4"/>
+                            <path d="M12 18v4"/>
+                            <path d="M4.93 4.93l2.83 2.83"/>
+                            <path d="M16.24 16.24l2.83 2.83"/>
+                        </svg>
+                    </a>
+                </div>
+                
+                <!-- NEW SIMPLE ADD BUTTON -->
+                <button class="simple-add-btn" id="simple-add-btn">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"/>
+                        <line x1="12" y1="8" x2="12" y2="16"/>
+                        <line x1="8" y1="12" x2="16" y2="12"/>
+                    </svg>
+                    Add
+                </button>
+                
+                <!-- NEW SIMPLE DROPDOWN MENU -->
+                <div class="simple-dropdown-menu" id="simple-dropdown-menu">
+                    <button class="simple-dropdown-item" data-action="header">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 10H3M21 6H3M21 14H3M21 18H3"/>
+                        </svg>
+                        Header
+                    </button>
+                    <button class="simple-dropdown-item" data-action="footer">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 10H3M21 6H3M21 14H3M21 18H3"/>
+                        </svg>
+                        Footer
+                    </button>
+                    <button class="simple-dropdown-item" data-action="image">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect width="18" height="18" x="3" y="3" rx="2" ry="2"/>
+                            <circle cx="9" cy="9" r="2"/>
+                            <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/>
+                        </svg>
+                        Image
+                    </button>
+                    <button class="simple-dropdown-item" data-action="media">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect width="18" height="18" x="3" y="3" rx="2"/>
+                            <path d="m10 8 6 4-6 4Z"/>
+                        </svg>
+                        Media
+                    </button>
+                    <button class="simple-dropdown-item" data-action="break">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="3" y1="12" x2="21" y2="12"/>
+                            <line x1="3" y1="6" x2="21" y2="6"/>
+                            <line x1="3" y1="18" x2="21" y2="18"/>
+                        </svg>
+                        Page Break
+                    </button>
+                </div>
+                
+                <input type="file" id="insert-media-input" style="display: none;" accept="image/*,video/*,.svg">
+                
+                <div class="btn-item" id="toc-toggle-btn" title="Toggle Table of Contents">
+                    <a href="#">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="8" y1="6" x2="21" y2="6"></line>
+                            <line x1="8" y1="12" x2="21" y2="12"></line>
+                            <line x1="8" y1="18" x2="21" y2="18"></line>
+                            <line x1="3" y1="6" x2="3.01" y2="6"></line>
+                            <line x1="3" y1="12" x2="3.01" y2="12"></line>
+                            <line x1="3" y1="18" x2="3.01" y2="18"></line>
+                        </svg>
+                        TOC
+                    </a>
+                </div>
+            </div>
+            
+            <!-- Editor-only buttons -->
+            <div class="button-group editor-only-buttons">
+                <button class="icon-button" id="pdf-settings-btn" title="PDF Settings">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="3"></circle>
+                        <path d="M12 1v6m0 6v6"></path>
+                        <path d="M5.64 5.64l4.24 4.24m4.24 4.24l4.24 4.24"></path>
+                        <path d="M18.36 5.64l-4.24 4.24m-4.24 4.24l-4.24 4.24"></path>
+                    </svg>
+                </button>
+                
+                <button class="icon-button" id="export-pdf-button" title="Export PDF">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                        <polyline points="14 2 14 8 20 8"></polyline>
+                        <text x="9" y="16" font-size="6" font-weight="bold" fill="currentColor">PDF</text>
+                    </svg>
+                </button>
+                <button class="icon-button" id="print-pdf-button" title="Print to PDF">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="6 9 6 2 18 2 18 9"></polyline>
+                        <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+                        <rect x="6" y="14" width="12" height="8"></rect>
+                    </svg>
+                </button>
+                <button class="icon-button" id="export-html-button" title="Export HTML">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="16 18 22 12 16 6"></polyline>
+                        <polyline points="8 6 2 12 8 18"></polyline>
+                    </svg>
+                </button>
+                <button class="icon-button" id="inspector-toggle-btn" title="Toggle HTML Inspector" style="display: none;">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"></path>
+                        <circle cx="12" cy="12" r="3"></circle>
+                    </svg>
+                </button>
+                <button class="icon-button" id="ai-assistant-button" title="AI Assistant">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7h1a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v1a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-1H2a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h1a7 7 0 0 1 7-7h1V5.73c-.6-.34-1-.99-1-1.73a2 2 0 0 1 2-2Z"/>
+                        <path d="M14 22v-4a2 2 0 0 0-2-2h-0a2 2 0 0 0-2 2v4"/>
+                    </svg>
+                </button>
+                <button class="icon-button" id="settings-button" title="Settings">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="3"></circle>
+                        <path d="M12 1v6m0 6v6m-6-6h6m6 0h6"></path>
+                        <path d="M19.07 4.93l-4.24 4.24m0 5.66l4.24 4.24M4.93 4.93l4.24 4.24m0 5.66l-4.24 4.24"></path>
+                    </svg>
+                </button>
+                <button class="icon-button" id="help-button" title="Help & Documentation">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+                        <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                    </svg>
+                </button>
+                <div class="btn-item" id="cheatsheet-button">
+                    <a href="#">Syntax Guide</a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="header-right">
+            <button class="icon-button" id="import-html-button" title="Import HTML File">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                    <polyline points="14 2 14 8 20 8"></polyline>
+                    <line x1="16" y1="13" x2="8" y2="13"></line>
+                    <line x1="16" y1="17" x2="8" y2="17"></line>
+                    <polyline points="10 9 9 9 8 9"></polyline>
+                </svg>
+            </button>
+            <button class="icon-button" id="import-css-button" title="Import CSS File">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                    <polyline points="14 2 14 8 20 8"></polyline>
+                    <path d="M12 18v-6"></path>
+                    <path d="M8 15h8"></path>
+                </svg>
+            </button>
+            <button class="icon-button" id="import-md-button" title="Import Markdown File">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                    <polyline points="7 10 12 15 17 10"></polyline>
+                    <line x1="12" y1="15" x2="12" y2="3"></line>
+                </svg>
+            </button>
+            <button class="icon-button" id="export-md-button" title="Export Markdown File">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                    <polyline points="17 8 12 3 7 8"></polyline>
+                    <line x1="12" y1="3" x2="12" y2="15"></line>
+                </svg>
+            </button>
+        </div>
+        <input type="file" id="import-html-input" accept=".html,.htm" style="display: none;">
+        <input type="file" id="import-css-input" accept=".css" style="display: none;">
+        <input type="file" id="import-md-input" accept=".md,.markdown,.txt" style="display: none;">
+    </header>
+
+    <div id="container" class="split-container">
+
+        <div id="edit" class="column editor-pane">
+            <div id="editor-wrapper">
+                <div id="editor"></div>
+            </div>
+        </div>
+
+        <div id="split-divider" class="split-divider"></div>
+
+        <div id="preview" class="column preview-pane">
+            <div id="preview-wrapper">
+                <!-- Paper Layout Controls (Compact Floating Bar) -->
+                <div id="paper-controls" class="paper-controls-bar hidden">
+                    <!-- Zoom Controls -->
+                    <div class="paper-controls-group">
+                        <button class="paper-control-btn-sm" id="paper-zoom-out" title="Zoom Out">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M5 12h14"></path>
+                            </svg>
+                        </button>
+                        <span class="paper-zoom-display" id="paper-zoom-display">100%</span>
+                        <button class="paper-control-btn-sm" id="paper-zoom-in" title="Zoom In">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M5 12h14"></path>
+                                <path d="M12 5v14"></path>
+                            </svg>
+                        </button>
+                    </div>
+                    
+                    <div class="paper-controls-divider"></div>
+                    
+                    <!-- Page Navigation -->
+                    <div class="paper-controls-group">
+                        <button class="paper-control-btn-sm" id="paper-prev-page" title="Previous Page">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M15 18l-6-6 6-6"></path>
+                            </svg>
+                        </button>
+                        <span class="paper-page-info" id="paper-page-info">1 / 1</span>
+                        <button class="paper-control-btn-sm" id="paper-next-page" title="Next Page">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M9 18l6-6-6-6"></path>
+                            </svg>
+                        </button>
+                    </div>
+                    
+                    <div class="paper-controls-divider"></div>
+                    
+                    <!-- Navigation Mode Toggle -->
+                    <button class="paper-mode-toggle" id="paper-mode-toggle" title="Toggle Navigation Mode">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M3 3h7v7H3z"></path>
+                            <path d="M14 3h7v7h-7z"></path>
+                            <path d="M14 14h7v7h-7z"></path>
+                            <path d="M3 14h7v7H3z"></path>
+                        </svg>
+                        <span id="paper-mode-text">Flow</span>
+                    </button>
+                </div>
+                
+                <div id="paper-scaler">
+                    <div id="output" class="content markdown-body"></div>
+                </div>
+            </div>
+            
+            <!-- HTML Preview Refresh Button (hidden by default, shown in HTML mode) -->
+            <button id="html-refresh-button" class="html-refresh-btn" title="Refresh HTML Preview" style="display: none;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+                </svg>
+            </button>
+        </div>
+
+        <!-- CLEAN PROFESSIONAL INSPECTOR PANEL -->
+        <div id="inspector-panel" class="inspector-panel hidden">
+            <div class="inspector-header">
+                <h3>🎨 HTML Inspector</h3>
+                <div class="inspector-header-actions">
+                    <button class="inspector-icon-btn" id="inspector-undo-btn" title="Undo (Ctrl+Z)">↶</button>
+                    <button class="inspector-icon-btn" id="inspector-redo-btn" title="Redo (Ctrl+Y)">↷</button>
+                    <button class="inspector-close-btn" id="inspector-close-btn">×</button>
+                </div>
+            </div>
+            
+            <div class="inspector-content">
+                <!-- Empty State -->
+                <div id="inspector-empty" class="inspector-empty">
+                    <div class="empty-icon">👆</div>
+                    <p>Click an element in the preview to inspect and edit</p>
+                </div>
+                
+                <!-- Editor State -->
+                <div id="inspector-editor" class="inspector-editor hidden">
+                    
+                    <!-- Element Info -->
+                    <div class="inspector-section">
+                        <div class="section-title">📋 Element Info</div>
+                        <div class="inspector-field">
+                            <label>Tag</label>
+                            <input type="text" id="insp-tag" readonly>
+                        </div>
+                        <div class="inspector-field">
+                            <label>Text Content</label>
+                            <input type="text" id="insp-text">
+                        </div>
+                    </div>
+                    
+                    <!-- Arrange (Z-Index) -->
+                    <div class="inspector-section">
+                        <div class="section-title">📚 Arrange (Layering)</div>
+                        <div class="button-grid">
+                            <button class="action-btn" id="btn-to-front">⬆️ To Front</button>
+                            <button class="action-btn" id="btn-forward">↑ Forward</button>
+                            <button class="action-btn" id="btn-backward">↓ Backward</button>
+                            <button class="action-btn" id="btn-to-back">⬇️ To Back</button>
+                        </div>
+                        <button class="action-btn full-width" id="btn-arrange-mode">🎯 Bring Above Element</button>
+                    </div>
+                    
+                    <!-- Actions -->
+                    <div class="inspector-section">
+                        <div class="section-title">⚡ Actions</div>
+                        <button class="action-btn full-width" id="btn-lock">🔒 Lock Element</button>
+                        <button class="action-btn full-width" id="btn-multi-select">☑️ Multi-Select Mode</button>
+                        <button class="action-btn full-width" id="btn-copy-style">🎨 Copy Style</button>
+                        <button class="action-btn full-width hidden" id="btn-paste-style">📋 Paste Style</button>
+                        <button class="action-btn full-width" id="btn-delete">🗑️ Delete</button>
+                        <button class="action-btn full-width" id="btn-copy-html">📋 Copy HTML</button>
+                    </div>
+                    
+                    <!-- Typography -->
+                    <div class="inspector-section">
+                        <div class="section-title">🔤 Typography</div>
+                        <div class="inspector-field">
+                            <label>Font Size (px)</label>
+                            <input type="number" id="insp-font-size">
+                        </div>
+                        <div class="inspector-field">
+                            <label>Font Weight</label>
+                            <select id="insp-font-weight">
+                                <option value="normal">Normal</option>
+                                <option value="bold">Bold</option>
+                                <option value="100">100</option>
+                                <option value="300">300</option>
+                                <option value="500">500</option>
+                                <option value="700">700</option>
+                                <option value="900">900</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <!-- Colors -->
+                    <div class="inspector-section">
+                        <div class="section-title">🎨 Colors</div>
+                        <div class="inspector-field">
+                            <label>Text Color</label>
+                            <input type="color" id="insp-color">
+                        </div>
+                        <div class="inspector-field">
+                            <label>Background</label>
+                            <input type="color" id="insp-bg">
+                        </div>
+                    </div>
+                    
+                    <!-- Spacing -->
+                    <div class="inspector-section">
+                        <div class="section-title">📏 Spacing</div>
+                        <div class="inspector-field">
+                            <label>Padding (px)</label>
+                            <input type="number" id="insp-padding">
+                        </div>
+                        <div class="inspector-field">
+                            <label>Margin (px)</label>
+                            <input type="number" id="insp-margin">
+                        </div>
+                    </div>
+                    
+                    <!-- Border -->
+                    <div class="inspector-section">
+                        <div class="section-title">🔲 Border</div>
+                        <div class="inspector-field">
+                            <label>Width (px)</label>
+                            <input type="number" id="insp-border-width">
+                        </div>
+                        <div class="inspector-field">
+                            <label>Style</label>
+                            <select id="insp-border-style">
+                                <option value="none">None</option>
+                                <option value="solid">Solid</option>
+                                <option value="dashed">Dashed</option>
+                                <option value="dotted">Dotted</option>
+                            </select>
+                        </div>
+                        <div class="inspector-field">
+                            <label>Color</label>
+                            <input type="color" id="insp-border-color">
+                        </div>
+                        <div class="inspector-field">
+                            <label>Radius (px)</label>
+                            <input type="number" id="insp-border-radius">
+                        </div>
+                    </div>
+                    
+                </div>
+            </div>
+        </div>
+
+        <div id="cheatsheet-divider" class="split-divider cheatsheet-divider hidden"></div>
+
+        <div id="cheatsheet-panel" class="column cheatsheet-pane hidden">
+            <div class="cheatsheet-panel-header">
+                <h3>Markdown Syntax Guide</h3>
+                <button class="cheatsheet-close" id="cheatsheet-close-btn">×</button>
+            </div>
+            <div class="cheatsheet-panel-content" id="cheatsheet-content">
+                <!-- Cheatsheet content will be inserted here -->
+            </div>
+        </div>
+
+        <div id="toc-panel" class="column toc-pane hidden">
+            <div class="toc-panel-header">
+                <h3>Table of Contents</h3>
+                <button class="toc-close" id="toc-close-btn">×</button>
+            </div>
+            <div class="toc-panel-content" id="toc-content">
+                <!-- TOC will be inserted here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Status Bar -->
+    <div class="status-bar">
+        <div class="status-bar-section status-bar-left">
+            <div class="status-item" title="Word count">
+                <span class="status-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M4 7V4h16v3M9 20h6M12 4v16"/>
+                    </svg>
+                </span>
+                <span class="status-value" id="status-word-count">0</span>
+                <span class="status-label">words</span>
+            </div>
+            <div class="status-separator"></div>
+            <div class="status-item" title="Character count">
+                <span class="status-value" id="status-char-count">0</span>
+                <span class="status-label">chars</span>
+            </div>
+            <div class="status-separator"></div>
+            <div class="status-item" title="Line count">
+                <span class="status-value" id="status-line-count">0</span>
+                <span class="status-label">lines</span>
+            </div>
+            <div class="status-separator"></div>
+            <div class="status-item" title="Estimated reading time">
+                <span class="status-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"/>
+                        <polyline points="12 6 12 12 16 14"/>
+                    </svg>
+                </span>
+                <span class="status-value" id="status-reading-time">0 min</span>
+                <span class="status-label">read</span>
+            </div>
+            <div class="status-separator"></div>
+            <div class="status-item clickable" title="Estimated PDF pages" id="status-pdf-estimate">
+                <span class="status-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                        <polyline points="14 2 14 8 20 8"/>
+                    </svg>
+                </span>
+                <span class="status-value" id="status-pdf-pages">~0</span>
+                <span class="status-label">pages</span>
+            </div>
+            <div class="status-separator"></div>
+            <div class="status-item clickable" title="Version history" id="status-versions">
+                <span class="status-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"/>
+                        <polyline points="12 6 12 12 16 14"/>
+                    </svg>
+                </span>
+                <span class="status-value" id="status-versions-count">0</span>
+                <span class="status-label">versions</span>
+            </div>
+        </div>
+
+        <div class="status-bar-section status-bar-right">
+            <div class="status-item" title="Layout mode">
+                <span class="status-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                        <line x1="9" y1="3" x2="9" y2="21"/>
+                    </svg>
+                </span>
+                <span class="status-label" id="status-layout-mode">Web Layout</span>
+            </div>
+            <div class="status-separator"></div>
+            <div class="status-item" title="Auto-save status">
+                <span class="status-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="20 6 9 17 4 12"/>
+                    </svg>
+                </span>
+                <span class="status-label" id="status-save-indicator">Saved</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Version History Panel -->
+    <div class="version-history-panel" id="version-history-panel">
+        <div class="version-history-header">
+            <h3>Version History</h3>
+            <div class="version-history-header-actions">
+                <button class="version-settings-btn" id="version-settings-btn" title="Autosave Settings">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                        <path d="M8 10.5a2.5 2.5 0 100-5 2.5 2.5 0 000 5z"/>
+                        <path d="M14 8a1.5 1.5 0 01-1.5 1.5h-.5a.5.5 0 00-.5.5v.5a1.5 1.5 0 01-1.5 1.5h-.5a.5.5 0 00-.5.5v.5a1.5 1.5 0 01-1.5 1.5h-1a1.5 1.5 0 01-1.5-1.5v-.5a.5.5 0 00-.5-.5h-.5A1.5 1.5 0 012 10.5v-.5a.5.5 0 00-.5-.5h-.5A1.5 1.5 0 010 8a1.5 1.5 0 011.5-1.5h.5a.5.5 0 00.5-.5v-.5A1.5 1.5 0 014 4h.5a.5.5 0 00.5-.5v-.5A1.5 1.5 0 016.5 1.5h1A1.5 1.5 0 019 3v.5a.5.5 0 00.5.5h.5A1.5 1.5 0 0111.5 5.5v.5a.5.5 0 00.5.5h.5A1.5 1.5 0 0114 8z"/>
+                    </svg>
+                </button>
+                <button class="version-history-close" id="version-history-close-btn">×</button>
+            </div>
+        </div>
+        <div class="version-history-actions">
+            <div class="version-info">
+                <strong id="total-versions-display">0</strong> versions saved
+            </div>
+            <button class="version-action-btn" id="save-version-now-btn">Save Version Now</button>
+        </div>
+        <div style="padding: 0 20px;">
+            <input type="text" class="version-search-box" id="version-search-box" placeholder="Search versions by name...">
+        </div>
+        <div class="version-history-list" id="version-history-list">
+            <p class="version-empty-state">No versions saved yet. Versions are auto-saved every 10 minutes.</p>
+        </div>
+    </div>
+
+    <!-- Autosave Settings Modal -->
+    <div class="autosave-modal" id="autosave-modal">
+        <div class="autosave-modal-content">
+            <div class="autosave-modal-header">
+                <h3>Autosave Settings</h3>
+                <button class="autosave-modal-close" id="autosave-modal-close-btn">×</button>
+            </div>
+            <div class="autosave-modal-body">
+                <div class="autosave-setting">
+                    <label class="autosave-toggle">
+                        <input type="checkbox" id="autosave-enabled-toggle" checked>
+                        <span>Enable Autosave</span>
+                    </label>
+                </div>
+                <div class="autosave-setting">
+                    <label>Autosave Interval</label>
+                    <div class="autosave-interval-options">
+                        <button class="interval-btn" data-minutes="5">5 min</button>
+                        <button class="interval-btn active" data-minutes="10">10 min</button>
+                        <button class="interval-btn" data-minutes="30">30 min</button>
+                        <button class="interval-btn" data-minutes="60">60 min</button>
+                    </div>
+                    <div class="autosave-custom-interval">
+                        <label>Custom (minutes):</label>
+                        <input type="number" id="autosave-custom-minutes" min="1" max="1440" placeholder="10">
+                    </div>
+                </div>
+            </div>
+            <div class="autosave-modal-footer">
+                <button class="autosave-btn-cancel" id="autosave-cancel-btn">Cancel</button>
+                <button class="autosave-btn-save" id="autosave-save-btn">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Custom Confirmation Dialog -->
+    <div class="confirm-dialog" id="confirm-dialog">
+        <div class="confirm-dialog-content">
+            <div class="confirm-dialog-header">
+                <h3 id="confirm-dialog-title">Confirm Action</h3>
+            </div>
+            <div class="confirm-dialog-body">
+                <p id="confirm-dialog-message">Are you sure?</p>
+            </div>
+            <div class="confirm-dialog-footer">
+                <button class="confirm-btn-cancel" id="confirm-cancel-btn">Cancel</button>
+                <button class="confirm-btn-confirm" id="confirm-confirm-btn">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Version Preview/Compare Modal -->
+    <div class="version-modal" id="version-modal">
+        <div class="version-modal-content">
+            <div class="version-modal-header">
+                <div style="flex: 1;">
+                    <h3 id="version-modal-title">Version Preview</h3>
+                </div>
+                <button class="modal-btn modal-btn-secondary" id="version-modal-toggle-btn" style="display: none; margin-right: 12px;">Toggle View</button>
+                <button class="version-modal-close" id="version-modal-close-btn">×</button>
+            </div>
+            <div class="version-modal-body" id="version-modal-body">
+                <!-- Content will be inserted dynamically -->
+            </div>
+            <div class="version-modal-footer">
+                <button class="modal-btn modal-btn-secondary" id="version-modal-cancel-btn">Close</button>
+                <button class="modal-btn modal-btn-primary" id="version-modal-restore-btn" style="display: none;">Restore This Version</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Panel Modal -->
+    <div class="settings-panel" id="settings-panel">
+        <div class="settings-panel-overlay"></div>
+        <div class="settings-panel-content">
+            
+            <div class="settings-tabs">
+                <button class="settings-tab active" data-tab="layout">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                        <line x1="9" y1="3" x2="9" y2="21"></line>
+                    </svg>
+                    <span>Layout</span>
+                </button>
+                <button class="settings-tab" data-tab="advanced">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="3"></circle>
+                        <path d="M12 1v6m0 6v6"></path>
+                        <path d="M17 7l-10 10M7 7l10 10"></path>
+                    </svg>
+                    <span>Advanced</span>
+                </button>
+                <button class="settings-tab" data-tab="ai">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
+                        <path d="M2 17l10 5 10-5"></path>
+                        <path d="M2 12l10 5 10-5"></path>
+                    </svg>
+                    <span>AI Assistant</span>
+                </button>
+            </div>
+            
+            <div class="settings-content">
+                <!-- Layout Tab (merged Editor + View) -->
+                <div class="settings-tab-content active" data-tab-content="layout">
+                    <div class="settings-section">
+                        <h4>Preview Style</h4>
+                        <div class="settings-item">
+                            <label>
+                                <span>Style:</span>
+                                <select id="style-selector">
+                                    <option value="docmark">DocMark</option>
+                                    <option value="github">GitHub</option>
+                                    <option value="gitbook">GitBook</option>
+                                    <option value="vscode">VSCode</option>
+                                    <option value="notion">Notion</option>
+                                    <option value="medium">Medium</option>
+                                    <option value="latex">LaTeX</option>
+                                    <option value="minimal">Minimal</option>
+                                    <option value="typewriter">Typewriter</option>
+                                </select>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="settings-section">
+                        <h4>Editor</h4>
+                        <label class="settings-item">
+                            <input type="checkbox" id="word-wrap-checkbox" checked>
+                            <span>Word Wrap</span>
+                        </label>
+                        <label class="settings-item">
+                            <input type="checkbox" id="edit-mode-checkbox">
+                            <span>Edit Mode (Preview)</span>
+                        </label>
+                    </div>
+                    
+                    <div class="settings-section">
+                        <h4>Appearance</h4>
+                        <label class="settings-item">
+                            <input type="checkbox" id="theme-checkbox">
+                            <span>Dark Mode</span>
+                        </label>
+                    </div>
+                    
+                    <div class="settings-section">
+                        <h4>Panel Layout</h4>
+                        <label class="settings-item">
+                            <input type="checkbox" id="flip-panels-checkbox">
+                            <span>Flip Panels</span>
+                        </label>
+                        <label class="settings-item">
+                            <input type="checkbox" id="vertical-layout-checkbox">
+                            <span>Vertical Layout</span>
+                        </label>
+                    </div>
+                </div>
+                
+                <!-- Advanced Tab -->
+                <div class="settings-tab-content" data-tab-content="advanced">
+                    <div class="settings-section">
+                        <h4>Synchronization</h4>
+                        <label class="settings-item">
+                            <input type="checkbox" id="sync-scroll-checkbox">
+                            <span>Sync Scroll</span>
+                        </label>
+                        <label class="settings-item">
+                            <input type="checkbox" id="sync-cursor-checkbox">
+                            <span>Sync Cursor</span>
+                        </label>
+                    </div>
+                    <div class="settings-section">
+                        <h4>Validation</h4>
+                        <label class="settings-item">
+                            <input type="checkbox" id="validation-checkbox">
+                            <span>Markdown Validation</span>
+                        </label>
+                        <a href="#" id="export-validation-link" class="settings-link" style="display: none;">Export Validation Report</a>
+                    </div>
+                    <div class="settings-section">
+                        <h4>Other</h4>
+                        <label class="settings-item">
+                            <input type="checkbox" id="helper-messages-checkbox">
+                            <span>Helper Messages</span>
+                        </label>
+                        <label class="settings-item">
+                            <input type="checkbox" id="style-tooltips-checkbox">
+                            <span>Style Info Tooltips</span>
+                        </label>
+                        <a href="#" id="pdf-settings-link" class="settings-link">PDF Settings</a>
+                    </div>
+                </div>
+                
+                <!-- AI Assistant Tab -->
+                <div class="settings-tab-content" data-tab-content="ai">
+                    <div class="settings-section">
+                        <h4>API Keys</h4>
+                        <p class="settings-hint">Add your API keys below. Keys are stored locally in your browser.</p>
+                        <div class="ai-api-key-item">
+                            <label>OpenAI:</label>
+                            <div class="ai-api-key-input-group">
+                                <input type="password" id="ai-key-openai" placeholder="sk-..." data-provider="openai">
+                                <button class="ai-toggle-visibility-btn" data-target="ai-key-openai" title="Show/Hide API Key">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                                        <circle cx="12" cy="12" r="3"/>
+                                    </svg>
+                                </button>
+                                <button class="ai-test-key-btn" data-provider="openai">Test</button>
+                            </div>
+                        </div>
+                        <div class="ai-api-key-item">
+                            <label>Anthropic Claude:</label>
+                            <div class="ai-api-key-input-group">
+                                <input type="password" id="ai-key-claude" placeholder="sk-ant-..." data-provider="claude">
+                                <button class="ai-toggle-visibility-btn" data-target="ai-key-claude" title="Show/Hide API Key">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                                        <circle cx="12" cy="12" r="3"/>
+                                    </svg>
+                                </button>
+                                <button class="ai-test-key-btn" data-provider="claude">Test</button>
+                            </div>
+                        </div>
+                        <div class="ai-api-key-item">
+                            <label>Cerebras:</label>
+                            <div class="ai-api-key-input-group">
+                                <input type="password" id="ai-key-cerebras" placeholder="csk-..." data-provider="cerebras">
+                                <button class="ai-toggle-visibility-btn" data-target="ai-key-cerebras" title="Show/Hide API Key">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                                        <circle cx="12" cy="12" r="3"/>
+                                    </svg>
+                                </button>
+                                <button class="ai-test-key-btn" data-provider="cerebras">Test</button>
+                            </div>
+                        </div>
+                        <div class="ai-api-key-item">
+                            <label>Groq:</label>
+                            <div class="ai-api-key-input-group">
+                                <input type="password" id="ai-key-groq" placeholder="gsk_..." data-provider="groq">
+                                <button class="ai-toggle-visibility-btn" data-target="ai-key-groq" title="Show/Hide API Key">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                                        <circle cx="12" cy="12" r="3"/>
+                                    </svg>
+                                </button>
+                                <button class="ai-test-key-btn" data-provider="groq">Test</button>
+                            </div>
+                        </div>
+                        <div class="ai-api-key-item">
+                            <label>Mistral AI:</label>
+                            <div class="ai-api-key-input-group">
+                                <input type="password" id="ai-key-mistral" placeholder="..." data-provider="mistral">
+                                <button class="ai-toggle-visibility-btn" data-target="ai-key-mistral" title="Show/Hide API Key">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                                        <circle cx="12" cy="12" r="3"/>
+                                    </svg>
+                                </button>
+                                <button class="ai-test-key-btn" data-provider="mistral">Test</button>
+                            </div>
+                        </div>
+                        <div class="ai-api-key-item">
+                            <label>OpenRouter:</label>
+                            <div class="ai-api-key-input-group">
+                                <input type="password" id="ai-key-openrouter" placeholder="sk-or-..." data-provider="openrouter">
+                                <button class="ai-toggle-visibility-btn" data-target="ai-key-openrouter" title="Show/Hide API Key">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                                        <circle cx="12" cy="12" r="3"/>
+                                    </svg>
+                                </button>
+                                <button class="ai-test-key-btn" data-provider="openrouter">Test</button>
+                            </div>
+                        </div>
+                        <div class="ai-api-key-item">
+                            <label>Google AI Studio:</label>
+                            <div class="ai-api-key-input-group">
+                                <input type="password" id="ai-key-google" placeholder="..." data-provider="google">
+                                <button class="ai-toggle-visibility-btn" data-target="ai-key-google" title="Show/Hide API Key">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                                        <circle cx="12" cy="12" r="3"/>
+                                    </svg>
+                                </button>
+                                <button class="ai-test-key-btn" data-provider="google">Test</button>
+                            </div>
+                        </div>
+                        <div class="ai-api-key-item">
+                            <label>Cohere:</label>
+                            <div class="ai-api-key-input-group">
+                                <input type="password" id="ai-key-cohere" placeholder="..." data-provider="cohere">
+                                <button class="ai-toggle-visibility-btn" data-target="ai-key-cohere" title="Show/Hide API Key">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                                        <circle cx="12" cy="12" r="3"/>
+                                    </svg>
+                                </button>
+                                <button class="ai-test-key-btn" data-provider="cohere">Test</button>
+                            </div>
+                        </div>
+                        <div class="ai-api-key-item">
+                            <label>Hugging Face:</label>
+                            <div class="ai-api-key-input-group">
+                                <input type="password" id="ai-key-huggingface" placeholder="hf_..." data-provider="huggingface">
+                                <button class="ai-toggle-visibility-btn" data-target="ai-key-huggingface" title="Show/Hide API Key">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                                        <circle cx="12" cy="12" r="3"/>
+                                    </svg>
+                                </button>
+                                <button class="ai-test-key-btn" data-provider="huggingface">Test</button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="settings-section">
+                        <h4>Options</h4>
+                        <label class="settings-item">
+                            <input type="checkbox" id="ai-streaming-checkbox" checked>
+                            <span>Enable Streaming</span>
+                        </label>
+                        <label class="settings-item">
+                            <input type="checkbox" id="ai-autosave-checkbox" checked>
+                            <span>Auto-save Settings</span>
+                        </label>
+                        <label class="settings-item">
+                            <input type="checkbox" id="ai-token-usage-checkbox">
+                            <span>Show Token Usage</span>
+                        </label>
+                        <label class="settings-item">
+                            <input type="checkbox" id="ai-chat-history-checkbox" checked>
+                            <span>Save Chat History</span>
+                        </label>
+                    </div>
+                    
+                    <div class="settings-section">
+                        <h4>Keyboard Shortcuts</h4>
+                        <div class="ai-shortcuts-list">
+                            <div class="ai-shortcut-item">
+                                <span class="ai-shortcut-key">Ctrl+K</span>
+                                <span class="ai-shortcut-desc">Open AI Panel</span>
+                            </div>
+                            <div class="ai-shortcut-item">
+                                <span class="ai-shortcut-key">Ctrl+Shift+K</span>
+                                <span class="ai-shortcut-desc">Open AI Chat</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="settings-panel-footer">
+                <button class="settings-close-btn" id="settings-close-btn">Close</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- AI Status Toast (bottom center) -->
+    <div class="ai-status-toast" id="ai-status-toast">
+        <div class="ai-status-content">
+            <div class="ai-status-spinner"></div>
+            <span class="ai-status-text">Processing...</span>
+        </div>
+    </div>
+    
+    <!-- PDF Settings Modal -->
+    <div class="pdf-settings-modal-overlay" id="pdf-settings-modal">
+        <div class="pdf-settings-modal">
+            <div class="pdf-settings-modal-header">
+                <h3>PDF Export Settings</h3>
+                <button class="pdf-settings-modal-close" id="pdf-settings-modal-close">×</button>
+            </div>
+            <div class="pdf-settings-modal-body">
+                <div class="pdf-modal-section">
+                    <label class="pdf-modal-label">Text Alignment</label>
+                    <div class="pdf-align-buttons">
+                        <button class="pdf-align-btn active" data-align="left">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="3" y1="6" x2="21" y2="6"></line>
+                                <line x1="3" y1="12" x2="15" y2="12"></line>
+                                <line x1="3" y1="18" x2="18" y2="18"></line>
+                            </svg>
+                            <span>Left</span>
+                        </button>
+                        <button class="pdf-align-btn" data-align="center">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="3" y1="6" x2="21" y2="6"></line>
+                                <line x1="6" y1="12" x2="18" y2="12"></line>
+                                <line x1="4" y1="18" x2="20" y2="18"></line>
+                            </svg>
+                            <span>Center</span>
+                        </button>
+                        <button class="pdf-align-btn" data-align="right">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="3" y1="6" x2="21" y2="6"></line>
+                                <line x1="9" y1="12" x2="21" y2="12"></line>
+                                <line x1="6" y1="18" x2="21" y2="18"></line>
+                            </svg>
+                            <span>Right</span>
+                        </button>
+                        <button class="pdf-align-btn" data-align="justify">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="3" y1="6" x2="21" y2="6"></line>
+                                <line x1="3" y1="12" x2="21" y2="12"></line>
+                                <line x1="3" y1="18" x2="21" y2="18"></line>
+                            </svg>
+                            <span>Justify</span>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="pdf-modal-section">
+                    <label class="pdf-modal-label">Page Number Position</label>
+                    <div class="pdf-align-buttons">
+                        <button class="pdf-page-num-btn" data-position="left">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="3" y="3" width="18" height="18" rx="2"></rect>
+                                <text x="6" y="18" font-size="8" fill="currentColor">1</text>
+                            </svg>
+                            <span>Left</span>
+                        </button>
+                        <button class="pdf-page-num-btn active" data-position="center">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="3" y="3" width="18" height="18" rx="2"></rect>
+                                <text x="10" y="18" font-size="8" fill="currentColor">1</text>
+                            </svg>
+                            <span>Center</span>
+                        </button>
+                        <button class="pdf-page-num-btn" data-position="right">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="3" y="3" width="18" height="18" rx="2"></rect>
+                                <text x="15" y="18" font-size="8" fill="currentColor">1</text>
+                            </svg>
+                            <span>Right</span>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="pdf-modal-section">
+                    <label class="pdf-modal-label">Page Margins (mm)</label>
+                    <div class="pdf-margin-grid">
+                        <div class="pdf-margin-field">
+                            <label>Top</label>
+                            <input type="number" id="pdf-margin-top" min="0" max="50" value="15">
+                        </div>
+                        <div class="pdf-margin-field">
+                            <label>Right</label>
+                            <input type="number" id="pdf-margin-right" min="0" max="50" value="15">
+                        </div>
+                        <div class="pdf-margin-field">
+                            <label>Bottom</label>
+                            <input type="number" id="pdf-margin-bottom" min="0" max="50" value="15">
+                        </div>
+                        <div class="pdf-margin-field">
+                            <label>Left</label>
+                            <input type="number" id="pdf-margin-left" min="0" max="50" value="15">
+                        </div>
+                    </div>
+                    <div style="margin-top: 12px;">
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                            <input type="checkbox" id="show-margin-guides" checked style="cursor: pointer;">
+                            <span style="font-size: 13px; color: #64748b;">Show red margin guides on pages</span>
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="pdf-modal-actions">
+                    <button class="pdf-modal-btn-secondary" id="pdf-reset-btn">Reset to Defaults</button>
+                    <button class="pdf-modal-btn-primary" id="pdf-apply-btn">Apply & Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Media Context Menu -->
+    <div id="media-context-menu" class="media-context-menu">
+        <div id="media-move-top" class="media-context-menu-item">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18" />
+            </svg>
+            Move to Top
+        </div>
+        <div id="media-move-up" class="media-context-menu-item">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7" />
+            </svg>
+            Move Up
+        </div>
+        <div id="media-move-down" class="media-context-menu-item">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+            </svg>
+            Move Down
+        </div>
+        <div id="media-move-bottom" class="media-context-menu-item">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+            </svg>
+            Move to Bottom
+        </div>
+        <div class="media-context-menu-separator"></div>
+        <div id="media-jump-to-code" class="media-context-menu-item">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+            </svg>
+            Jump to Code
+        </div>
+        <div id="media-delete" class="media-context-menu-item" style="color: #ef4444;">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
+            Delete Media
+        </div>
+    </div>
+
+  </body>
+</html>
