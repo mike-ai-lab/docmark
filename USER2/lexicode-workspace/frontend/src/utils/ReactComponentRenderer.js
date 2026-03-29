@@ -270,7 +270,6 @@ class ReactComponentRenderer {
   <script>
     (function() {
       try {
-        console.log('[Preview] Starting React render...');
         const React = window.React;
         
         if (!React) {
@@ -286,8 +285,6 @@ class ReactComponentRenderer {
 
         const root = window.ReactDOM.createRoot(document.getElementById('root'));
         root.render(React.createElement(Component));
-        
-        console.log('[Preview] React render complete!');
       } catch (e) {
         console.error('[Preview] Error:', e);
         const overlay = document.createElement('div');
@@ -295,6 +292,113 @@ class ReactComponentRenderer {
         overlay.innerHTML = '<div class="error-title">Preview Error</div><div class="error-content">' + e.message + '\\n\\nStack:\\n' + (e.stack || 'No stack trace') + '</div>';
         document.body.appendChild(overlay);
       }
+    })();
+  </script>
+</body>
+</html>`;
+  }
+
+  // Generate persistent iframe HTML that listens for postMessage updates
+  generatePersistentIframeHTML() {
+    return `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script crossorigin src="${this.options.reactCDN}"></script>
+  <script crossorigin src="${this.options.reactDOMCDN}"></script>
+  <script src="${this.options.tailwindCDN}"></script>
+  <style>
+    body { margin: 0; padding: 0; background: #f8fafc; }
+    #root { min-height: 100vh; }
+    .error-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.95);
+      color: white;
+      padding: 30px;
+      font-family: monospace;
+      font-size: 14px;
+      overflow: auto;
+      z-index: 9999;
+    }
+    .error-title {
+      color: #ef4444;
+      font-size: 20px;
+      font-weight: bold;
+      margin-bottom: 20px;
+    }
+    .error-content {
+      background: #1f2937;
+      padding: 20px;
+      border-left: 4px solid #ef4444;
+      white-space: pre-wrap;
+      max-height: 70vh;
+      overflow: auto;
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script>
+    (function() {
+      const React = window.React;
+      let root = null;
+      
+      // Initialize root
+      function initRoot() {
+        if (!root && React && window.ReactDOM) {
+          root = window.ReactDOM.createRoot(document.getElementById('root'));
+        }
+      }
+      
+      // Render component from code
+      function renderComponent(code) {
+        try {
+          initRoot();
+          
+          if (!root) {
+            throw new Error('React root not initialized');
+          }
+          
+          // Clear any existing error overlays
+          const existingOverlay = document.querySelector('.error-overlay');
+          if (existingOverlay) {
+            existingOverlay.remove();
+          }
+          
+          const Component = eval(code);
+          
+          if (typeof Component !== 'function') {
+            throw new Error('Code evaluation did not return a component function');
+          }
+
+          root.render(React.createElement(Component));
+        } catch (e) {
+          console.error('[Preview] Render error:', e);
+          showError(e.message, e.stack);
+        }
+      }
+      
+      // Show error overlay
+      function showError(message, stack) {
+        const overlay = document.createElement('div');
+        overlay.className = 'error-overlay';
+        overlay.innerHTML = '<div class="error-title">Preview Error</div><div class="error-content">' + message + '\\n\\nStack:\\n' + (stack || 'No stack trace') + '</div>';
+        document.body.appendChild(overlay);
+      }
+      
+      // Listen for postMessage updates
+      window.addEventListener('message', function(event) {
+        if (event.data.type === 'UPDATE_CODE') {
+          renderComponent(event.data.code);
+        } else if (event.data.type === 'COMPILATION_ERROR') {
+          showError('Compilation Error', event.data.error);
+        }
+      });
+      
+      // Signal ready
+      window.parent.postMessage({ type: 'IFRAME_READY' }, '*');
     })();
   </script>
 </body>

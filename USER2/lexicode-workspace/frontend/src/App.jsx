@@ -3,12 +3,16 @@ import EditorContainer from './components/EditorContainer';
 import AiPanel from './components/AiPanel';
 import MainHeader from './components/MainHeader';
 import Auth from './components/Auth';
+import StreamingDemo from './components/StreamingDemo';
 import { EditorProvider } from './contexts/EditorContext';
 import { useDemoStore } from './store/useDemoStore';
 import { onAuthChange } from './lib/firebase';
 
 export default function App() {
   const { aiPanelOpen, user, setUser, initDemo } = useDemoStore();
+
+  // Check if demo mode is enabled via URL
+  const isDemoMode = window.location.search.includes('demo=streaming');
 
   useEffect(() => {
     // Initialize demo data
@@ -21,6 +25,11 @@ export default function App() {
     
     return () => unsubscribe();
   }, [setUser, initDemo]);
+
+  // Show streaming demo if requested
+  if (isDemoMode) {
+    return <StreamingDemo />;
+  }
 
   // Show auth screen if not logged in
   if (!user) {

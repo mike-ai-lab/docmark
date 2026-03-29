@@ -7,9 +7,12 @@ import {
   FolderPlus, 
   Edit2, 
   Trash2, 
-  FilePlus
+  FilePlus,
+  Copy,
+  Download
 } from 'lucide-react';
 import { useDemoStore } from '../store/useDemoStore';
+import JSZip from 'jszip';
 
 /**
  * FILE NODE COMPONENT
@@ -116,6 +119,8 @@ const ContextMenu = ({ x, y, onClose, onAction, node }) => {
   const items = [
     { id: 'new-file', label: 'New File', icon: <FilePlus size={14} />, show: !node || node.type === 'folder' },
     { id: 'new-folder', label: 'New Folder', icon: <FolderPlus size={14} />, show: !node || node.type === 'folder' },
+    { id: 'copy-path', label: 'Copy Relative Path', icon: <Copy size={14} />, show: !!node },
+    { id: 'download', label: node?.type === 'folder' ? 'Download as ZIP' : 'Download', icon: <Download size={14} />, show: !!node },
     { id: 'rename', label: 'Rename', icon: <Edit2 size={14} />, show: !!node },
     { id: 'delete', label: 'Delete', icon: <Trash2 size={14} />, show: !!node, className: 'text-red-400' },
   ];
@@ -157,23 +162,138 @@ export default function ExplorerPanel() {
     createNode,
     deleteNode,
     renameNode,
-    moveNode
+    moveNode,
+    findNodeInTree
   } = useDemoStore();
   
   const [contextMenu, setContextMenu] = useState(null);
   const [draggedId, setDraggedId] = useState(null);
+  const [selectedFolderId, setSelectedFolderId] = useState(null);
 
   const handleToggle = (id) => {
     toggleNode(id);
   };
 
   const handleSelect = (id) => {
-    setActiveFile(id);
+    const node = findNodeInTree(fileTree, id);
+    if (node?.type === 'folder') {
+      setSelectedFolderId(id);
+    } else {
+      setActiveFile(id);
+    }
+  };
+
+  // Get relative path for a node
+  const getNodePath = (nodeId, tree = fileTree, currentPath = []) => {
+    for (const node of tree) {
+      if (node.id === nodeId) {
+        return [...currentPath, node.name].join('/');
+      }
+      if (node.children) {
+        const found = getNodePath(nodeId, node.children, [...currentPath, node.name]);
+        if (found) return found;
+      }
+    }
+    return null;
+  };
+
+  // Copy relative path to clipboard
+  const copyRelativePath = async (node) => {
+    const path = getNodePath(node.id);
+    if (path) {
+      try {
+        await navigator.clipboard.writeText(path);
+        console.log('📋 [COPY PATH] Copied to clipboard:', path);
+      } catch (err) {
+        console.error('❌ [COPY PATH] Failed to copy:', err);
+      }
+    }
+  };
+
+  // Download single file
+  const downloadFile = (node) => {
+    console.log('💾 [DOWNLOAD] Downloading file:', node.name);
+    const content = node.content || '';
+    const blob = new Blob([content], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = node.name;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    console.log('✅ [DOWNLOAD] File downloaded successfully');
+  };
+
+  // Download folder as ZIP
+  const downloadFolder = async (node) => {
+    console.log('📦 [DOWNLOAD ZIP] Starting ZIP creation for folder:', node.name);
+    const zip = new JSZip();
+    
+    // Recursively add files to ZIP
+    const addToZip = (currentNode, zipFolder) => {
+      if (currentNode.type === 'file') {
+        const content = currentNode.content || '';
+        zipFolder.file(currentNode.name, content);
+        console.log('📄 [DOWNLOAD ZIP] Added file:', currentNode.name);
+      } else if (currentNode.type === 'folder' && currentNode.children) {
+        const subFolder = zipFolder.folder(currentNode.name);
+        currentNode.children.forEach(child => addToZip(child, subFolder));
+      }
+    };
+
+    // Add all children to ZIP (not the folder itself, just its contents)
+    if (node.children) {
+      node.children.forEach(child => {
+        if (child.type === 'file') {
+          zip.file(child.name, child.content || '');
+          console.log('📄 [DOWNLOAD ZIP] Added file:', child.name);
+        } else if (child.type === 'folder') {
+          const subFolder = zip.folder(child.name);
+          if (child.children) {
+            child.children.forEach(subChild => addToZip(subChild, subFolder));
+          }
+        }
+      });
+    }
+
+    try {
+      console.log('🔄 [DOWNLOAD ZIP] Generating ZIP file...');
+      const blob = await zip.generateAsync({ type: 'blob' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${node.name}.zip`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      console.log('✅ [DOWNLOAD ZIP] ZIP file downloaded successfully');
+    } catch (err) {
+      console.error('❌ [DOWNLOAD ZIP] Failed to create ZIP:', err);
+    }
   };
 
   const handleAction = (type, targetNode) => {
+    console.log('🎬 [ACTION]', type, 'on node:', targetNode?.name || 'root');
+    console.log('📂 [ACTION] Selected folder ID:', selectedFolderId);
+    
     if (type === 'new-file' || type === 'new-folder') {
-      createNode(type === 'new-folder' ? 'folder' : 'file', targetNode?.id);
+      // Use targetNode if provided (right-click on folder)
+      // Otherwise use selectedFolderId (last selected folder)
+      // Otherwise use null (root)
+      const parentId = targetNode?.id || selectedFolderId || null;
+      console.log('📁 [ACTION] Creating in parent:', parentId);
+      createNode(type === 'new-folder' ? 'folder' : 'file', parentId);
+    } else if (type === 'copy-path') {
+      copyRelativePath(targetNode);
+    } else if (type === 'download') {
+      if (targetNode.type === 'folder') {
+        downloadFolder(targetNode);
+      } else {
+        downloadFile(targetNode);
+      }
     } else if (type === 'rename') {
       renameNode(targetNode.id, null, true); // Start editing
     } else if (type === 'delete') {
@@ -207,14 +327,14 @@ export default function ExplorerPanel() {
         <span>Explorer</span>
         <div className="flex gap-1">
           <button 
-            onClick={() => handleAction('new-file', fileTree[0])} 
+            onClick={() => handleAction('new-file', null)} 
             title="New File" 
             className="hover:bg-[#37373d] p-1 rounded transition-colors text-white/60 hover:text-white"
           >
             <FilePlus size={14}/>
           </button>
           <button 
-            onClick={() => handleAction('new-folder', fileTree[0])} 
+            onClick={() => handleAction('new-folder', null)} 
             title="New Folder" 
             className="hover:bg-[#37373d] p-1 rounded transition-colors text-white/60 hover:text-white"
           >

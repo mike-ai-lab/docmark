@@ -35,7 +35,6 @@ const MonacoEditor = forwardRef(({ file, onContentChange }, ref) => {
         monaco.Uri.parse(`file:///${fileData.id}`)
       );
       modelCacheRef.current.set(fileData.id, model);
-      console.log('📄 [MONACO] Created model for:', fileData.name, 'Language:', language);
     }
     return modelCacheRef.current.get(fileData.id);
   };
@@ -44,7 +43,21 @@ const MonacoEditor = forwardRef(({ file, onContentChange }, ref) => {
   useEffect(() => {
     if (!containerRef.current || editorRef.current) return;
 
-    console.log('✅ [MONACO] Initializing editor...');
+    // Configure Monaco Environment to disable web workers completely
+    // Provide a fake worker that does nothing to prevent errors
+    window.MonacoEnvironment = {
+      getWorker: function (workerId, label) {
+        // Return a fake worker object that prevents all worker operations
+        return {
+          postMessage: () => {},
+          addEventListener: () => {},
+          removeEventListener: () => {},
+          terminate: () => {},
+          onmessage: null,
+          onerror: null
+        };
+      }
+    };
 
     // Define custom themes
     monaco.editor.defineTheme('custom-dark', {
@@ -83,7 +96,6 @@ const MonacoEditor = forwardRef(({ file, onContentChange }, ref) => {
     });
 
     editorRef.current = editor;
-    console.log('✅ [MONACO] Editor created');
 
     // Listen for content changes with debouncing
     let changeTimeout;
@@ -94,14 +106,12 @@ const MonacoEditor = forwardRef(({ file, onContentChange }, ref) => {
         if (!fileId || !onContentChangeRef.current) return;
 
         const newContent = editor.getValue();
-        console.log('💾 [MONACO] Auto-saving file:', fileId);
         onContentChangeRef.current(fileId, newContent);
       }, 500);
     });
 
     // Cleanup on unmount
     return () => {
-      console.log('🧹 [MONACO] Cleaning up...');
       if (editorRef.current) {
         editorRef.current.dispose();
         editorRef.current = null;
@@ -118,13 +128,11 @@ const MonacoEditor = forwardRef(({ file, onContentChange }, ref) => {
       return;
     }
 
-    console.log('🔄 [MONACO] Switching to file:', file.name);
     currentFileIdRef.current = file.id;
 
     const model = getOrCreateModel(file);
     if (model) {
       editorRef.current.setModel(model);
-      console.log('✅ [MONACO] Model switched successfully');
     }
   }, [file?.id]);
 

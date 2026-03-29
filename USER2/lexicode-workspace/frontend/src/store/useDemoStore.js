@@ -220,94 +220,168 @@ export const useDemoStore = create((set, get) => ({
                 console.log('📁 [AI ACTION] Creating files...');
                 console.log('📋 Files to create:', data.createdFiles);
                 
-                const { fileTree } = get();
-                
-                // Process each file and organize by path
-                const filesByPath = {};
-                data.createdFiles.forEach((fileData, index) => {
-                    const pathParts = fileData.path.split('/');
-                    const fileName = pathParts.pop();
-                    const folderPath = pathParts.join('/');
+                // STREAMING: Show files being created one by one with typing animation
+                const createFilesSequentially = async () => {
+                    const createdFileIds = [];
+                    const fileSummaries = [];
                     
-                    if (!filesByPath[folderPath]) {
-                        filesByPath[folderPath] = [];
-                    }
-                    
-                    const newFile = {
-                        id: `file-${Date.now()}-${index}-${Math.random()}`,
-                        name: fileName,
-                        type: 'file',
-                        content: fileData.content || '',
-                        last_modified: new Date().toISOString()
+                    // Helper to find or create folder path in tree
+                    const findOrCreateFolder = (tree, pathParts, startIndex = 0) => {
+                        if (startIndex >= pathParts.length) return tree;
+                        
+                        const folderName = pathParts[startIndex];
+                        let folder = tree.find(node => node.name === folderName && node.type === 'folder');
+                        
+                        if (!folder) {
+                            folder = {
+                                id: `folder-${Date.now()}-${startIndex}-${Math.random()}`,
+                                name: folderName,
+                                type: 'folder',
+                                isOpen: true,
+                                children: []
+                            };
+                            tree.push(folder);
+                            console.log('📁 [AI ACTION] Created folder:', folderName);
+                        }
+                        
+                        // Recursively create nested folders
+                        if (startIndex < pathParts.length - 1) {
+                            return findOrCreateFolder(folder.children, pathParts, startIndex + 1);
+                        }
+                        
+                        return folder;
                     };
                     
-                    console.log(`📄 [${index + 1}/${data.createdFiles.length}] Creating file:`, {
-                        name: newFile.name,
-                        path: fileData.path,
-                        folderPath: folderPath || 'root',
-                        contentLength: newFile.content?.length || 0
-                    });
+                    // Get tree ONCE before the loop - don't refresh it for each file
+                    let workingTree = [...get().fileTree];
                     
-                    filesByPath[folderPath].push(newFile);
-                });
-                
-                // Build tree structure
-                const updatedTree = [...fileTree];
-                
-                // Helper to find or create folder path in tree
-                const findOrCreateFolder = (tree, pathParts, startIndex = 0) => {
-                    if (startIndex >= pathParts.length) return tree;
-                    
-                    const folderName = pathParts[startIndex];
-                    let folder = tree.find(node => node.name === folderName && node.type === 'folder');
-                    
-                    if (!folder) {
-                        folder = {
-                            id: `folder-${Date.now()}-${Math.random()}`,
-                            name: folderName,
-                            type: 'folder',
-                            isOpen: true,
-                            children: []
+                    // Process each file sequentially with streaming effect
+                    for (let index = 0; index < data.createdFiles.length; index++) {
+                        const fileData = data.createdFiles[index];
+                        const pathParts = fileData.path.split('/');
+                        const fileName = pathParts.pop();
+                        const folderPath = pathParts;
+                        
+                        const newFile = {
+                            id: `file-${Date.now()}-${index}-${Math.random()}`,
+                            name: fileName,
+                            type: fileData.type || 'file',
+                            content: '', // Start with empty content for streaming
+                            last_modified: new Date().toISOString()
                         };
-                        tree.push(folder);
-                        console.log('📁 [AI ACTION] Created folder:', folderName);
+                        
+                        console.log(`📄 [${index + 1}/${data.createdFiles.length}] Creating file:`, {
+                            name: newFile.name,
+                            path: fileData.path,
+                            folderPath: folderPath.length > 0 ? folderPath.join('/') : 'root',
+                            contentLength: fileData.content?.length || 0
+                        });
+                        
+                        // Add file to working tree (NOT a fresh copy each time)
+                        if (folderPath.length === 0) {
+                            // Add to root
+                            workingTree.push(newFile);
+                        } else {
+                            // Find or create folder structure and add file
+                            const targetFolder = findOrCreateFolder(workingTree, folderPath);
+                            if (!targetFolder.children) {
+                                targetFolder.children = [];
+                            }
+                            targetFolder.children.push(newFile);
+                        }
+                        
+                        createdFileIds.push(newFile.id);
+                        
+                        // Update tree and save (use workingTree, not a fresh copy)
+                        set({ fileTree: workingTree });
+                        localStorage.setItem('lexicode-file-tree', JSON.stringify(workingTree));
+                        
+                        // Open file in editor
+                        set({
+                            activeFileId: newFile.id,
+                            openTabs: [...new Set([...get().openTabs, newFile.id])]
+                        });
+                        
+                        // Small delay before starting to type
+                        await new Promise(resolve => setTimeout(resolve, 200));
+                        
+                        // Ghost write the content with realistic typing
+                        const fullContent = fileData.content || '';
+                        const totalDuration = 4000; // 4 seconds per file
+                        const charDelay = Math.max(10, totalDuration / fullContent.length);
+                        
+                        // Helper function to update file content in tree
+                        const updateFileInTree = (tree, fileId, content) => {
+                            return tree.map(node => {
+                                if (node.id === fileId) {
+                                    return { ...node, content, last_modified: new Date().toISOString() };
+                                }
+                                if (node.children) {
+                                    return { ...node, children: updateFileInTree(node.children, fileId, content) };
+                                }
+                                return node;
+                            });
+                        };
+                        
+                        // Stream content character by character
+                        for (let i = 0; i < fullContent.length; i++) {
+                            const currentContent = fullContent.substring(0, i + 1);
+                            
+                            // Update file content in workingTree (NOT a fresh copy)
+                            workingTree = updateFileInTree(workingTree, newFile.id, currentContent);
+                            set({ fileTree: workingTree });
+                            
+                            // Save every 50 characters - save workingTree directly, not from get()
+                            if (i % 50 === 0 || i === fullContent.length - 1) {
+                                localStorage.setItem('lexicode-file-tree', JSON.stringify(workingTree));
+                            }
+                            
+                            // Wait for typing effect with slight randomness
+                            await new Promise(resolve => setTimeout(resolve, charDelay + Math.random() * 15));
+                        }
+                        
+                        // CRITICAL: Ensure final content is set and SAVED
+                        workingTree = updateFileInTree(workingTree, newFile.id, fullContent);
+                        set({ fileTree: workingTree });
+                        localStorage.setItem('lexicode-file-tree', JSON.stringify(workingTree)); // Save workingTree directly
+                        
+                        fileSummaries.push(`${index + 1}. ${fileData.path}`);
+                        
+                        // Pause between files
+                        if (index < data.createdFiles.length - 1) {
+                            await new Promise(resolve => setTimeout(resolve, 800));
+                        }
                     }
                     
-                    if (startIndex < pathParts.length - 1) {
-                        findOrCreateFolder(folder.children, pathParts, startIndex + 1);
-                    }
+                    console.log('✅ [AI ACTION] All files created successfully!');
+                    console.log('🎯 Created file IDs:', createdFileIds);
                     
-                    return folder;
+                    // Stream the summary message AFTER all files are done
+                    const summaryMessage = `\n\n✅ **Task Complete**\n\nSuccessfully created ${data.createdFiles.length} file(s):\n${fileSummaries.join('\n')}`;
+                    
+                    // Add summary to conversation with typing effect
+                    const currentHistory = get().conversationHistory;
+                    const lastMessage = currentHistory[currentHistory.length - 1];
+                    
+                    if (lastMessage && lastMessage.role === 'assistant') {
+                        let summaryText = '';
+                        // Type summary character by character
+                        for (let i = 0; i < summaryMessage.length; i++) {
+                            summaryText += summaryMessage[i];
+                            const updatedHistory = [
+                                ...currentHistory.slice(0, -1),
+                                { ...lastMessage, content: lastMessage.content + summaryText }
+                            ];
+                            set({ conversationHistory: updatedHistory });
+                            await new Promise(resolve => setTimeout(resolve, 15));
+                        }
+                        
+                        get().saveChatSessions();
+                    }
                 };
                 
-                // Add files to appropriate folders
-                Object.keys(filesByPath).forEach(folderPath => {
-                    const files = filesByPath[folderPath];
-                    
-                    if (!folderPath) {
-                        // Add to root
-                        updatedTree.push(...files);
-                    } else {
-                        // Find or create folder structure
-                        const pathParts = folderPath.split('/');
-                        const targetFolder = findOrCreateFolder(updatedTree, pathParts);
-                        targetFolder.children = [...(targetFolder.children || []), ...files];
-                    }
-                });
-                
-                // Get first created file ID
-                const firstFileId = Object.values(filesByPath)[0]?.[0]?.id;
-                
-                set({
-                    fileTree: updatedTree,
-                    activeFileId: firstFileId,
-                    openTabs: firstFileId ? [...get().openTabs, firstFileId] : get().openTabs
-                });
-                
-                get().saveTreeToLocalStorage();
-                console.log('✅ [AI ACTION] All files created successfully!');
-                console.log('📊 Total nodes in tree:', updatedTree.length);
-                console.log('🎯 Active file ID:', firstFileId);
+                // Start sequential file creation
+                await createFilesSequentially();
             } else {
                 console.log('ℹ️ [AI ACTION] No file action required (action:', data.action, ')');
             }

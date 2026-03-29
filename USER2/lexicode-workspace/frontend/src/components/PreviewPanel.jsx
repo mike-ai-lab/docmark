@@ -463,70 +463,226 @@ export default function PreviewPanel({ content, fileType, fileName }) {
             ) : (
                 <div className="flex-1 overflow-auto bg-white p-6">
                     <style>{`
+                        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800;900&display=swap');
+                        
                         .preview-content {
                             max-width: 800px;
                             margin: 0 auto;
-                            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
-                            line-height: 1.6;
-                            color: #333;
+                            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', 'Roboto', sans-serif;
+                            font-size: 16px;
+                            line-height: 1.8;
+                            color: #24292f;
+                            letter-spacing: 0.01em;
                         }
-                        .preview-content h1 { font-size: 2em; margin-top: 0.67em; margin-bottom: 0.67em; }
-                        .preview-content h2 { font-size: 1.5em; margin-top: 0.83em; margin-bottom: 0.83em; }
-                        .preview-content h3 { font-size: 1.17em; margin-top: 1em; margin-bottom: 1em; }
-                        .preview-content p { margin: 1em 0; }
-                        .preview-content pre { 
-                            background: #f6f8fa; 
-                            padding: 16px; 
-                            border-radius: 6px; 
-                            overflow-x: auto;
-                            font-family: 'Courier New', monospace;
-                            font-size: 14px;
+                        
+                        /* Headings with DocMark style */
+                        .preview-content h1 { 
+                            font-size: 48px;
+                            font-weight: 300;
+                            line-height: 1.2;
+                            letter-spacing: -0.02em;
+                            margin-top: 0;
+                            margin-bottom: 24px;
+                            padding-bottom: 0.3em;
+                            border-bottom: none;
+                            color: #1f2937;
                         }
-                        .preview-content code {
-                            background: #f6f8fa;
-                            padding: 2px 6px;
-                            border-radius: 3px;
-                            font-family: 'Courier New', monospace;
-                            font-size: 14px;
+                        .preview-content h1 strong,
+                        .preview-content h1 b {
+                            font-weight: 700;
+                            color: #2563eb;
                         }
-                        .preview-content pre code {
-                            background: none;
-                            padding: 0;
+                        
+                        .preview-content h2 { 
+                            font-size: 32px;
+                            font-weight: 700;
+                            line-height: 1.3;
+                            letter-spacing: -0.01em;
+                            margin-top: 48px;
+                            margin-bottom: 20px;
+                            padding-bottom: 0.3em;
+                            border-bottom: 1px solid #d0d7de;
+                            color: #1f2937;
                         }
-                        .preview-content blockquote {
-                            border-left: 4px solid #ddd;
-                            padding-left: 16px;
-                            margin-left: 0;
-                            color: #666;
+                        .preview-content h2 strong,
+                        .preview-content h2 b {
+                            font-weight: 900;
+                            color: #2563eb;
                         }
+                        
+                        .preview-content h3 { 
+                            font-size: 24px;
+                            font-weight: 700;
+                            line-height: 1.4;
+                            letter-spacing: -0.01em;
+                            margin-top: 32px;
+                            margin-bottom: 16px;
+                            color: #1f2937;
+                        }
+                        .preview-content h3 strong,
+                        .preview-content h3 b {
+                            font-weight: 900;
+                            color: #2563eb;
+                        }
+                        
+                        .preview-content h4 {
+                            font-size: 20px;
+                            font-weight: 700;
+                            margin-top: 24px;
+                            margin-bottom: 12px;
+                            color: #1f2937;
+                        }
+                        
+                        .preview-content h5 {
+                            font-size: 18px;
+                            font-weight: 700;
+                            margin-top: 20px;
+                            margin-bottom: 10px;
+                            color: #1f2937;
+                        }
+                        
+                        .preview-content h6 {
+                            font-size: 16px;
+                            font-weight: 700;
+                            margin-top: 16px;
+                            margin-bottom: 8px;
+                            color: #1f2937;
+                        }
+                        
+                        /* Paragraphs and text */
+                        .preview-content p { 
+                            margin-top: 0;
+                            margin-bottom: 20px;
+                            font-weight: 400;
+                        }
+                        
+                        .preview-content strong,
+                        .preview-content b {
+                            font-weight: 700;
+                            color: #2563eb;
+                        }
+                        
+                        /* Links with blue accent */
+                        .preview-content a {
+                            color: #2563eb;
+                            text-decoration: none;
+                            font-weight: 600;
+                            transition: opacity 0.2s;
+                        }
+                        .preview-content a:hover {
+                            opacity: 0.8;
+                        }
+                        
+                        /* Lists */
                         .preview-content ul, .preview-content ol {
+                            margin-top: 0;
+                            margin-bottom: 20px;
                             padding-left: 2em;
                         }
-                        .preview-content table {
-                            border-collapse: collapse;
-                            width: 100%;
-                            margin: 1em 0;
+                        .preview-content li {
+                            margin-bottom: 8px;
                         }
-                        .preview-content th, .preview-content td {
-                            border: 1px solid #ddd;
-                            padding: 8px 12px;
-                            text-align: left;
+                        .preview-content li > p {
+                            margin-bottom: 8px;
                         }
-                        .preview-content th {
-                            background: #f6f8fa;
+                        
+                        /* Code with blue accent */
+                        .preview-content code {
+                            font-family: 'JetBrains Mono', 'Monaco', 'Menlo', 'Courier New', monospace;
+                            font-size: 14px;
                             font-weight: 600;
+                            padding: 3px 8px;
+                            margin: 0;
+                            background-color: rgba(37, 99, 235, 0.08);
+                            border: 1px solid rgba(37, 99, 235, 0.2);
+                            border-radius: 4px;
+                            color: #2563eb;
                         }
+                        
+                        .preview-content pre { 
+                            padding: 20px;
+                            overflow: auto;
+                            font-size: 14px;
+                            line-height: 1.6;
+                            background-color: #f6f8fa;
+                            border-radius: 8px;
+                            border: 1px solid #d0d7de;
+                            margin-bottom: 20px;
+                        }
+                        
+                        .preview-content pre code {
+                            display: inline;
+                            max-width: auto;
+                            padding: 0;
+                            margin: 0;
+                            overflow: visible;
+                            line-height: inherit;
+                            word-wrap: normal;
+                            background-color: transparent;
+                            border: 0;
+                            color: #24292f;
+                            font-weight: 400;
+                        }
+                        
+                        /* Blockquotes with blue accent */
+                        .preview-content blockquote {
+                            margin: 0 0 20px 0;
+                            padding: 0 1em;
+                            color: #656d76;
+                            border-left: 4px solid #2563eb;
+                            background-color: rgba(37, 99, 235, 0.05);
+                        }
+                        
+                        /* Tables */
+                        .preview-content table {
+                            border-spacing: 0;
+                            border-collapse: collapse;
+                            display: block;
+                            width: max-content;
+                            max-width: 100%;
+                            overflow: auto;
+                            margin-bottom: 20px;
+                        }
+                        .preview-content table tr {
+                            background-color: #ffffff;
+                            border-top: 1px solid #d0d7de;
+                        }
+                        .preview-content table th,
+                        .preview-content table td {
+                            padding: 12px 16px;
+                            border: 1px solid #d0d7de;
+                        }
+                        .preview-content table th {
+                            font-weight: 700;
+                            background-color: #f6f8fa;
+                        }
+                        
+                        /* Horizontal rule */
+                        .preview-content hr {
+                            height: 1px;
+                            padding: 0;
+                            margin: 32px 0;
+                            background-color: #d0d7de;
+                            border: 0;
+                        }
+                        
+                        /* Images */
                         .preview-content img {
                             max-width: 100%;
                             height: auto;
+                            box-sizing: content-box;
                         }
-                        .preview-content a {
-                            color: #0366d6;
-                            text-decoration: none;
+                        
+                        /* Task lists */
+                        .preview-content .task-list-item {
+                            list-style-type: none;
                         }
-                        .preview-content a:hover {
-                            text-decoration: underline;
+                        .preview-content .task-list-item input {
+                            margin: 0 0.5em 0.25em -1.6em;
+                            vertical-align: middle;
                         }
+                        
+                        /* Error messages */
                         .preview-content .error {
                             color: #d73a49;
                             background: #ffeef0;
