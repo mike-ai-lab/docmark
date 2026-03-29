@@ -1,112 +1,129 @@
-import React, { useState, useEffect } from 'react';
-import Editor from "@monaco-editor/react";
-import { useDemoStore } from "../store/useDemoStore";
-import PreviewPanel from "./PreviewPanel";
-import EditorHeader from "./EditorHeader";
-import { useEditor } from "../contexts/EditorContext";
+import { useRef, useEffect } from 'react';
+import { 
+  File, 
+  X, 
+  Code2, 
+  Layout, 
+  Zap,
+  MoreVertical
+} from 'lucide-react';
+import ExplorerPanel from './ExplorerPanel';
+import PreviewPanel from './PreviewPanel';
+import MonacoEditor from './MonacoEditor';
+import { useDemoStore } from '../store/useDemoStore';
+import { useEditor } from '../contexts/EditorContext';
 
 export default function EditorContainer() {
-    const { files, activeFileId, updateFileContent, showPreview } = useDemoStore();
-    const activeFile = files.find(f => f.id === activeFileId);
-    const [debouncedContent, setDebouncedContent] = useState(activeFile?.content || '');
-    const editorRef = useEditor();
+  const { 
+    fileTree,
+    activeFileId, 
+    openTabs,
+    setActiveFile, 
+    closeTab,
+    updateFileContent,
+    fileTreeOpen,
+    findNodeInTree,
+    showPreview
+  } = useDemoStore();
 
-    const handleEditorDidMount = (editor) => {
-        editorRef.current = editor;
-    };
+  const localEditorRef = useRef(null);
+  const sharedEditorRef = useEditor();
 
-    // Debounce preview updates
-    useEffect(() => {
-        if (!activeFile) return;
-        
-        const timer = setTimeout(() => {
-            setDebouncedContent(activeFile.content || '');
-        }, 500); // 500ms debounce
-
-        return () => clearTimeout(timer);
-    }, [activeFile?.content]);
-
-    // Update debounced content immediately when file changes
-    useEffect(() => {
-        if (activeFile) {
-            setDebouncedContent(activeFile.content || '');
-        }
-    }, [activeFileId]);
-
-    if (!activeFile) {
-        return (
-            <div className="flex items-center justify-center h-full">
-                <div className="text-center text-gray-500">
-                    <p className="text-lg mb-2">No file selected</p>
-                    <p className="text-sm">Select a file from the sidebar to begin editing</p>
-                </div>
-            </div>
-        );
+  // Sync local ref with shared context ref
+  useEffect(() => {
+    if (localEditorRef.current) {
+      sharedEditorRef.current = localEditorRef.current;
     }
+  }, [localEditorRef.current, sharedEditorRef]);
 
-    const getLanguage = (type) => {
-        const languageMap = {
-            'js': 'javascript',
-            'jsx': 'javascript',
-            'ts': 'typescript',
-            'tsx': 'typescript',
-            'json': 'json',
-            'md': 'markdown',
-            'html': 'html',
-            'css': 'css',
-            'py': 'python',
-            'java': 'java',
-            'cpp': 'cpp',
-            'xml': 'xml',
-            'yaml': 'yaml',
-            'sql': 'sql',
-            'txt': 'plaintext',
-            'svg': 'xml'
-        };
-        return languageMap[type] || 'plaintext';
-    };
+  // Get active file from tree
+  const activeFile = activeFileId ? findNodeInTree(fileTree, activeFileId) : null;
 
-    const canPreview = ['md', 'html', 'svg', 'xml', 'json'].includes(activeFile.type);
+  const handleCloseTab = (e, id) => {
+    e.stopPropagation();
+    closeTab(id);
+  };
 
-    return (
-        <div className="flex flex-col h-full overflow-hidden rounded-lg">
-            {/* Editor Header - Document Actions */}
-            <EditorHeader />
+  return (
+    <div className="flex h-full w-full overflow-hidden">
+      {/* File Tree Sidebar */}
+      {fileTreeOpen && <ExplorerPanel />}
 
-            {/* Editor and Preview Area */}
-            <div className="flex flex-1 overflow-hidden">
-                {/* Editor */}
-                <div className={`${showPreview && canPreview ? 'w-1/2' : 'w-full'} overflow-hidden`}>
-                    <Editor
-                        height="100%"
-                        theme="vs-dark"
-                        path={activeFile.name}
-                        defaultLanguage={getLanguage(activeFile.type)}
-                        value={activeFile.content || ''}
-                        onChange={(value) => updateFileContent(activeFile.id, value || '')}
-                        onMount={handleEditorDidMount}
-                        options={{
-                            fontSize: 14,
-                            minimap: { enabled: false },
-                            wordWrap: "on",
-                            automaticLayout: true,
-                            scrollBeyondLastLine: false,
-                            padding: { top: 16, bottom: 16 }
-                        }}
-                    />
-                </div>
+      {/* Main Editor Area */}
+      <div className="flex-1 flex flex-col min-w-0 bg-[#1e1e1e]">
+        {/* Tab Bar */}
+        <nav className="h-10 bg-[#252526] flex overflow-x-auto no-scrollbar border-b border-black/40">
+          {openTabs.map(fileId => {
+            const file = findNodeInTree(fileTree, fileId);
+            if (!file) return null;
+            const isActive = activeFileId === fileId;
+            return (
+              <div 
+                key={fileId} 
+                onClick={() => setActiveFile(fileId)}
+                className={`flex items-center gap-3 px-4 py-1 h-full min-w-[140px] max-w-[220px] border-r border-black/20 cursor-pointer text-xs transition-all relative group
+                  ${isActive ? 'bg-[#1e1e1e] text-white shadow-[inset_0_2px_0_#3b82f6]' : 'bg-[#2d2d2d] text-[#969696] hover:bg-[#2b2b2b]'}
+                `}
+              >
+                <File size={14} className={isActive ? "text-blue-400" : "opacity-50"} />
+                <span className="truncate flex-1 font-medium">{file.name}</span>
+                <X 
+                  size={14} 
+                  className="opacity-0 group-hover:opacity-100 hover:bg-white/10 rounded p-0.5 transition-all" 
+                  onClick={(e) => handleCloseTab(e, fileId)} 
+                />
+              </div>
+            );
+          })}
+        </nav>
 
-                {/* Preview */}
-                {showPreview && canPreview && (
-                    <div className="w-1/2 overflow-hidden">
-                        <PreviewPanel 
-                            content={debouncedContent}
-                            fileType={activeFile.type}
-                            fileName={activeFile.name}
-                        />
-                    </div>
-                )}
+        {activeFile ? (
+          <div className="flex-1 flex overflow-hidden">
+            {/* Editor */}
+            <div className={`${showPreview ? 'w-1/2' : 'w-full'} relative transition-all duration-300`}>
+              <MonacoEditor 
+                ref={localEditorRef}
+                file={activeFile}
+                onContentChange={updateFileContent}
+              />
             </div>
-        </div>
-    );
+            
+            {/* Preview Panel */}
+            {showPreview && (
+              <div className="w-1/2 border-l border-black/40">
+                <PreviewPanel 
+                  content={activeFile.content || ''} 
+                  fileType={activeFile.name?.split('.').pop() || 'txt'}
+                  fileName={activeFile.name}
+                />
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="flex-1 flex flex-col items-center justify-center bg-[#1e1e1e]">
+            <div className="relative mb-8">
+              <div className="absolute inset-0 bg-blue-500/20 blur-[80px] rounded-full" />
+              <Code2 size={120} strokeWidth={0.5} className="text-blue-500/30 relative" />
+            </div>
+            <h2 className="text-2xl font-bold text-white/60 mb-2">LexiCode Workspace</h2>
+            <p className="text-white/20 text-sm max-w-[280px] text-center">Open a file from the explorer to start coding.</p>
+            
+            <div className="mt-16 grid grid-cols-3 gap-12 opacity-10">
+               <div className="flex flex-col items-center gap-2"><Layout size={20}/><span className="text-[10px] font-bold">GRID</span></div>
+               <div className="flex flex-col items-center gap-2"><Zap size={20}/><span className="text-[10px] font-bold">TURBO</span></div>
+               <div className="flex flex-col items-center gap-2"><MoreVertical size={20}/><span className="text-[10px] font-bold">MORE</span></div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <style>{`
+        .custom-scrollbar::-webkit-scrollbar { width: 10px; height: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; border: 3px solid #1e1e1e; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #444; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+      `}</style>
+    </div>
+  );
 }

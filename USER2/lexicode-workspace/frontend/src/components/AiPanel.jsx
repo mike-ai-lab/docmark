@@ -19,17 +19,18 @@ export default function AiPanel() {
         availableModels,
         fetchAvailableModels,
         chatWithAI,
-        files,
         activeFileId,
         chatSessions,
         activeChatSession,
         createNewChatSession,
         loadChatSession,
         deleteChatSession,
-        saveChatSessions
+        saveChatSessions,
+        fileTree,
+        findNodeInTree
     } = useDemoStore();
 
-    const activeFile = files.find(f => f.id === activeFileId);
+    const activeFile = activeFileId ? findNodeInTree(fileTree, activeFileId) : null;
 
     useEffect(() => {
         fetchAvailableModels();
