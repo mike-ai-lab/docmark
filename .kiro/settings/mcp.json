@@ -36,7 +36,8 @@
         "playwright_hover",
         "playwright_drag",
         "playwright_press_key"
-      ]
+      ],
+      "disabledTools": []
     }
   }
 }

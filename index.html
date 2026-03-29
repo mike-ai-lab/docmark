@@ -88,12 +88,14 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css" id="hljs-dark-theme" disabled>
     <link rel="icon" type="image/png" href="./favicon.png">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.8/dist/purify.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/turndown@7.1.2/dist/turndown.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked@11.1.1/marked.min.js"></script>
     <script>
       // Make hljs and TurndownService available globally for the module
       window.hljs = hljs;
       window.TurndownService = TurndownService;
+      window.DOMPurify = DOMPurify;
     </script>
     <script type="module" src="./pagination-engine.js"></script>
     <!-- <script type="module" src="./src/code-paste-window.js"></script> -->

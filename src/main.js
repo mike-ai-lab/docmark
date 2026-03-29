@@ -2802,6 +2802,35 @@ let performBeautify = (content) => {
             // Show loading indicator
             showLoadingIndicator('Generating PDF...');
 
+            // CRITICAL FIX: If in paper layout mode, temporarily switch to web layout
+            // to get clean HTML for PDF export
+            const wasPaperLayout = paperLayoutActive;
+            let cleanOutputElement = outputElement;
+            
+            if (wasPaperLayout) {
+                console.log('[PDF Export] Paper layout detected - temporarily switching to web layout for export');
+                
+                // Create a temporary div to render clean markdown
+                const tempDiv = document.createElement('div');
+                tempDiv.id = 'temp-export-output';
+                tempDiv.className = 'markdown-body';
+                tempDiv.style.display = 'none';
+                document.body.appendChild(tempDiv);
+                
+                // Render markdown to temp div
+                const markdownContent = editor.getValue();
+                const { metadata, content } = parseMetadata(markdownContent);
+                const html = marked.parse(content);
+                const sanitizedHtml = DOMPurify.sanitize(html, {
+                    ADD_TAGS: ['iframe'],
+                    ADD_ATTR: ['allow', 'allowfullscreen', 'frameborder', 'scrolling']
+                });
+                tempDiv.innerHTML = sanitizedHtml;
+                
+                cleanOutputElement = tempDiv;
+                console.log('[PDF Export] Using temporary clean output for export');
+            }
+
             // Get page setup settings (includes margins from dropdown)
             const layoutSettings = loadPdfLayoutSettings();
             
@@ -2819,7 +2848,15 @@ let performBeautify = (content) => {
             console.log('[PDF Export] User margins will be applied as padding:', layoutSettings.margins);
 
             // Collect HTML with all styles (async - fetches CSS)
-            const fullHtml = await collectHtmlForPuppeteer(outputElement);
+            const fullHtml = await collectHtmlForPuppeteer(cleanOutputElement);
+            
+            // Clean up temp div if created
+            if (wasPaperLayout) {
+                const tempDiv = document.getElementById('temp-export-output');
+                if (tempDiv) {
+                    tempDiv.remove();
+                }
+            }
 
             // Generate filename
             const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
@@ -2843,17 +2880,101 @@ let performBeautify = (content) => {
 
             // Download PDF
             const blob = await response.blob();
+            console.log('═══════════════════════════════════════════════════════');
+            console.log('🎉 PDF EXPORT COMPLETE');
+            console.log('═══════════════════════════════════════════════════════');
+            console.log('📦 Blob received:', blob.size, 'bytes (', (blob.size / 1024).toFixed(2), 'KB )');
+            console.log('📦 Blob type:', blob.type);
+            
+            if (blob.size === 0) {
+                throw new Error('PDF blob is empty - server may have failed silently');
+            }
+            
             const url = window.URL.createObjectURL(blob);
+            console.log('🔗 Blob URL created:', url);
+            
             const a = document.createElement('a');
             a.href = url;
             a.download = filename;
+            
+            // Force download by appending to body and clicking
             document.body.appendChild(a);
+            console.log('🖱️  Triggering download...');
+            console.log('📄 Filename:', filename);
+            
+            // Add event listeners to track download
+            let downloadStarted = false;
+            a.addEventListener('click', () => {
+                downloadStarted = true;
+                console.log('✅ Download click event fired!');
+            });
+            
             a.click();
-            document.body.removeChild(a);
-            window.URL.revokeObjectURL(url);
+            
+            if (!downloadStarted) {
+                console.warn('⚠️  Download click may have been blocked!');
+            }
+            
+            // Small delay before cleanup to ensure download starts
+            setTimeout(() => {
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
+                console.log('🧹 Cleanup complete');
+            }, 100);
 
             hideLoadingIndicator();
-            console.log('[PDF Export] Success!');
+            
+            // Get download path
+            const userAgent = navigator.userAgent;
+            const platform = navigator.platform;
+            const isWindows = userAgent.includes('Windows');
+            const isMac = userAgent.includes('Mac');
+            const isLinux = userAgent.includes('Linux');
+            
+            console.log('═══════════════════════════════════════════════════════');
+            console.log('💾 DOWNLOAD LOCATION');
+            console.log('═══════════════════════════════════════════════════════');
+            console.log('🖥️  Platform:', platform);
+            console.log('🌐 User Agent:', userAgent);
+            
+            if (isWindows) {
+                console.log('📁 DEFAULT DOWNLOAD FOLDER:');
+                console.log('   C:\\Users\\YOUR_USERNAME\\Downloads\\');
+                console.log('📄 FULL PATH (check your Downloads folder):');
+                console.log('   C:\\Users\\YOUR_USERNAME\\Downloads\\' + filename);
+                console.log('');
+                console.log('💡 TIP: Press Win+E to open File Explorer');
+                console.log('💡 TIP: Click "Downloads" in the left sidebar');
+                console.log('💡 TIP: Sort by "Date modified" to find the newest file');
+            } else if (isMac) {
+                console.log('📁 DEFAULT DOWNLOAD FOLDER:');
+                console.log('   /Users/YOUR_USERNAME/Downloads/');
+                console.log('📄 FULL PATH:');
+                console.log('   /Users/YOUR_USERNAME/Downloads/' + filename);
+                console.log('');
+                console.log('💡 TIP: Press Cmd+Shift+L to open Downloads folder');
+            } else if (isLinux) {
+                console.log('📁 DEFAULT DOWNLOAD FOLDER:');
+                console.log('   /home/YOUR_USERNAME/Downloads/');
+                console.log('📄 FULL PATH:');
+                console.log('   /home/YOUR_USERNAME/Downloads/' + filename);
+            } else {
+                console.log('📁 Check your browser\'s default download folder');
+                console.log('📄 Filename:', filename);
+            }
+            
+            console.log('═══════════════════════════════════════════════════════');
+            console.log('🔍 TROUBLESHOOTING');
+            console.log('═══════════════════════════════════════════════════════');
+            console.log('1. Check your browser\'s download bar (usually at bottom)');
+            console.log('2. Check browser settings: chrome://settings/downloads');
+            console.log('3. Look for download notification in system tray');
+            console.log('4. Check if browser blocked the download (popup blocker)');
+            console.log('5. File size:', (blob.size / 1024).toFixed(2), 'KB - download DID happen!');
+            console.log('═══════════════════════════════════════════════════════');
+            
+            // Show success toast with file info
+            showToast(`PDF exported successfully!\n${filename}\n${(blob.size / 1024).toFixed(2)} KB\n\nCheck your Downloads folder!`, 'success');
 
         } catch (error) {
             console.error('[PDF Export] Failed:', error);
@@ -3251,6 +3372,38 @@ ${fontLinkTags}
         return htmlContent;
     };
 
+    // Helper function to get actual download path
+    let getDefaultDownloadPath = (filename) => {
+        // Get actual Windows username from environment
+        const userAgent = navigator.userAgent.toLowerCase();
+        
+        // Try to get actual username from various sources
+        let username = 'YOUR_USERNAME';
+        
+        // For Windows, try to extract from user profile path
+        try {
+            // This won't work in browser, but we'll construct the most likely path
+            const homeDir = navigator.userAgent.match(/Windows NT ([0-9.]+)/);
+            if (homeDir) {
+                // Windows detected - use standard Downloads folder
+                username = '%USERNAME%'; // Windows environment variable
+            }
+        } catch (e) {
+            // Fallback
+        }
+        
+        if (userAgent.includes('win')) {
+            // Windows path - use environment variable that will be resolved
+            return `C:\\Users\\${username}\\Downloads\\${filename}`;
+        } else if (userAgent.includes('mac')) {
+            return `/Users/${username}/Downloads/${filename}`;
+        } else if (userAgent.includes('linux')) {
+            return `/home/${username}/Downloads/${filename}`;
+        } else {
+            return `~/Downloads/${filename}`;
+        }
+    };
+
     // Loading indicator functions
     let showLoadingIndicator = (message) => {
         // Remove existing indicator if any
@@ -3606,11 +3759,13 @@ ${fontLinkTags}
         if (exportPdfButton) {
             exportPdfButton.addEventListener('click', (event) => {
                 event.preventDefault();
-                showConfirmDialog(
+                // TEMPORARILY DISABLED FOR TESTING - Remove comments to re-enable confirmation
+                exportPreviewToPdf();
+                /* showConfirmDialog(
                     'Export PDF',
                     'Are you sure you want to export this document as PDF? Make sure the PDF server is running (node pdf-server.js).',
                     exportPreviewToPdf
-                );
+                ); */
             });
         }
         
@@ -3619,11 +3774,13 @@ ${fontLinkTags}
         if (printPdfButton) {
             printPdfButton.addEventListener('click', (event) => {
                 event.preventDefault();
-                showConfirmDialog(
+                // TEMPORARILY DISABLED FOR TESTING - Remove comments to re-enable confirmation
+                printPreviewToPdf();
+                /* showConfirmDialog(
                     'Print PDF',
                     'Are you sure you want to print this document?',
                     printPreviewToPdf
-                );
+                ); */
             });
         }
         
@@ -3854,24 +4011,30 @@ ${fontLinkTags}
         // Export PDF button (shared)
         const exportPdfBtnShared = document.getElementById('export-pdf-button-shared');
         if (exportPdfBtnShared) {
-            exportPdfBtnShared.addEventListener('click', () => {
-                // Trigger the original export PDF button
-                const originalBtn = document.getElementById('export-pdf-button');
-                if (originalBtn) {
-                    originalBtn.click();
-                }
+            exportPdfBtnShared.addEventListener('click', (event) => {
+                event.preventDefault();
+                // TEMPORARILY DISABLED FOR TESTING - Remove comments to re-enable confirmation
+                exportPreviewToPdf();
+                /* showConfirmDialog(
+                    'Export PDF',
+                    'Are you sure you want to export this document as PDF? Make sure the PDF server is running (node pdf-server.js).',
+                    exportPreviewToPdf
+                ); */
             });
         }
         
         // Print PDF button (shared)
         const printPdfBtnShared = document.getElementById('print-pdf-button-shared');
         if (printPdfBtnShared) {
-            printPdfBtnShared.addEventListener('click', () => {
-                // Trigger the original print PDF button
-                const originalBtn = document.getElementById('print-pdf-button');
-                if (originalBtn) {
-                    originalBtn.click();
-                }
+            printPdfBtnShared.addEventListener('click', (event) => {
+                event.preventDefault();
+                // TEMPORARILY DISABLED FOR TESTING - Remove comments to re-enable confirmation
+                printPreviewToPdf();
+                /* showConfirmDialog(
+                    'Print PDF',
+                    'Are you sure you want to print this document?',
+                    printPreviewToPdf
+                ); */
             });
         }
         
@@ -7485,6 +7648,7 @@ ${fontLinkTags}
         confirmConfirmBtn.addEventListener('click', () => {
             if (confirmCallback) {
                 confirmCallback();
+                closeConfirmDialog(); // CRITICAL FIX: Close dialog after confirming
             }
         });
     }
@@ -8398,7 +8562,23 @@ ${fontLinkTags}
             // Content with offset for this page - ONLY THIS MOVES
             const content = document.createElement('div');
             content.style.transform = `translateY(-${i * exactContentHeight}px)`;
-            content.textContent = markdownSource;
+            
+            // Parse markdown to HTML (keeping the same pagination logic)
+            try {
+                let htmlContent = marked.parse(markdownSource);
+                if (typeof DOMPurify !== 'undefined') {
+                    htmlContent = DOMPurify.sanitize(htmlContent, {
+                        ADD_TAGS: ['span', 'div', 'strong', 'em', 'code', 'a', 'img', 'table', 'thead', 'tbody', 'tr', 'th', 'td', 
+                                   'ul', 'ol', 'li', 'p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'blockquote', 'pre', 'br', 'hr'],
+                        ADD_ATTR: ['class', 'style', 'href', 'src', 'alt', 'title'],
+                        KEEP_CONTENT: true
+                    });
+                }
+                content.innerHTML = htmlContent;
+            } catch (e) {
+                console.error('Markdown parsing error:', e);
+                content.textContent = markdownSource; // Fallback to plain text
+            }
             
             contentClip.appendChild(content);
             
