@@ -11,6 +11,6 @@ if not exist .env (
     pause
     exit /b 1
 )
-echo Starting server on port 3001...
+echo Starting server on port 3005...
 node index.js
 USER2\lexicode-workspace\start-backend.bat

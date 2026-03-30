@@ -212,5 +212,5 @@ After this is implemented, the app must:
 
 ---
 
-When done, **do a node unit test**, and test the pipeline with ede cases simulation user real workflow.
+## When done, **do a node unit test**, and test the pipeline with edge cases simulation user real workflow.
 the API key is already configured in the user system environment variable and can be used.

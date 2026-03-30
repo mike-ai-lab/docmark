@@ -455,7 +455,7 @@ export default function PreviewPanel({ content, fileType, fileName }) {
 
     // Main render
     const previewContent = (
-        <div className={`flex flex-col h-full ${isMaximized ? 'fixed inset-0 z-50 bg-[#1e1e1e]' : ''}`}>
+        <div className={`flex flex-col h-full rounded-lg overflow-hidden ${isMaximized ? 'fixed inset-0 z-50 bg-[#1e1e1e]' : ''}`}>
             <PreviewHeader />
             
             {(fileType === 'html' || fileType === 'svg' || fileType === 'jsx' || fileType === 'tsx') ? (

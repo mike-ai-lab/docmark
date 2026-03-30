@@ -100,7 +100,7 @@ npm run dev
 
 The application will be available at:
 - **Frontend**: http://localhost:5173
-- **Backend**: http://localhost:3001
+- **Backend**: http://localhost:3005
 
 ## 📖 Usage Guide
 
@@ -232,7 +232,7 @@ lexicode-workspace/
 
 ### AI Not Working
 - Check that `GROQ_API_KEY` is set in environment variables
-- Verify backend server is running on port 3001
+- Verify backend server is running on port 3005
 - Check browser console for errors
 
 ### Preview Not Showing

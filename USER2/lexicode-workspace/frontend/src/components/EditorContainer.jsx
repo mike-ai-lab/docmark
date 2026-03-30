@@ -46,14 +46,24 @@ export default function EditorContainer() {
   };
 
   return (
-    <div className="flex h-full w-full overflow-hidden">
+    <div className="flex h-full w-full overflow-hidden rounded-lg">
       {/* File Tree Sidebar */}
       {fileTreeOpen && <ExplorerPanel />}
 
       {/* Main Editor Area */}
-      <div className="flex-1 flex flex-col min-w-0 bg-[#1e1e1e]">
+      <div className="flex-1 flex flex-col min-w-0 bg-[#1e1e1e] rounded-lg overflow-hidden">
         {/* Tab Bar */}
-        <nav className="h-10 bg-[#252526] flex overflow-x-auto no-scrollbar border-b border-black/40">
+        <nav 
+          className="h-8 bg-[#252526] flex overflow-x-auto border-b border-black/40 rounded-t-lg"
+          onWheel={(e) => {
+            // Enable horizontal scroll with mouse wheel
+            e.currentTarget.scrollLeft += e.deltaY;
+          }}
+          style={{
+            scrollbarWidth: 'thin',
+            scrollbarColor: '#333 transparent'
+          }}
+        >
           {openTabs.map(fileId => {
             const file = findNodeInTree(fileTree, fileId);
             if (!file) return null;
@@ -66,17 +76,17 @@ export default function EditorContainer() {
                   console.log('🖱️ [TAB CLICK] Clicked on tab:', file.name, 'ID:', fileId);
                   setActiveFile(fileId);
                 }}
-                className={`flex items-center gap-3 px-4 py-1 h-full min-w-[140px] max-w-[220px] border-r border-black/20 cursor-pointer text-xs transition-all relative group
+                className={`flex items-center gap-2 px-3 py-1 h-full whitespace-nowrap border-r border-black/20 cursor-pointer text-xs transition-all relative group
                   ${isActive ? 'bg-[#1e1e1e] text-white shadow-[inset_0_2px_0_#3b82f6]' : 'bg-[#2d2d2d] text-[#969696] hover:bg-[#2b2b2b]'}
                   ${isStreaming ? 'animate-pulse' : ''}
                 `}
               >
-                <File size={14} className={`${isActive ? "text-blue-400" : "opacity-50"} ${isStreaming ? 'animate-spin' : ''}`} />
-                <span className="truncate flex-1 font-medium">{file.name}</span>
-                {isStreaming && <span className="text-[10px] text-yellow-400">⚡</span>}
+                <File size={13} className={`flex-shrink-0 ${isActive ? "text-blue-400" : "opacity-50"} ${isStreaming ? 'animate-spin' : ''}`} />
+                <span className="font-medium">{file.name}</span>
+                {isStreaming && <span className="text-[10px] text-yellow-400 flex-shrink-0">⚡</span>}
                 <X 
-                  size={14} 
-                  className="opacity-0 group-hover:opacity-100 hover:bg-white/10 rounded p-0.5 transition-all" 
+                  size={13} 
+                  className="flex-shrink-0 opacity-0 group-hover:opacity-100 hover:bg-white/10 rounded p-0.5 transition-all" 
                   onClick={(e) => handleCloseTab(e, fileId)} 
                 />
               </div>
@@ -85,9 +95,9 @@ export default function EditorContainer() {
         </nav>
 
         {activeFile ? (
-          <div className="flex-1 flex overflow-hidden">
+          <div className="flex-1 flex overflow-hidden gap-2">
             {/* Editor */}
-            <div className={`${showPreview ? 'w-1/2' : 'w-full'} relative transition-all duration-300`}>
+            <div className={`${showPreview ? 'w-1/2' : 'w-full'} relative transition-all duration-300 rounded-lg overflow-hidden`}>
               <MonacoEditor 
                 ref={localEditorRef}
                 file={activeFile}
@@ -97,7 +107,7 @@ export default function EditorContainer() {
             
             {/* Preview Panel */}
             {showPreview && (
-              <div className="w-1/2 border-l border-black/40">
+              <div className="w-1/2 rounded-lg overflow-hidden">
                 <PreviewPanel 
                   content={activeFile.content || ''} 
                   fileType={activeFile.name?.split('.').pop() || 'txt'}

@@ -244,14 +244,23 @@ export default function ExplorerPanel() {
   // Download folder as ZIP
   const downloadFolder = async (node) => {
     console.log('📦 [DOWNLOAD ZIP] Starting ZIP creation for folder:', node.name);
+    console.log('📦 [DOWNLOAD ZIP] Node has children:', !!node.children, 'Count:', node.children?.length || 0);
+    
+    if (node.children) {
+      node.children.forEach((child, idx) => {
+        console.log(`  ${idx + 1}. ${child.name} (${child.type}) - Content: ${child.content?.length || 0} chars`);
+      });
+    }
+    
     const zip = new JSZip();
     
     // Recursively add files to ZIP
     const addToZip = (currentNode, zipFolder) => {
-      if (currentNode.type === 'file') {
+      if (currentNode.type !== 'folder') {
+        // It's a file (type is the extension)
         const content = currentNode.content || '';
+        console.log(`📄 [ZIP] Adding file: ${currentNode.name} (${content.length} chars)`);
         zipFolder.file(currentNode.name, content);
-        console.log('📄 [DOWNLOAD ZIP] Added file:', currentNode.name);
       } else if (currentNode.type === 'folder' && currentNode.children) {
         const subFolder = zipFolder.folder(currentNode.name);
         currentNode.children.forEach(child => addToZip(child, subFolder));
@@ -261,9 +270,11 @@ export default function ExplorerPanel() {
     // Add all children to ZIP (not the folder itself, just its contents)
     if (node.children) {
       node.children.forEach(child => {
-        if (child.type === 'file') {
-          zip.file(child.name, child.content || '');
-          console.log('📄 [DOWNLOAD ZIP] Added file:', child.name);
+        if (child.type !== 'folder') {
+          // It's a file (type is the extension like 'html', 'css', etc.)
+          const content = child.content || '';
+          console.log(`📄 [ZIP] Adding root file: ${child.name} (${content.length} chars)`);
+          zip.file(child.name, content);
         } else if (child.type === 'folder') {
           const subFolder = zip.folder(child.name);
           if (child.children) {
@@ -276,6 +287,7 @@ export default function ExplorerPanel() {
     try {
       console.log('🔄 [DOWNLOAD ZIP] Generating ZIP file...');
       const blob = await zip.generateAsync({ type: 'blob' });
+      console.log('📦 [DOWNLOAD ZIP] ZIP size:', blob.size, 'bytes');
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -337,7 +349,7 @@ export default function ExplorerPanel() {
   };
 
   return (
-    <aside className="w-64 bg-[#252526] border-r border-black/40 flex flex-col shrink-0">
+    <aside className="w-64 bg-[#252526] border-r border-black/40 flex flex-col shrink-0 rounded-lg overflow-hidden">
       <div className="flex items-center justify-between px-4 py-4 text-[11px] font-bold text-white/40 uppercase tracking-widest select-none">
         <span>Explorer</span>
         <div className="flex gap-1">

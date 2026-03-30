@@ -235,7 +235,17 @@ export default function MainHeader() {
 
                         {/* Live Preview Toggle */}
                         <button
-                            onClick={canPreview ? togglePreview : undefined}
+                            onClick={() => {
+                                console.log('🖱️ [PREVIEW BUTTON] Clicked!');
+                                console.log('🖱️ [PREVIEW BUTTON] canPreview:', canPreview);
+                                console.log('🖱️ [PREVIEW BUTTON] activeFile:', activeFile?.name);
+                                console.log('🖱️ [PREVIEW BUTTON] togglePreview function:', typeof togglePreview);
+                                if (canPreview) {
+                                    togglePreview();
+                                } else {
+                                    console.log('⚠️ [PREVIEW BUTTON] Cannot preview this file type');
+                                }
+                            }}
                             disabled={!canPreview}
                             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all border ${
                                 !canPreview

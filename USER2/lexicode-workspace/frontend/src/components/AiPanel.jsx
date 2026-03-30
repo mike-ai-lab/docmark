@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Send, Sparkles, Cpu, Trash2, Copy, RotateCcw, Check, Plus, History, X } from 'lucide-react';
+import { Send, Sparkles, Cpu, Trash2, Copy, RotateCcw, Check, Plus, History, X, Volume2, VolumeX } from 'lucide-react';
 import { useDemoStore } from '../store/useDemoStore';
 
 export default function AiPanel() {
@@ -27,7 +27,10 @@ export default function AiPanel() {
         deleteChatSession,
         saveChatSessions,
         fileTree,
-        findNodeInTree
+        findNodeInTree,
+        currentStreamingFile,
+        soundNotificationsEnabled,
+        toggleSoundNotifications
     } = useDemoStore();
 
     const activeFile = activeFileId ? findNodeInTree(fileTree, activeFileId) : null;
@@ -90,6 +93,17 @@ export default function AiPanel() {
                     <span className="text-xs text-purple-400 font-mono">{tokenUsage.total.toLocaleString()}</span>
                 </div>
                 <div className="flex items-center space-x-1">
+                    <button
+                        onClick={toggleSoundNotifications}
+                        className="p-1 hover:bg-gray-700 rounded transition"
+                        title={soundNotificationsEnabled ? "Disable completion sound" : "Enable completion sound"}
+                    >
+                        {soundNotificationsEnabled ? (
+                            <Volume2 className="w-3 h-3 text-blue-400" />
+                        ) : (
+                            <VolumeX className="w-3 h-3 text-gray-500" />
+                        )}
+                    </button>
                     <button
                         onClick={() => setShowHistory(!showHistory)}
                         className="p-1 hover:bg-gray-700 rounded transition"
@@ -208,38 +222,55 @@ export default function AiPanel() {
                     </div>
                 ) : (
                     conversationHistory.map((msg, idx) => (
-                        <div key={idx} className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'} group`}>
-                            <div className={`max-w-[85%] p-3 rounded-lg text-xs relative ${
-                                msg.role === 'user'
-                                    ? 'bg-blue-600 text-white rounded-tr-none'
-                                    : 'bg-[#1e1e1e] text-gray-300 border border-gray-700 rounded-tl-none'
-                            }`}>
-                                {msg.role === 'assistant' && (
-                                    <Sparkles className="w-3 h-3 inline-block mr-1 text-purple-400" />
-                                )}
-                                <span className="whitespace-pre-wrap">{msg.content}</span>
+                        <React.Fragment key={idx}>
+                            <div className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'} mb-6 group`}>
+                                <div className={`max-w-[85%] p-3 rounded-lg text-xs relative ${
+                                    msg.role === 'user'
+                                        ? 'bg-blue-600 text-white rounded-tr-none shadow-lg'
+                                        : 'bg-[#1e1e1e] text-gray-300 border border-gray-700 rounded-tl-none shadow-lg'
+                                }`}>
+                                    {msg.role === 'assistant' && (
+                                        <Sparkles className="w-3 h-3 inline-block mr-1 text-purple-400" />
+                                    )}
+                                    <span className="whitespace-pre-wrap break-words">{msg.content}</span>
+                                </div>
 
-                                {/* Message Actions */}
-                                <div className="absolute -bottom-6 flex items-center space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                {/* Copy button on hover AFTER message */}
+                                <div className="flex items-center gap-2 mt-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
                                     <button
                                         onClick={() => copyToClipboard(msg.content, idx)}
-                                        className="text-[10px] text-gray-500 hover:text-blue-400 flex items-center space-x-1 bg-[#252526] px-2 py-1 rounded border border-gray-700"
-                                        title="Copy text"
+                                        className="text-[10px] text-gray-500 hover:text-blue-400 flex items-center gap-1 bg-[#252526] px-2 py-1 rounded border border-gray-700 hover:border-blue-500/50 transition-all"
+                                        title="Copy message"
                                     >
-                                        {copyStatus === idx ? <Check className="w-3 h-3 text-green-500" /> : <Copy className="w-3 h-3" />}
+                                        {copyStatus === idx ? (
+                                            <>
+                                                <Check className="w-3 h-3 text-green-500" />
+                                                <span className="text-green-500">Copied</span>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Copy className="w-3 h-3" />
+                                                <span>Copy</span>
+                                            </>
+                                        )}
                                     </button>
-                                    {msg.role === 'assistant' && (
-                                        <button
-                                            onClick={() => setPendingRestore(idx)}
-                                            className="text-[10px] text-gray-500 hover:text-yellow-500 flex items-center space-x-1 bg-[#252526] px-2 py-1 rounded border border-gray-700"
-                                            title="Restore to this point"
-                                        >
-                                            <RotateCcw className="w-3 h-3" />
-                                        </button>
-                                    )}
                                 </div>
                             </div>
-                        </div>
+
+                            {/* Restore button AFTER user message, BEFORE next AI response */}
+                            {msg.role === 'user' && idx < conversationHistory.length - 1 && (
+                                <div className="flex items-start mb-4">
+                                    <button
+                                        onClick={() => setPendingRestore(idx)}
+                                        className="text-[10px] text-gray-500 hover:text-yellow-500 flex items-center gap-1 bg-[#252526] px-2 py-1 rounded border border-gray-700 hover:border-yellow-500/50 transition-all"
+                                        title="Restore conversation to this point (undo next response)"
+                                    >
+                                        <RotateCcw className="w-3 h-3" />
+                                        <span>Restore</span>
+                                    </button>
+                                </div>
+                            )}
+                        </React.Fragment>
                     ))
                 )}
                 <div ref={chatEndRef} />
@@ -273,36 +304,44 @@ export default function AiPanel() {
                 )}
 
                 {/* Input Area */}
-                <div className="bg-[#1e1e1e] border border-gray-700 rounded-lg p-2 flex items-center space-x-2 pointer-events-auto">
-                    <textarea
-                        className="flex-1 bg-transparent border-none p-2 text-xs text-white placeholder-gray-500 focus:outline-none resize-none max-h-24 leading-tight"
-                        rows="1"
-                        placeholder="Ask anything or request changes..."
-                        value={prompt}
-                        onChange={(e) => {
-                            setPrompt(e.target.value);
-                            e.target.style.height = 'auto';
-                            e.target.style.height = `${e.target.scrollHeight}px`;
-                        }}
-                        onKeyDown={(e) => {
-                            if (e.key === 'Enter' && !e.shiftKey) {
-                                e.preventDefault();
-                                handleAiSubmit();
-                            }
-                        }}
-                        disabled={pendingRestore !== null}
-                    />
-                    <button
-                        onClick={handleAiSubmit}
-                        disabled={!prompt.trim() || isProcessing || pendingRestore !== null}
-                        className="p-2 bg-purple-600 hover:bg-purple-500 disabled:bg-gray-700 disabled:cursor-not-allowed text-white rounded transition-all flex-shrink-0"
-                    >
-                        {isProcessing ? (
-                            <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                        ) : (
+                <div className="bg-[#1e1e1e] border border-gray-700 rounded-lg overflow-hidden pointer-events-auto">
+                    {/* Progress indicator when streaming */}
+                    {currentStreamingFile && (
+                        <div className="px-3 py-1.5 bg-purple-900/30 border-b border-purple-500/30 flex items-center gap-2">
+                            <div className="w-2 h-2 bg-purple-400 rounded-full animate-pulse" />
+                            <span className="text-xs text-purple-300 font-medium">
+                                Generating {currentStreamingFile}...
+                            </span>
+                        </div>
+                    )}
+                    
+                    <div className="p-2 flex items-center space-x-2">
+                        <textarea
+                            className="flex-1 bg-transparent border-none p-2 text-xs text-white placeholder-gray-500 focus:outline-none resize-none max-h-24 leading-tight"
+                            rows="1"
+                            placeholder="Ask anything or request changes..."
+                            value={prompt}
+                            onChange={(e) => {
+                                setPrompt(e.target.value);
+                                e.target.style.height = 'auto';
+                                e.target.style.height = `${e.target.scrollHeight}px`;
+                            }}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter' && !e.shiftKey) {
+                                    e.preventDefault();
+                                    handleAiSubmit();
+                                }
+                            }}
+                            disabled={pendingRestore !== null}
+                        />
+                        <button
+                            onClick={handleAiSubmit}
+                            disabled={!prompt.trim() || isProcessing || pendingRestore !== null}
+                            className="p-2 bg-purple-600 hover:bg-purple-500 disabled:bg-gray-700 disabled:cursor-not-allowed text-white rounded transition-all flex-shrink-0"
+                        >
                             <Send className="w-4 h-4" />
-                        )}
-                    </button>
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>

@@ -32,6 +32,8 @@ export const useDemoStore = create((set, get) => ({
     useFirebase: false, 
     openTabs: [], 
     streamingFileIds: [], // Track which files are currently streaming
+    currentStreamingFile: null, // Track current file being generated
+    soundNotificationsEnabled: true, // Toggle for completion sound
     skipDeleteConfirmation: false,
 
     setSkipDeleteConfirmation: (skip) => {
@@ -39,10 +41,41 @@ export const useDemoStore = create((set, get) => ({
         localStorage.setItem('lexicode-skip-delete-confirmation', skip.toString());
     },
 
+    toggleSoundNotifications: () => {
+        const newValue = !get().soundNotificationsEnabled;
+        set({ soundNotificationsEnabled: newValue });
+        localStorage.setItem('lexicode-sound-notifications', newValue.toString());
+    },
+
+    playCompletionSound: () => {
+        if (!get().soundNotificationsEnabled) return;
+        
+        // Create a simple beep sound using Web Audio API
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+        
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+        
+        oscillator.frequency.value = 800; // Pleasant frequency
+        oscillator.type = 'sine'; // Smooth sine wave
+        
+        gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
+        
+        oscillator.start(audioContext.currentTime);
+        oscillator.stop(audioContext.currentTime + 0.2);
+    },
+
     loadPreferences: () => {
         const skipDelete = localStorage.getItem('lexicode-skip-delete-confirmation');
         if (skipDelete) {
             set({ skipDeleteConfirmation: skipDelete === 'true' });
+        }
+        const soundNotif = localStorage.getItem('lexicode-sound-notifications');
+        if (soundNotif !== null) {
+            set({ soundNotificationsEnabled: soundNotif === 'true' });
         }
     },
 
@@ -74,6 +107,24 @@ export const useDemoStore = create((set, get) => ({
         set((state) => ({ fileTreeOpen: !state.fileTreeOpen }));
     },
 
+    togglePreview: () => {
+        const currentState = get().showPreview;
+        const activeFile = get().activeFileId ? get().findNodeInTree(get().fileTree, get().activeFileId) : null;
+        
+        console.log('👁️ [PREVIEW] ========== TOGGLE START ==========');
+        console.log('👁️ [PREVIEW] Current state:', currentState);
+        console.log('👁️ [PREVIEW] Active file:', activeFile?.name);
+        console.log('👁️ [PREVIEW] File type:', activeFile?.name?.split('.').pop());
+        console.log('👁️ [PREVIEW] Can preview:', activeFile && ['md', 'html', 'svg', 'xml', 'json', 'jsx', 'tsx'].includes(activeFile.name?.split('.').pop()));
+        
+        set((state) => {
+            const newState = !state.showPreview;
+            console.log('👁️ [PREVIEW] New state:', newState);
+            console.log('👁️ [PREVIEW] ========== TOGGLE END ==========');
+            return { showPreview: newState };
+        });
+    },
+
     addToConversation: (role, content) => {
         set((state) => ({
             conversationHistory: [...state.conversationHistory, { role, content, timestamp: Date.now() }]
@@ -91,6 +142,8 @@ export const useDemoStore = create((set, get) => ({
             history: [],
             createdAt: Date.now()
         };
+        
+        console.log('✨ [CHAT] Creating new session:', newSession.id);
         
         set((state) => ({
             chatSessions: [...state.chatSessions, newSession],
@@ -121,21 +174,34 @@ export const useDemoStore = create((set, get) => ({
                 : session
         );
         localStorage.setItem('lexicode-chat-sessions', JSON.stringify(updatedSessions));
+        console.log('💾 [CHAT] Saved sessions:', updatedSessions.length, 'Active:', activeChatSession);
+        console.log('💾 [CHAT] Current conversation length:', conversationHistory.length);
         set({ chatSessions: updatedSessions });
     },
 
     loadChatSessions: () => {
         const stored = localStorage.getItem('lexicode-chat-sessions');
+        console.log('📂 [CHAT] Loading sessions from localStorage...');
         if (stored) {
             const sessions = JSON.parse(stored);
+            console.log('📂 [CHAT] Found', sessions.length, 'stored sessions');
             set({ chatSessions: sessions });
             if (sessions.length > 0) {
                 const lastSession = sessions[sessions.length - 1];
+                console.log('📂 [CHAT] Loading last session:', lastSession.id, 'with', lastSession.history.length, 'messages');
                 set({
                     activeChatSession: lastSession.id,
                     conversationHistory: lastSession.history
                 });
+            } else {
+                // No sessions found, create initial one
+                console.log('📂 [CHAT] No sessions in storage, creating initial session');
+                get().createNewChatSession();
             }
+        } else {
+            // No stored sessions, create initial one
+            console.log('📂 [CHAT] No stored sessions found, creating initial session');
+            get().createNewChatSession();
         }
     },
 
@@ -154,6 +220,12 @@ export const useDemoStore = create((set, get) => ({
     },
 
     chatWithAI: async (userMessage) => {
+        // Ensure there's an active chat session
+        if (!get().activeChatSession) {
+            console.log('📝 [CHAT] No active session, creating one...');
+            get().createNewChatSession();
+        }
+        
         const { files, activeFileId, selectedModel, conversationHistory } = get();
         const activeFile = files.find(f => f.id === activeFileId);
         
@@ -192,16 +264,35 @@ export const useDemoStore = create((set, get) => ({
                 }));
             }
             
-            get().addToConversation('assistant', data.message);
+            // Modify AI message tense for file creation actions
+            let aiMessage = data.message;
+            if (data.action === 'create' && data.createdFiles) {
+                // Change past tense to future tense for initial message
+                aiMessage = aiMessage
+                    .replace(/I've created/gi, "I'll create")
+                    .replace(/I have created/gi, "I will create")
+                    .replace(/I've generated/gi, "I'll generate")
+                    .replace(/I have generated/gi, "I will generate")
+                    .replace(/Created/gi, "Creating")
+                    .replace(/Generated/gi, "Generating");
+            }
+            
+            // Add message BEFORE starting file creation
+            get().addToConversation('assistant', aiMessage);
             get().saveChatSessions();
+            
+            // For file creation, add a small delay so user can see the restore button
+            if (data.action === 'create' && data.createdFiles) {
+                await new Promise(resolve => setTimeout(resolve, 1000)); // 1 second delay
+            }
             
             if (data.action === 'edit' && data.updatedContent && activeFile) {
                 await get().updateFileContent(activeFileId, data.updatedContent);
             } else if (data.action === 'create' && data.createdFiles) {
-                console.log('📁 [AI STREAMING] Starting sequential file creation...');
+                console.log('📁 [AI] Starting file creation...');
                 
                 const createFilesSequentially = async () => {
-                    const currentTree = JSON.parse(JSON.stringify(get().fileTree)); // Deep clone
+                    let currentTree = JSON.parse(JSON.stringify(get().fileTree));
                     
                     const findOrCreateFolder = (tree, pathParts, startIndex = 0) => {
                         if (startIndex >= pathParts.length) return tree;
@@ -217,7 +308,6 @@ export const useDemoStore = create((set, get) => ({
                                 children: []
                             };
                             tree.push(folder);
-                            console.log('📁 [AI STREAMING] Created folder:', folderName);
                         }
                         
                         if (startIndex < pathParts.length - 1) {
@@ -233,53 +323,56 @@ export const useDemoStore = create((set, get) => ({
                         const fileName = pathParts.pop();
                         const folderPath = pathParts;
                         
-                        console.log(`\n📄 [AI STREAMING] File ${index + 1}/${data.createdFiles.length}: ${fileName}`);
-                        console.log(`📂 [AI STREAMING] Path: ${fileData.path}`);
-                        console.log(`📝 [AI STREAMING] Content length: ${fileData.content?.length || 0} chars`);
+                        console.log(`📄 [AI] Creating ${index + 1}/${data.createdFiles.length}: ${fileData.path}`);
+                        
+                        // Update progress in chat
+                        set({ currentStreamingFile: fileName });
+                        const progressMsg = `\n\n⚡ **Generating ${fileName}...** (${index + 1}/${data.createdFiles.length})`;
+                        const history = get().conversationHistory;
+                        if (history.length > 0 && history[history.length - 1].role === 'assistant') {
+                            const lastMsg = history[history.length - 1];
+                            set({ 
+                                conversationHistory: [
+                                    ...history.slice(0, -1),
+                                    { ...lastMsg, content: lastMsg.content + progressMsg }
+                                ]
+                            });
+                        }
                         
                         // Create file node with proper type
                         const newFile = {
                             id: `file-${Date.now()}-${index}-${Math.random()}`,
                             name: fileName,
-                            type: fileData.type || fileName.split('.').pop() || 'txt', // Use extension as type
-                            content: '', // Start empty for streaming
+                            type: fileData.type || fileName.split('.').pop() || 'txt',
+                            content: '',
                             last_modified: new Date().toISOString()
                         };
-                        
-                        console.log(`🔧 [AI STREAMING] File type: ${newFile.type}`);
                         
                         // Add file to tree structure
                         if (folderPath.length === 0) {
                             currentTree.push(newFile);
-                            console.log('📍 [AI STREAMING] Added to root');
                         } else {
                             const targetFolder = findOrCreateFolder(currentTree, folderPath);
                             if (!targetFolder.children) targetFolder.children = [];
                             targetFolder.children.push(newFile);
-                            console.log(`📍 [AI STREAMING] Added to folder: ${folderPath.join('/')}`);
                         }
                         
                         // Update tree and open file in editor
                         set({
-                            fileTree: JSON.parse(JSON.stringify(currentTree)), // Deep clone to trigger update
+                            fileTree: JSON.parse(JSON.stringify(currentTree)),
                             activeFileId: newFile.id,
                             openTabs: [...new Set([...get().openTabs, newFile.id])]
                         });
-                        get().saveTreeToLocalStorage();
+                        // DON'T save to localStorage yet - wait for content
                         
-                        console.log(`✅ [AI STREAMING] File node created and opened in editor`);
-                        
-                        // Stream content with realistic typing speed
+                        // Stream content with realistic typing speed (works in background)
                         const fullContent = fileData.content || '';
-                        const typingSpeed = 30; // 30ms per character (slower for realism)
-                        const chunkSize = 1; // 1 character at a time for smooth effect
-                        
-                        console.log(`⌨️ [AI STREAMING] Starting content streaming...`);
+                        const typingSpeed = 10; // Reduced for faster background execution
+                        const chunkSize = 3; // Larger chunks for better performance
                         
                         for (let charIndex = 0; charIndex < fullContent.length; charIndex += chunkSize) {
                             const currentContent = fullContent.slice(0, charIndex + chunkSize);
                             
-                            // Update content in tree
                             const updateContent = (tree) => tree.map(node => {
                                 if (node.id === newFile.id) {
                                     return { ...node, content: currentContent };
@@ -290,11 +383,18 @@ export const useDemoStore = create((set, get) => ({
                                 return node;
                             });
                             
-                            const updatedTree = updateContent(JSON.parse(JSON.stringify(get().fileTree)));
-                            set({ fileTree: updatedTree });
+                            currentTree = updateContent(currentTree);
+                            set({ fileTree: JSON.parse(JSON.stringify(currentTree)) });
                             
-                            // Wait for typing effect
-                            await new Promise(resolve => setTimeout(resolve, typingSpeed));
+                            // Use Promise with minimal delay for background compatibility
+                            await new Promise(resolve => {
+                                // Try setImmediate first (better for background), fallback to setTimeout
+                                if (typeof setImmediate !== 'undefined') {
+                                    setImmediate(resolve);
+                                } else {
+                                    setTimeout(resolve, typingSpeed);
+                                }
+                            });
                         }
                         
                         // Finalize file with complete content
@@ -308,23 +408,30 @@ export const useDemoStore = create((set, get) => ({
                             return node;
                         });
                         
-                        const finalTree = finalizeContent(JSON.parse(JSON.stringify(get().fileTree)));
+                        currentTree = finalizeContent(currentTree);
+                        const finalTree = JSON.parse(JSON.stringify(currentTree));
+                        
+                        // Update store with final content
                         set({ fileTree: finalTree });
+                        
+                        // Wait for state update, then save to localStorage
+                        await new Promise(resolve => setTimeout(resolve, 50));
                         get().saveTreeToLocalStorage();
                         
-                        console.log(`✅ [AI STREAMING] Content streaming complete for ${fileName}`);
+                        console.log(`✅ [AI] Completed: ${fileName} (${fullContent.length} chars)`);
                         
-                        // Pause between files
                         if (index < data.createdFiles.length - 1) {
-                            console.log(`⏸️ [AI STREAMING] Pausing before next file...`);
                             await new Promise(resolve => setTimeout(resolve, 500));
                         }
                     }
                     
-                    console.log(`\n🎉 [AI STREAMING] All files created successfully!`);
+                    console.log(`🎉 [AI] All ${data.createdFiles.length} files created!`);
                     
-                    // Stream summary message
-                    const summary = `\n\n✅ **Task Complete**\n\nSuccessfully created ${data.createdFiles.length} file(s):\n${data.createdFiles.map((f, i) => `${i + 1}. ${f.path}`).join('\n')}`;
+                    // Clear current streaming file and play completion sound
+                    set({ currentStreamingFile: null });
+                    get().playCompletionSound();
+                    
+                    const summary = `\n\n✅ **Task Complete**\n\nI've successfully created ${data.createdFiles.length} file(s):\n${data.createdFiles.map((f, i) => `${i + 1}. ${f.path}`).join('\n')}`;
                     const history = get().conversationHistory;
                     
                     if (history.length > 0 && history[history.length - 1].role === 'assistant') {
@@ -478,12 +585,31 @@ export const useDemoStore = create((set, get) => ({
     },
 
     saveTreeToLocalStorage: () => {
-        localStorage.setItem('lexicode-file-tree', JSON.stringify(get().fileTree));
+        const tree = get().fileTree;
+        localStorage.setItem('lexicode-file-tree', JSON.stringify(tree));
     },
 
     loadTreeFromLocalStorage: () => {
         const stored = localStorage.getItem('lexicode-file-tree');
-        if (stored) set({ fileTree: JSON.parse(stored) });
+        
+        if (stored) {
+            const tree = JSON.parse(stored);
+            
+            // Count files with content
+            const countFilesWithContent = (nodes) => {
+                nodes.forEach(node => {
+                    if (node.type !== 'folder' && !node.content) {
+                        console.warn(`⚠️ [LOAD] File WITHOUT content: ${node.name}`);
+                    }
+                    if (node.children) {
+                        countFilesWithContent(node.children);
+                    }
+                });
+            };
+            
+            countFilesWithContent(tree);
+            set({ fileTree: tree });
+        }
     },
 
     initDemo: () => {
@@ -516,8 +642,155 @@ export const useDemoStore = create((set, get) => ({
                         type: 'folder',
                         isOpen: true,
                         children: [
-                            { id: 'demo-file-1', name: 'index.html', type: 'file', content: '<html><body><h1>Hello</h1></body></html>' }
+                            { 
+                                id: 'demo-file-1', 
+                                name: 'index.html', 
+                                type: 'html', 
+                                content: '<!DOCTYPE html>\n<html lang="en">\n<head>\n  <meta charset="UTF-8">\n  <title>Demo App</title>\n  <link rel="stylesheet" href="../styles/main.css">\n</head>\n<body>\n  <h1>Welcome to Demo Project</h1>\n  <p>This is a comprehensive demo with all supported file types.</p>\n  <script src="app.js"></script>\n</body>\n</html>' 
+                            },
+                            { 
+                                id: 'demo-file-2', 
+                                name: 'app.js', 
+                                type: 'javascript', 
+                                content: '// Main application entry point\nconsole.log("Demo App Started");\n\nconst app = {\n  init() {\n    console.log("Initializing...");\n    this.setupEventListeners();\n  },\n  \n  setupEventListeners() {\n    document.addEventListener("DOMContentLoaded", () => {\n      console.log("DOM Ready");\n    });\n  }\n};\n\napp.init();' 
+                            },
+                            { 
+                                id: 'demo-file-3', 
+                                name: 'utils.ts', 
+                                type: 'typescript', 
+                                content: '// TypeScript utility functions\nexport interface User {\n  id: number;\n  name: string;\n  email: string;\n}\n\nexport function formatDate(date: Date): string {\n  return date.toISOString().split("T")[0];\n}\n\nexport function validateEmail(email: string): boolean {\n  const regex = /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/;\n  return regex.test(email);\n}' 
+                            },
+                            { 
+                                id: 'demo-file-4', 
+                                name: 'Component.jsx', 
+                                type: 'javascript', 
+                                content: 'import React, { useState } from "react";\n\nexport default function Component() {\n  const [count, setCount] = useState(0);\n  \n  return (\n    <div className="component">\n      <h2>Counter: {count}</h2>\n      <button onClick={() => setCount(count + 1)}>\n        Increment\n      </button>\n    </div>\n  );\n}' 
+                            }
                         ]
+                    },
+                    {
+                        id: 'styles-folder',
+                        name: 'styles',
+                        type: 'folder',
+                        isOpen: false,
+                        children: [
+                            { 
+                                id: 'demo-file-5', 
+                                name: 'main.css', 
+                                type: 'css', 
+                                content: '/* Main stylesheet */\n:root {\n  --primary-color: #3b82f6;\n  --text-color: #1f2937;\n  --bg-color: #ffffff;\n}\n\nbody {\n  margin: 0;\n  font-family: system-ui, -apple-system, sans-serif;\n  color: var(--text-color);\n  background: var(--bg-color);\n}\n\nh1 {\n  color: var(--primary-color);\n  font-size: 2rem;\n}' 
+                            },
+                            { 
+                                id: 'demo-file-6', 
+                                name: 'variables.scss', 
+                                type: 'scss', 
+                                content: '// SCSS Variables\n$primary: #3b82f6;\n$secondary: #8b5cf6;\n$success: #10b981;\n$danger: #ef4444;\n\n$spacing: (\n  xs: 0.25rem,\n  sm: 0.5rem,\n  md: 1rem,\n  lg: 1.5rem,\n  xl: 2rem\n);\n\n@mixin flex-center {\n  display: flex;\n  align-items: center;\n  justify-content: center;\n}' 
+                            }
+                        ]
+                    },
+                    {
+                        id: 'docs-folder',
+                        name: 'docs',
+                        type: 'folder',
+                        isOpen: false,
+                        children: [
+                            { 
+                                id: 'demo-file-7', 
+                                name: 'README.md', 
+                                type: 'markdown', 
+                                content: '# Demo Project\n\nThis is a comprehensive demo project showcasing all supported file types.\n\n## Features\n\n- HTML, CSS, JavaScript support\n- TypeScript and JSX/TSX\n- Markdown documentation\n- JSON and YAML configuration\n- Python, Java, C++, and more\n\n## Getting Started\n\n```bash\nnpm install\nnpm run dev\n```\n\n## License\n\nMIT' 
+                            },
+                            { 
+                                id: 'demo-file-8', 
+                                name: 'API.md', 
+                                type: 'markdown', 
+                                content: '# API Documentation\n\n## Endpoints\n\n### GET /api/users\n\nReturns a list of users.\n\n**Response:**\n```json\n[\n  {\n    "id": 1,\n    "name": "John Doe",\n    "email": "john@example.com"\n  }\n]\n```\n\n### POST /api/users\n\nCreates a new user.\n\n**Request Body:**\n```json\n{\n  "name": "Jane Doe",\n  "email": "jane@example.com"\n}\n```' 
+                            }
+                        ]
+                    },
+                    {
+                        id: 'config-folder',
+                        name: 'config',
+                        type: 'folder',
+                        isOpen: false,
+                        children: [
+                            { 
+                                id: 'demo-file-9', 
+                                name: 'package.json', 
+                                type: 'json', 
+                                content: '{\n  "name": "demo-project",\n  "version": "1.0.0",\n  "description": "A comprehensive demo project",\n  "main": "src/app.js",\n  "scripts": {\n    "dev": "vite",\n    "build": "vite build",\n    "test": "jest"\n  },\n  "dependencies": {\n    "react": "^18.2.0",\n    "react-dom": "^18.2.0"\n  },\n  "devDependencies": {\n    "vite": "^5.0.0",\n    "typescript": "^5.0.0"\n  }\n}' 
+                            },
+                            { 
+                                id: 'demo-file-10', 
+                                name: 'config.yaml', 
+                                type: 'yaml', 
+                                content: '# Application Configuration\napp:\n  name: Demo Project\n  version: 1.0.0\n  port: 3000\n\ndatabase:\n  host: localhost\n  port: 5432\n  name: demo_db\n  user: admin\n\nfeatures:\n  - authentication\n  - api\n  - dashboard\n\nlogging:\n  level: info\n  format: json' 
+                            },
+                            { 
+                                id: 'demo-file-11', 
+                                name: 'tsconfig.json', 
+                                type: 'json', 
+                                content: '{\n  "compilerOptions": {\n    "target": "ES2020",\n    "module": "ESNext",\n    "lib": ["ES2020", "DOM"],\n    "jsx": "react-jsx",\n    "strict": true,\n    "esModuleInterop": true,\n    "skipLibCheck": true,\n    "forceConsistentCasingInFileNames": true,\n    "moduleResolution": "node",\n    "resolveJsonModule": true,\n    "isolatedModules": true,\n    "noEmit": true\n  },\n  "include": ["src/**/*"],\n  "exclude": ["node_modules"]\n}' 
+                            }
+                        ]
+                    },
+                    {
+                        id: 'backend-folder',
+                        name: 'backend',
+                        type: 'folder',
+                        isOpen: false,
+                        children: [
+                            { 
+                                id: 'demo-file-12', 
+                                name: 'server.py', 
+                                type: 'python', 
+                                content: '# Python Flask Server\nfrom flask import Flask, jsonify, request\n\napp = Flask(__name__)\n\n@app.route(\'/api/users\', methods=[\'GET\'])\ndef get_users():\n    users = [\n        {\'id\': 1, \'name\': \'John Doe\', \'email\': \'john@example.com\'},\n        {\'id\': 2, \'name\': \'Jane Smith\', \'email\': \'jane@example.com\'}\n    ]\n    return jsonify(users)\n\n@app.route(\'/api/users\', methods=[\'POST\'])\ndef create_user():\n    data = request.get_json()\n    return jsonify(data), 201\n\nif __name__ == \'__main__\':\n    app.run(debug=True, port=5000)' 
+                            },
+                            { 
+                                id: 'demo-file-13', 
+                                name: 'Database.java', 
+                                type: 'java', 
+                                content: '// Java Database Connection\nimport java.sql.*;\n\npublic class Database {\n    private static final String URL = "jdbc:postgresql://localhost:5432/demo_db";\n    private static final String USER = "admin";\n    private static final String PASSWORD = "password";\n    \n    public static Connection getConnection() throws SQLException {\n        return DriverManager.getConnection(URL, USER, PASSWORD);\n    }\n    \n    public static void main(String[] args) {\n        try (Connection conn = getConnection()) {\n            System.out.println("Connected to database!");\n        } catch (SQLException e) {\n            System.err.println("Connection failed: " + e.getMessage());\n        }\n    }\n}' 
+                            },
+                            { 
+                                id: 'demo-file-14', 
+                                name: 'utils.cpp', 
+                                type: 'cpp', 
+                                content: '// C++ Utility Functions\n#include <iostream>\n#include <string>\n#include <vector>\n\nnamespace utils {\n    std::string toUpperCase(const std::string& str) {\n        std::string result = str;\n        for (char& c : result) {\n            c = std::toupper(c);\n        }\n        return result;\n    }\n    \n    template<typename T>\n    void printVector(const std::vector<T>& vec) {\n        for (const auto& item : vec) {\n            std::cout << item << " ";\n        }\n        std::cout << std::endl;\n    }\n}' 
+                            }
+                        ]
+                    },
+                    {
+                        id: 'scripts-folder',
+                        name: 'scripts',
+                        type: 'folder',
+                        isOpen: false,
+                        children: [
+                            { 
+                                id: 'demo-file-15', 
+                                name: 'deploy.sh', 
+                                type: 'shell', 
+                                content: '#!/bin/bash\n# Deployment script\n\necho "Starting deployment..."\n\n# Build the project\nnpm run build\n\nif [ $? -eq 0 ]; then\n    echo "Build successful!"\n    \n    # Deploy to server\n    rsync -avz dist/ user@server:/var/www/app/\n    \n    echo "Deployment complete!"\nelse\n    echo "Build failed!"\n    exit 1\nfi' 
+                            },
+                            { 
+                                id: 'demo-file-16', 
+                                name: 'test.rb', 
+                                type: 'ruby', 
+                                content: '# Ruby Test Script\nrequire \'minitest/autorun\'\n\nclass TestCalculator < Minitest::Test\n  def setup\n    @calc = Calculator.new\n  end\n  \n  def test_addition\n    assert_equal 4, @calc.add(2, 2)\n  end\n  \n  def test_subtraction\n    assert_equal 0, @calc.subtract(2, 2)\n  end\n  \n  def test_multiplication\n    assert_equal 6, @calc.multiply(2, 3)\n  end\nend' 
+                            }
+                        ]
+                    },
+                    { 
+                        id: 'demo-file-17', 
+                        name: '.gitignore', 
+                        type: 'plaintext', 
+                        content: '# Dependencies\nnode_modules/\n__pycache__/\n*.pyc\n\n# Build output\ndist/\nbuild/\n*.o\n*.class\n\n# Environment\n.env\n.env.local\n\n# IDE\n.vscode/\n.idea/\n*.swp\n\n# OS\n.DS_Store\nThumbs.db' 
+                    },
+                    { 
+                        id: 'demo-file-18', 
+                        name: 'LICENSE', 
+                        type: 'plaintext', 
+                        content: 'MIT License\n\nCopyright (c) 2024 Demo Project\n\nPermission is hereby granted, free of charge, to any person obtaining a copy\nof this software and associated documentation files (the "Software"), to deal\nin the Software without restriction, including without limitation the rights\nto use, copy, modify, merge, publish, distribute, sublicense, and/or sell\ncopies of the Software, and to permit persons to whom the Software is\nfurnished to do so, subject to the following conditions:\n\nThe above copyright notice and this permission notice shall be included in all\ncopies or substantial portions of the Software.\n\nTHE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\nIMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,\nFITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.' 
                     }
                 ]
             }];
@@ -565,49 +838,30 @@ export const useDemoStore = create((set, get) => ({
     },
 
     setActiveFile: (fileId) => {
-        console.log('🎯 [SET ACTIVE FILE] ========== START ==========');
-        console.log('🎯 [SET ACTIVE FILE] Requested fileId:', fileId);
-        
         const { fileTree, openTabs } = get();
-        console.log('🎯 [SET ACTIVE FILE] Current open tabs:', openTabs);
-        console.log('🎯 [SET ACTIVE FILE] Searching in tree...');
-        
         const node = get().findNodeInTree(fileTree, fileId);
         
         if (!node) {
-            console.error('❌ [SET ACTIVE FILE] Node NOT FOUND in tree!');
-            console.log('🔍 [SET ACTIVE FILE] Tree structure:', JSON.stringify(fileTree, null, 2));
+            console.error('❌ [FILE] Node NOT FOUND:', fileId);
             return;
         }
         
-        console.log('✅ [SET ACTIVE FILE] Found node:', {
-            id: node.id,
-            name: node.name,
-            type: node.type,
-            hasContent: !!node.content,
-            contentLength: node.content?.length || 0
-        });
+        console.log('✅ [FILE] Opening:', node.name, `(${node.content?.length || 0} chars)`);
+        console.log('📦 [FILE] Content preview:', node.content?.substring(0, 50) || 'EMPTY');
         
-        // Any type that's not 'folder' is a file
         if (node.type === 'folder') {
-            console.warn('⚠️ [SET ACTIVE FILE] Node is a folder, not a file!');
+            console.warn('⚠️ [FILE] Cannot open folder as file');
             return;
         }
-        
-        console.log('📂 [SET ACTIVE FILE] Valid file, updating state...');
         
         if (!openTabs.includes(fileId)) {
-            console.log('➕ [SET ACTIVE FILE] Adding to open tabs');
             set({ 
                 openTabs: [...openTabs, fileId],
                 activeFileId: fileId 
             });
         } else {
-            console.log('🔄 [SET ACTIVE FILE] Already in tabs, just switching');
             set({ activeFileId: fileId });
         }
-        
-        console.log('✅ [SET ACTIVE FILE] ========== COMPLETE ==========');
     },
 
     closeTab: (fileId) => {

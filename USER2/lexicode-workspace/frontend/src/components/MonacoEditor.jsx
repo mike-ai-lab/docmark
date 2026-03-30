@@ -1,81 +1,52 @@
-import { useEffect, useRef, useImperativeHandle, forwardRef } from 'react';
+import { useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
 import * as monaco from 'monaco-editor';
 
-/**
- * Monaco Editor Component with proper model management
- * - One model per file (preserves undo/redo history)
- * - No memory leaks (proper cleanup)
- * - No stale closures (uses refs)
- * - No cursor jumps (model switching instead of setValue)
- */
 const MonacoEditor = forwardRef(({ file, onContentChange }, ref) => {
   const containerRef = useRef(null);
   const editorRef = useRef(null);
-  const modelCacheRef = useRef(new Map());
-  const currentFileIdRef = useRef(null);
-  const onContentChangeRef = useRef(onContentChange);
+  const currentFileRef = useRef(null);
 
-  // Expose editor instance to parent via ref
-  useImperativeHandle(ref, () => editorRef.current);
+  useImperativeHandle(ref, () => ({
+    getEditor: () => editorRef.current,
+    getValue: () => editorRef.current?.getValue() || '',
+    setValue: (value) => editorRef.current?.setValue(value || '')
+  }));
 
-  // Keep callback ref in sync
-  useEffect(() => {
-    onContentChangeRef.current = onContentChange;
-  }, [onContentChange]);
-
-  // Helper: Get or create model for a file
-  const getOrCreateModel = (fileData) => {
-    if (!fileData) return null;
-
-    if (!modelCacheRef.current.has(fileData.id)) {
-      const language = getMonacoLanguage(fileData.name?.split('.').pop() || 'txt');
-      const model = monaco.editor.createModel(
-        fileData.content || '',
-        language,
-        monaco.Uri.parse(`file:///${fileData.id}`)
-      );
-      modelCacheRef.current.set(fileData.id, model);
-    }
-    return modelCacheRef.current.get(fileData.id);
+  // Get Monaco language from file extension
+  const getLanguage = (filename) => {
+    const ext = filename?.split('.').pop()?.toLowerCase() || 'txt';
+    const langMap = {
+      'js': 'javascript', 'jsx': 'javascript', 'ts': 'typescript', 'tsx': 'typescript',
+      'json': 'json', 'html': 'html', 'css': 'css', 'scss': 'scss', 'less': 'less',
+      'md': 'markdown', 'py': 'python', 'java': 'java', 'c': 'c', 'cpp': 'cpp',
+      'cs': 'csharp', 'php': 'php', 'rb': 'ruby', 'go': 'go', 'rs': 'rust',
+      'sql': 'sql', 'sh': 'shell', 'yaml': 'yaml', 'yml': 'yaml', 'xml': 'xml',
+      'txt': 'plaintext'
+    };
+    return langMap[ext] || 'plaintext';
   };
 
   // Initialize editor once
   useEffect(() => {
     if (!containerRef.current || editorRef.current) return;
 
-    // Configure Monaco Environment to disable web workers completely
-    // Provide a fake worker that does nothing to prevent errors
+    // Disable Monaco workers
     window.MonacoEnvironment = {
-      getWorker: function (workerId, label) {
-        // Return a fake worker object that prevents all worker operations
-        return {
-          postMessage: () => {},
-          addEventListener: () => {},
-          removeEventListener: () => {},
-          terminate: () => {},
-          onmessage: null,
-          onerror: null
-        };
-      }
+      getWorker: () => ({
+        postMessage: () => {},
+        addEventListener: () => {},
+        removeEventListener: () => {},
+        terminate: () => {},
+        onmessage: null,
+        onerror: null
+      })
     };
-
-    // Define custom themes
-    monaco.editor.defineTheme('custom-dark', {
-      base: 'vs-dark',
-      inherit: true,
-      rules: [],
-      colors: {
-        'editor.background': '#1e1e1e',
-        'editor.selectionBackground': '#264f78',
-        'editor.lineHighlightBackground': '#2a2a2a',
-        'editorLineNumber.foreground': '#858585',
-        'editorLineNumber.activeForeground': '#c6c6c6'
-      }
-    });
 
     // Create editor
     const editor = monaco.editor.create(containerRef.current, {
-      theme: 'custom-dark',
+      value: '',
+      language: 'plaintext',
+      theme: 'vs-dark',
       automaticLayout: true,
       fontSize: 14,
       fontFamily: 'JetBrains Mono, Consolas, Monaco, monospace',
@@ -87,132 +58,88 @@ const MonacoEditor = forwardRef(({ file, onContentChange }, ref) => {
       tabSize: 2,
       insertSpaces: true,
       formatOnPaste: true,
-      formatOnType: false,
-      quickSuggestions: {
-        other: true,
-        comments: false,
-        strings: false
-      }
+      formatOnType: false
     });
 
     editorRef.current = editor;
 
-    // Listen for content changes with debouncing
+    // Listen for content changes
     let changeTimeout;
-    editor.onDidChangeModelContent(() => {
+    editor.onDidChangeModelContent((e) => {
       clearTimeout(changeTimeout);
       changeTimeout = setTimeout(() => {
-        const fileId = currentFileIdRef.current;
-        if (!fileId || !onContentChangeRef.current) return;
-
+        if (!currentFileRef.current || !onContentChange) return;
+        // Don't save if change was programmatic
+        if (e.isFlush || e.isUndoing || e.isRedoing) return;
+        
         const newContent = editor.getValue();
-        onContentChangeRef.current(fileId, newContent);
+        onContentChange(currentFileRef.current.id, newContent);
       }, 500);
     });
 
-    // Cleanup on unmount
     return () => {
-      if (editorRef.current) {
-        editorRef.current.dispose();
-        editorRef.current = null;
-      }
-      modelCacheRef.current.forEach(model => model.dispose());
-      modelCacheRef.current.clear();
+      editor.dispose();
+      editorRef.current = null;
     };
   }, []);
 
-  // Switch model when file changes
+  // Update editor when file changes
   useEffect(() => {
     if (!editorRef.current || !file) {
-      currentFileIdRef.current = null;
+      currentFileRef.current = null;
       return;
     }
 
-    const fileId = file.id;
-    const previousFileId = currentFileIdRef.current;
+    const editor = editorRef.current;
+    const fileContent = file.content || '';
+    const language = getLanguage(file.name);
+    const uri = monaco.Uri.parse(`file:///${file.id}`);
+
+    // Get current model
+    const currentModel = editor.getModel();
     
-    // Only switch model if file ID changed (not just content)
-    if (previousFileId !== fileId) {
-      currentFileIdRef.current = fileId;
-      
-      const model = getOrCreateModel(file);
-      if (model) {
-        editorRef.current.setModel(model);
-      }
+    // Check if model with this URI already exists
+    let newModel = monaco.editor.getModel(uri);
+    
+    if (!newModel) {
+      // Create new model with file content
+      newModel = monaco.editor.createModel(fileContent, language, uri);
     } else {
-      // Same file, just update content (for streaming)
-      const model = modelCacheRef.current.get(fileId);
-      if (model) {
-        const currentModelContent = model.getValue();
-        const fileContent = file.content || '';
+      // Model exists, update its content
+      const oldContent = newModel.getValue();
+      if (oldContent !== fileContent) {
+        // Smart auto-scroll: only scroll if user is near the bottom
+        const visibleRange = editor.getVisibleRanges()[0];
+        const totalLines = newModel.getLineCount();
+        const visibleEndLine = visibleRange?.endLineNumber || 0;
+        const isNearBottom = totalLines - visibleEndLine <= 5; // Within 5 lines of bottom
         
-        if (currentModelContent !== fileContent) {
-          // Update model content without switching models
-          const position = editorRef.current.getPosition();
-          const selection = editorRef.current.getSelection();
-          
-          model.pushEditOperations(
-            [],
-            [{
-              range: model.getFullModelRange(),
-              text: fileContent
-            }],
-            () => null
-          );
-          
-          // Restore cursor position
-          if (position) {
-            editorRef.current.setPosition(position);
-          }
-          if (selection) {
-            editorRef.current.setSelection(selection);
-          }
+        newModel.setValue(fileContent);
+        
+        // Auto-scroll to bottom if user was near bottom (streaming behavior)
+        if (isNearBottom && fileContent.length > oldContent.length) {
+          const newTotalLines = newModel.getLineCount();
+          editor.revealLine(newTotalLines, monaco.editor.ScrollType.Smooth);
         }
       }
     }
-  }, [file?.id, file?.content]); // Watch both id AND content
 
-  return <div ref={containerRef} className="w-full h-full" />;
+    // Set the model
+    editor.setModel(newModel);
+    
+    // Dispose old model if it's different
+    if (currentModel && currentModel !== newModel) {
+      currentModel.dispose();
+    }
+
+    // Update current file reference
+    currentFileRef.current = file;
+
+  }, [file?.id, file?.content, file?.name]);
+
+  return <div ref={containerRef} className="w-full h-full rounded-lg overflow-hidden" />;
 });
 
 MonacoEditor.displayName = 'MonacoEditor';
 
 export default MonacoEditor;
-
-// Helper: Map file extensions to Monaco languages
-function getMonacoLanguage(fileType) {
-  const languageMap = {
-    js: 'javascript',
-    jsx: 'javascript',
-    ts: 'typescript',
-    tsx: 'typescript',
-    html: 'html',
-    css: 'css',
-    scss: 'scss',
-    less: 'less',
-    json: 'json',
-    md: 'markdown',
-    mdx: 'markdown',
-    py: 'python',
-    java: 'java',
-    cpp: 'cpp',
-    c: 'c',
-    cs: 'csharp',
-    go: 'go',
-    rs: 'rust',
-    php: 'php',
-    rb: 'ruby',
-    swift: 'swift',
-    kt: 'kotlin',
-    sql: 'sql',
-    xml: 'xml',
-    yaml: 'yaml',
-    yml: 'yaml',
-    sh: 'shell',
-    bash: 'shell',
-    ps1: 'powershell',
-    txt: 'plaintext',
-  };
-
-  return languageMap[fileType] || 'plaintext';
-}
