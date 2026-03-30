@@ -18,6 +18,7 @@ export default function EditorContainer() {
     fileTree,
     activeFileId, 
     openTabs,
+    streamingFileIds, // Get streaming file IDs
     setActiveFile, 
     closeTab,
     updateFileContent,
@@ -57,16 +58,22 @@ export default function EditorContainer() {
             const file = findNodeInTree(fileTree, fileId);
             if (!file) return null;
             const isActive = activeFileId === fileId;
+            const isStreaming = streamingFileIds?.includes(fileId); // Check if streaming
             return (
               <div 
                 key={fileId} 
-                onClick={() => setActiveFile(fileId)}
+                onClick={() => {
+                  console.log('🖱️ [TAB CLICK] Clicked on tab:', file.name, 'ID:', fileId);
+                  setActiveFile(fileId);
+                }}
                 className={`flex items-center gap-3 px-4 py-1 h-full min-w-[140px] max-w-[220px] border-r border-black/20 cursor-pointer text-xs transition-all relative group
                   ${isActive ? 'bg-[#1e1e1e] text-white shadow-[inset_0_2px_0_#3b82f6]' : 'bg-[#2d2d2d] text-[#969696] hover:bg-[#2b2b2b]'}
+                  ${isStreaming ? 'animate-pulse' : ''}
                 `}
               >
-                <File size={14} className={isActive ? "text-blue-400" : "opacity-50"} />
+                <File size={14} className={`${isActive ? "text-blue-400" : "opacity-50"} ${isStreaming ? 'animate-spin' : ''}`} />
                 <span className="truncate flex-1 font-medium">{file.name}</span>
+                {isStreaming && <span className="text-[10px] text-yellow-400">⚡</span>}
                 <X 
                   size={14} 
                   className="opacity-0 group-hover:opacity-100 hover:bg-white/10 rounded p-0.5 transition-all" 

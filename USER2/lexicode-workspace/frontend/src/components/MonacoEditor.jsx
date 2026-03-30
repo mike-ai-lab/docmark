@@ -128,13 +128,49 @@ const MonacoEditor = forwardRef(({ file, onContentChange }, ref) => {
       return;
     }
 
-    currentFileIdRef.current = file.id;
-
-    const model = getOrCreateModel(file);
-    if (model) {
-      editorRef.current.setModel(model);
+    const fileId = file.id;
+    const previousFileId = currentFileIdRef.current;
+    
+    // Only switch model if file ID changed (not just content)
+    if (previousFileId !== fileId) {
+      currentFileIdRef.current = fileId;
+      
+      const model = getOrCreateModel(file);
+      if (model) {
+        editorRef.current.setModel(model);
+      }
+    } else {
+      // Same file, just update content (for streaming)
+      const model = modelCacheRef.current.get(fileId);
+      if (model) {
+        const currentModelContent = model.getValue();
+        const fileContent = file.content || '';
+        
+        if (currentModelContent !== fileContent) {
+          // Update model content without switching models
+          const position = editorRef.current.getPosition();
+          const selection = editorRef.current.getSelection();
+          
+          model.pushEditOperations(
+            [],
+            [{
+              range: model.getFullModelRange(),
+              text: fileContent
+            }],
+            () => null
+          );
+          
+          // Restore cursor position
+          if (position) {
+            editorRef.current.setPosition(position);
+          }
+          if (selection) {
+            editorRef.current.setSelection(selection);
+          }
+        }
+      }
     }
-  }, [file?.id]);
+  }, [file?.id, file?.content]); // Watch both id AND content
 
   return <div ref={containerRef} className="w-full h-full" />;
 });

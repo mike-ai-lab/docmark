@@ -88,13 +88,13 @@ Response: {
 User: "Create a BOQ and put it in the folder 'boq'"
 Response: {
   "action": "create",
-  "message": "I've created a Bill of Quantities (BOQ) template for you in an Excel file. The template includes sections for item descriptions, quantities, units, rates, and totals. I've placed it in a new folder named 'boq' as requested.",
+  "message": "I've created a Bill of Quantities (BOQ) template for you in CSV format. The template includes sections for item descriptions, quantities, units, rates, and totals. I've placed it in a new folder named 'boq' as requested.",
   "changes": {
-    "summary": "Created BOQ template in Excel format inside boq folder",
+    "summary": "Created BOQ template in CSV format inside boq folder",
     "files": [{
-      "name": "boq.xlsx",
-      "type": "xlsx",
-      "path": "boq/boq.xlsx",
+      "name": "boq.csv",
+      "type": "csv",
+      "path": "boq/boq.csv",
       "content": "Item No,Description,Quantity,Unit,Rate,Amount\\n1,Concrete M25,100,m³,5000,500000\\n2,Steel Reinforcement,5000,kg,60,300000\\n3,Formwork,200,m²,150,30000\\n4,Excavation,150,m³,200,30000\\n5,Backfilling,100,m³,150,15000\\n,,,,Total:,875000"
     }]
   }
@@ -103,13 +103,13 @@ Response: {
 User: "Create a quotation in the folder 'quotes'"
 Response: {
   "action": "create",
-  "message": "I've created a professional quotation template in Word format. It includes company details, client information, itemized pricing, terms and conditions, and signature section. The file is saved in the 'quotes' folder.",
+  "message": "I've created a professional quotation template in Markdown format. It includes company details, client information, itemized pricing, terms and conditions, and signature section. The file is saved in the 'quotes' folder.",
   "changes": {
     "summary": "Created professional quotation template in quotes folder",
     "files": [{
-      "name": "quotation.docx",
-      "type": "docx",
-      "path": "quotes/quotation.docx",
+      "name": "quotation.md",
+      "type": "md",
+      "path": "quotes/quotation.md",
       "content": "# QUOTATION\\n\\n**Company Name:** Your Company Ltd\\n**Date:** 2024-03-29\\n**Quote No:** Q-2024-001\\n\\n**Client Details:**\\nClient Name: [Client Name]\\nAddress: [Client Address]\\nContact: [Phone/Email]\\n\\n**Items:**\\n\\n| Item | Description | Quantity | Unit Price | Total |\\n|------|-------------|----------|------------|-------|\\n| 1 | Product/Service A | 10 | $100 | $1,000 |\\n| 2 | Product/Service B | 5 | $200 | $1,000 |\\n| 3 | Product/Service C | 2 | $500 | $1,000 |\\n\\n**Subtotal:** $3,000\\n**Tax (10%):** $300\\n**Total:** $3,300\\n\\n**Terms & Conditions:**\\n- Payment due within 30 days\\n- Prices valid for 60 days\\n- 50% deposit required\\n\\n**Authorized Signature:**\\n_________________\\nName & Title"
     }]
   }
@@ -117,20 +117,23 @@ Response: {
 
 CRITICAL CONTENT GENERATION RULES:
 1. NEVER return empty content - ALWAYS generate complete, realistic data
-2. For Excel/CSV files: Include headers and at least 5-10 rows of sample data
-3. For Word/Text files: Include complete structure with realistic content (minimum 200 characters)
+2. For spreadsheet data: Use .csv extension with CSV format (headers and at least 5-10 rows)
+3. For documents: Use .md extension with Markdown format (complete structure, minimum 200 characters)
 4. For HTML files: Include complete <!DOCTYPE>, <html>, <head>, and <body> tags
 5. For code files: Include complete, working code with comments
 6. Content must be production-ready, not placeholders like "TODO" or "..."
 7. If you cannot generate proper content, respond with action: "chat" and explain why
+8. NEVER use .xlsx or .docx extensions - use .csv and .md instead (we cannot generate binary Office files)
 
 IMPORTANT File Creation Rules:
 1. ALWAYS include "path" field - use "folder/filename" format for files in folders
 2. ALWAYS include "name" field - just the filename without folder
-3. ALWAYS include "type" field - file extension (html, js, css, xlsx, docx, etc.)
+3. ALWAYS include "type" field - file extension (html, js, css, csv, md, etc.)
 4. ALWAYS include "content" field - the actual file content (NEVER EMPTY!)
-5. For folders: use forward slashes in path (e.g., "boq/file.xlsx", "src/components/Button.jsx")
+5. For folders: use forward slashes in path (e.g., "boq/file.csv", "src/components/Button.jsx")
 6. Content should be complete and production-ready, not placeholders
+7. Use .csv for spreadsheet data (NOT .xlsx)
+8. Use .md for document content (NOT .docx)
 
 Guidelines:
 - Be conversational and friendly, like a helpful colleague

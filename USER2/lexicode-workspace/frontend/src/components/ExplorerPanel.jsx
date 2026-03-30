@@ -175,12 +175,27 @@ export default function ExplorerPanel() {
   };
 
   const handleSelect = (id) => {
+    console.log('🖱️ [EXPLORER CLICK] ========== START ==========');
+    console.log('🖱️ [EXPLORER CLICK] Clicked node ID:', id);
+    
     const node = findNodeInTree(fileTree, id);
-    if (node?.type === 'folder') {
+    console.log('🖱️ [EXPLORER CLICK] Found node:', node ? `${node.name} (${node.type})` : 'NOT FOUND');
+    
+    if (!node) {
+      console.warn('⚠️ [EXPLORER CLICK] Node not found!');
+      return;
+    }
+    
+    if (node.type === 'folder') {
+      console.log('📁 [EXPLORER CLICK] Is folder, setting as selected');
       setSelectedFolderId(id);
     } else {
+      // Any type that's not 'folder' is a file (md, js, json, txt, etc.)
+      console.log('📄 [EXPLORER CLICK] Is file (type: ' + node.type + '), calling setActiveFile');
       setActiveFile(id);
     }
+    
+    console.log('🖱️ [EXPLORER CLICK] ========== END ==========');
   };
 
   // Get relative path for a node
