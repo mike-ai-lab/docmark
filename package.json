@@ -6,7 +6,7 @@
   "scripts": {
     "test": "node test-html-rendering-node.js",
     "test:browser": "echo 'Open test-html-rendering-runner.html in your browser'",
-    "dev": "concurrently \"vite\" \"node pdf-server.js\"",
+    "dev": "concurrently --kill-others \"vite\" \"node pdf-server.js\"",
     "dev:vite-only": "vite",
     "build": "vite build",
     "vercel-build": "vite build",

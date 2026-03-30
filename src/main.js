@@ -2834,9 +2834,8 @@ let performBeautify = (content) => {
             // Get page setup settings (includes margins from dropdown)
             const layoutSettings = loadPdfLayoutSettings();
             
-            // CRITICAL FIX: Set PDF engine margins to 0
-            // Puppeteer shrinks viewport when margins are applied, shifting coordinates
-            // We'll apply margins manually via CSS padding instead
+            // Use @page margins from CSS instead of Puppeteer margins
+            // This ensures margins are applied correctly without viewport issues
             const margins = {
                 top: '0mm',
                 right: '0mm',
@@ -2844,8 +2843,8 @@ let performBeautify = (content) => {
                 left: '0mm'
             };
 
-            console.log('[PDF Export] PDF engine margins set to 0 (manual margins via CSS)');
-            console.log('[PDF Export] User margins will be applied as padding:', layoutSettings.margins);
+            console.log('[PDF Export] PDF engine margins set to 0 (margins applied via @page CSS)');
+            console.log('[PDF Export] User margins in @page rule:', layoutSettings.margins);
 
             // Collect HTML with all styles (async - fetches CSS)
             const fullHtml = await collectHtmlForPuppeteer(cleanOutputElement);
@@ -3279,6 +3278,26 @@ ${fontLinkTags}
             white-space: pre-wrap !important;
         }
         
+        /* PDF-specific page setup - applies to Puppeteer PDF generation */
+        @page {
+            size: A4;
+            margin: ${layoutSettings.margins.top}mm ${layoutSettings.margins.right}mm ${layoutSettings.margins.bottom}mm ${layoutSettings.margins.left}mm;
+        }
+        
+        /* Base styles for PDF (not in @media print) */
+        html {
+            margin: 0 !important;
+            padding: 0 !important;
+            background: white !important;
+        }
+        
+        body {
+            margin: 0 !important;
+            padding: 0 !important;
+            background: white !important;
+            box-sizing: border-box !important;
+        }
+        
         /* Print-specific resets */
         @media print {
             /* CRITICAL FIX: Manual margins via padding */
@@ -3286,7 +3305,7 @@ ${fontLinkTags}
             /* We apply margins manually using body padding */
             @page {
                 size: A4;
-                margin: 0; /* Force 0 margins - we handle margins manually */
+                margin: ${layoutSettings.margins.top}mm ${layoutSettings.margins.right}mm ${layoutSettings.margins.bottom}mm ${layoutSettings.margins.left}mm;
             }
             
             html {
@@ -3297,11 +3316,7 @@ ${fontLinkTags}
             
             body {
                 margin: 0 !important;
-                /* Apply user margins as padding - this keeps coordinate system intact */
-                padding-top: ${layoutSettings.margins.top}mm !important;
-                padding-right: ${layoutSettings.margins.right}mm !important;
-                padding-bottom: ${layoutSettings.margins.bottom}mm !important;
-                padding-left: ${layoutSettings.margins.left}mm !important;
+                padding: 0 !important;
                 background: white !important;
                 box-sizing: border-box !important;
             }
@@ -8427,7 +8442,7 @@ ${fontLinkTags}
     // PAPER LAYOUT & LINE-BASED PAGINATION SYSTEM (NEW)
     // ============================================================================
     
-    // Render content in paper layout with line-based pagination
+    // Render content in paper layout with intelligent content flow
     const renderPaperLayout = () => {
         if (!paperLayoutActive) return;
         
@@ -8450,17 +8465,11 @@ ${fontLinkTags}
         const settings = loadPdfLayoutSettings();
         const PX_SCALE = 3.7795275591; // 1mm ≈ 3.78px at 96 DPI
         
-        // Safety padding (invisible to user - protects header/footer)
-        const SAFETY_TOP = 15;    // mm
-        const SAFETY_BOTTOM = 15;  // mm
-        const SAFETY_LEFT = 10;    // mm
-        const SAFETY_RIGHT = 10;   // mm
-        
-        // Actual margins used (user setting + safety padding)
-        const actualTopMargin = (settings.margins.top + SAFETY_TOP) * PX_SCALE;
-        const actualBottomMargin = (settings.margins.bottom + SAFETY_BOTTOM) * PX_SCALE;
-        const actualLeftMargin = (settings.margins.left + SAFETY_LEFT) * PX_SCALE;
-        const actualRightMargin = (settings.margins.right + SAFETY_RIGHT) * PX_SCALE;
+        // User margins (no safety padding - use actual margins)
+        const actualTopMargin = settings.margins.top * PX_SCALE;
+        const actualBottomMargin = settings.margins.bottom * PX_SCALE;
+        const actualLeftMargin = settings.margins.left * PX_SCALE;
+        const actualRightMargin = settings.margins.right * PX_SCALE;
         
         // Page dimensions (A4 at 96 DPI)
         const pageWidth = 794;   // 210mm in pixels
@@ -8470,33 +8479,154 @@ ${fontLinkTags}
         const contentWidth = pageWidth - actualLeftMargin - actualRightMargin;
         const contentHeight = pageHeight - actualTopMargin - actualBottomMargin;
         
-        // Create measurement probe to get exact line height
-        const probe = document.createElement('div');
-        probe.style.cssText = `
-            visibility: hidden;
+        console.log(`[Pagination] Content area: ${contentWidth}px × ${contentHeight}px`);
+        console.log(`[Pagination] Margins: top=${actualTopMargin}px, bottom=${actualBottomMargin}px, left=${actualLeftMargin}px, right=${actualRightMargin}px`);
+        
+        // Parse markdown to HTML first
+        let htmlContent;
+        try {
+            htmlContent = marked.parse(markdownSource);
+            if (typeof DOMPurify !== 'undefined') {
+                htmlContent = DOMPurify.sanitize(htmlContent, {
+                    ADD_TAGS: ['span', 'div', 'strong', 'em', 'code', 'a', 'img', 'table', 'thead', 'tbody', 'tr', 'th', 'td', 
+                               'ul', 'ol', 'li', 'p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'blockquote', 'pre', 'br', 'hr'],
+                    ADD_ATTR: ['class', 'style', 'href', 'src', 'alt', 'title'],
+                    KEEP_CONTENT: true
+                });
+            }
+        } catch (e) {
+            console.error('Markdown parsing error:', e);
+            htmlContent = `<p>${markdownSource}</p>`;
+        }
+        
+        // Create measurement container with proper styling
+        const measurementContainer = document.createElement('div');
+        measurementContainer.className = 'markdown-body'; // Apply markdown styles
+        measurementContainer.style.cssText = `
             position: absolute;
+            visibility: hidden;
+            top: -9999px;
+            left: -9999px;
             width: ${contentWidth}px;
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
             font-size: 14px;
             line-height: 1.6;
-            white-space: pre-wrap;
-            word-wrap: break-word;
+            padding: 0;
+            margin: 0;
+            box-sizing: border-box;
         `;
-        probe.textContent = markdownSource;
-        document.body.appendChild(probe);
+        document.body.appendChild(measurementContainer);
         
-        const styles = window.getComputedStyle(probe);
-        const lineHeight = parseFloat(styles.lineHeight);
-        const totalContentHeight = probe.offsetHeight;
-        document.body.removeChild(probe);
+        // Parse HTML into elements
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = htmlContent;
         
-        // Line-based calculation (prevents partial lines)
-        const linesPerPage = Math.floor(contentHeight / lineHeight);
-        const exactContentHeight = linesPerPage * lineHeight;
-        const pageCount = Math.max(1, Math.ceil(totalContentHeight / exactContentHeight));
+        // Get all block-level elements
+        let contentElements = Array.from(tempDiv.children);
         
-        console.log(`[Pagination] ${pageCount} pages, ${linesPerPage} lines/page, ${lineHeight.toFixed(2)}px line height`);
-        console.log(`[Pagination] Margins: top=${actualTopMargin}px, bottom=${actualBottomMargin}px, left=${actualLeftMargin}px, right=${actualRightMargin}px`);
+        // CRITICAL FIX: Handle lists and large paragraphs by breaking them into smaller chunks
+        const processedElements = [];
+        
+        for (const element of contentElements) {
+            if (element.tagName === 'OL' || element.tagName === 'UL') {
+                const listItems = Array.from(element.children);
+                console.log(`[Pagination] Found ${element.tagName} with ${listItems.length} items`);
+                
+                // If list is large, break it into chunks that fit on pages
+                if (listItems.length > 20) {
+                    // Create smaller lists of ~20 items each
+                    const ITEMS_PER_CHUNK = 20;
+                    for (let i = 0; i < listItems.length; i += ITEMS_PER_CHUNK) {
+                        const chunk = listItems.slice(i, i + ITEMS_PER_CHUNK);
+                        const newList = document.createElement(element.tagName);
+                        newList.style.cssText = element.style.cssText;
+                        
+                        // Preserve list start number for ordered lists
+                        if (element.tagName === 'OL') {
+                            newList.start = i + 1;
+                        }
+                        
+                        chunk.forEach(item => newList.appendChild(item.cloneNode(true)));
+                        processedElements.push(newList);
+                    }
+                } else {
+                    processedElements.push(element);
+                }
+            } else if (element.tagName === 'P') {
+                // Check if single paragraph has many line breaks
+                const text = element.textContent;
+                const lines = text.split('\n').filter(line => line.trim());
+                
+                if (lines.length > 10) {
+                    console.log(`[Pagination] Splitting paragraph with ${lines.length} lines`);
+                    lines.forEach(line => {
+                        const p = document.createElement('p');
+                        p.textContent = line;
+                        p.style.margin = '0 0 16px 0';
+                        processedElements.push(p);
+                    });
+                } else {
+                    processedElements.push(element);
+                }
+            } else {
+                processedElements.push(element);
+            }
+        }
+        
+        contentElements = processedElements;
+        console.log(`[Pagination] Processing ${contentElements.length} content elements`);
+        
+        // Measure element height including margins
+        const measureElement = (element) => {
+            const clone = element.cloneNode(true);
+            clone.style.width = `${contentWidth}px`;
+            measurementContainer.appendChild(clone);
+            
+            // Get computed style to include margins
+            const computedStyle = window.getComputedStyle(clone);
+            const marginTop = parseFloat(computedStyle.marginTop) || 0;
+            const marginBottom = parseFloat(computedStyle.marginBottom) || 0;
+            const height = clone.offsetHeight + marginTop + marginBottom;
+            
+            measurementContainer.removeChild(clone);
+            return height;
+        };
+        
+        // Flow content across pages with safety margin
+        const SAFETY_MARGIN = 20; // Extra pixels to prevent overflow
+        const pages = [];
+        let currentPage = { elements: [], height: 0 };
+        
+        for (let i = 0; i < contentElements.length; i++) {
+            const element = contentElements[i];
+            const elementHeight = measureElement(element);
+            const availableHeight = contentHeight - currentPage.height - SAFETY_MARGIN;
+            
+            // Element fits on current page
+            if (elementHeight <= availableHeight) {
+                currentPage.elements.push(element.cloneNode(true));
+                currentPage.height += elementHeight;
+            } else {
+                // Element doesn't fit - start new page
+                if (currentPage.elements.length > 0) {
+                    pages.push(currentPage);
+                    currentPage = { elements: [], height: 0 };
+                }
+                // Add element to new page (even if it's larger than page height)
+                currentPage.elements.push(element.cloneNode(true));
+                currentPage.height += elementHeight;
+            }
+        }
+        
+        // Add last page
+        if (currentPage.elements.length > 0) {
+            pages.push(currentPage);
+        }
+        
+        // Clean up measurement container
+        document.body.removeChild(measurementContainer);
+        
+        console.log(`[Pagination] Generated ${pages.length} pages with safety margin`);
         
         // Clear and render
         outputDiv.innerHTML = '';
@@ -8507,7 +8637,7 @@ ${fontLinkTags}
         paperStack.className = 'paper-stack';
         paperStack.id = 'paper-stack';
         
-        for (let i = 0; i < pageCount; i++) {
+        pages.forEach((pageData, pageIndex) => {
             const page = document.createElement('div');
             page.className = 'paper-page';
             page.style.width = `${pageWidth}px`;
@@ -8530,7 +8660,7 @@ ${fontLinkTags}
             header.textContent = 'Document';
             header.style.cssText = `
                 position: absolute;
-                top: 10mm;
+                top: ${Math.max(10, actualTopMargin / 2)}px;
                 left: 50%;
                 transform: translateX(-50%);
                 font-size: 10px;
@@ -8541,7 +8671,7 @@ ${fontLinkTags}
                 pointer-events: none;
             `;
             
-            // Content clipping area - FIXED POSITION, NEVER MOVES
+            // Content area
             const contentClip = document.createElement('div');
             contentClip.className = 'paper-content';
             contentClip.style.cssText = `
@@ -8549,46 +8679,27 @@ ${fontLinkTags}
                 top: ${actualTopMargin}px;
                 left: ${actualLeftMargin}px;
                 width: ${contentWidth}px;
-                height: ${exactContentHeight}px;
+                height: ${contentHeight}px;
+                max-height: ${contentHeight}px;
                 overflow: hidden;
                 font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
                 font-size: 14px;
                 line-height: 1.6;
-                white-space: pre-wrap;
-                word-wrap: break-word;
                 text-align: ${settings.textAlign || 'left'};
             `;
             
-            // Content with offset for this page - ONLY THIS MOVES
-            const content = document.createElement('div');
-            content.style.transform = `translateY(-${i * exactContentHeight}px)`;
-            
-            // Parse markdown to HTML (keeping the same pagination logic)
-            try {
-                let htmlContent = marked.parse(markdownSource);
-                if (typeof DOMPurify !== 'undefined') {
-                    htmlContent = DOMPurify.sanitize(htmlContent, {
-                        ADD_TAGS: ['span', 'div', 'strong', 'em', 'code', 'a', 'img', 'table', 'thead', 'tbody', 'tr', 'th', 'td', 
-                                   'ul', 'ol', 'li', 'p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'blockquote', 'pre', 'br', 'hr'],
-                        ADD_ATTR: ['class', 'style', 'href', 'src', 'alt', 'title'],
-                        KEEP_CONTENT: true
-                    });
-                }
-                content.innerHTML = htmlContent;
-            } catch (e) {
-                console.error('Markdown parsing error:', e);
-                content.textContent = markdownSource; // Fallback to plain text
-            }
-            
-            contentClip.appendChild(content);
+            // Add elements to page
+            pageData.elements.forEach(element => {
+                contentClip.appendChild(element);
+            });
             
             // Page number
             const pageNum = document.createElement('div');
             pageNum.className = 'paper-page-number';
-            pageNum.textContent = `${i + 1}`;
+            pageNum.textContent = `${pageIndex + 1}`;
             pageNum.style.cssText = `
                 position: absolute;
-                bottom: 10mm;
+                bottom: ${Math.max(10, actualBottomMargin / 2)}px;
                 font-size: 9px;
                 color: #94a3b8;
                 font-weight: 500;
@@ -8613,11 +8724,11 @@ ${fontLinkTags}
             page.appendChild(contentClip);
             page.appendChild(pageNum);
             paperStack.appendChild(page);
-        }
+        });
         
         outputDiv.appendChild(paperStack);
         
-        console.log(`✅ Rendered ${pageCount} pages in paper layout`);
+        console.log(`✅ Rendered ${pages.length} pages in paper layout`);
     };
     
     // Restore normal web layout

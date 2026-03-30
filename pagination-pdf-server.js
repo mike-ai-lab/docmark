@@ -4,7 +4,7 @@ const puppeteer = require('puppeteer');
 const path = require('path');
 
 const app = express();
-const PORT = 3001; // Different port to avoid conflicts
+const PORT = 3002; // Different port to avoid conflicts with main app (3000) and other services (3001)
 
 // Enable CORS for all origins
 app.use(cors());
@@ -12,8 +12,27 @@ app.use(cors());
 // Parse JSON bodies
 app.use(express.json({ limit: '50mb' }));
 
-// Serve static files from current directory
-app.use(express.static(__dirname));
+// Serve ONLY specific test files (not the entire directory)
+app.get('/pagination-test-merged.html', (req, res) => {
+    res.sendFile(path.join(__dirname, 'pagination-test-merged.html'));
+});
+
+app.get('/PAG-TEST2.html', (req, res) => {
+    res.sendFile(path.join(__dirname, 'PAG-TEST2.html'));
+});
+
+app.get('/pagination-test.html', (req, res) => {
+    res.sendFile(path.join(__dirname, 'pagination-test.html'));
+});
+
+app.get('/manual-page-editor.html', (req, res) => {
+    res.sendFile(path.join(__dirname, 'manual-page-editor.html'));
+});
+
+// Root redirects to manual page editor
+app.get('/', (req, res) => {
+    res.redirect('/manual-page-editor.html');
+});
 
 // Health check endpoint
 app.get('/health', (req, res) => {
