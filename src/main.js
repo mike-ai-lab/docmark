@@ -8524,34 +8524,28 @@ ${fontLinkTags}
         // Get all block-level elements
         let contentElements = Array.from(tempDiv.children);
         
-        // CRITICAL FIX: Handle lists and large paragraphs by breaking them into smaller chunks
+        // CRITICAL FIX: Break down lists into individual items for accurate pagination
         const processedElements = [];
         
         for (const element of contentElements) {
             if (element.tagName === 'OL' || element.tagName === 'UL') {
                 const listItems = Array.from(element.children);
-                console.log(`[Pagination] Found ${element.tagName} with ${listItems.length} items`);
+                console.log(`[Pagination] Found ${element.tagName} with ${listItems.length} items - breaking into individual items`);
                 
-                // If list is large, break it into chunks that fit on pages
-                if (listItems.length > 20) {
-                    // Create smaller lists of ~20 items each
-                    const ITEMS_PER_CHUNK = 20;
-                    for (let i = 0; i < listItems.length; i += ITEMS_PER_CHUNK) {
-                        const chunk = listItems.slice(i, i + ITEMS_PER_CHUNK);
-                        const newList = document.createElement(element.tagName);
-                        newList.style.cssText = element.style.cssText;
-                        
-                        // Preserve list start number for ordered lists
-                        if (element.tagName === 'OL') {
-                            newList.start = i + 1;
-                        }
-                        
-                        chunk.forEach(item => newList.appendChild(item.cloneNode(true)));
-                        processedElements.push(newList);
+                // Add each list item as a separate element for pagination
+                // This allows natural page breaks between items
+                listItems.forEach((item, index) => {
+                    const singleItemList = document.createElement(element.tagName);
+                    singleItemList.style.cssText = element.style.cssText;
+                    
+                    // Preserve list numbering for ordered lists
+                    if (element.tagName === 'OL') {
+                        singleItemList.start = index + 1;
                     }
-                } else {
-                    processedElements.push(element);
-                }
+                    
+                    singleItemList.appendChild(item.cloneNode(true));
+                    processedElements.push(singleItemList);
+                });
             } else if (element.tagName === 'P') {
                 // Check if single paragraph has many line breaks
                 const text = element.textContent;
@@ -8592,15 +8586,14 @@ ${fontLinkTags}
             return height;
         };
         
-        // Flow content across pages with safety margin
-        const SAFETY_MARGIN = 20; // Extra pixels to prevent overflow
+        // Flow content across pages - NO safety margin for preview
         const pages = [];
         let currentPage = { elements: [], height: 0 };
         
         for (let i = 0; i < contentElements.length; i++) {
             const element = contentElements[i];
             const elementHeight = measureElement(element);
-            const availableHeight = contentHeight - currentPage.height - SAFETY_MARGIN;
+            const availableHeight = contentHeight - currentPage.height; // No safety margin
             
             // Element fits on current page
             if (elementHeight <= availableHeight) {
