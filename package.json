@@ -61,5 +61,8 @@
     "puppeteer-core": "^24.37.2",
     "storehouse-js": "github:tanabe/Storehouse-js"
   },
+  "engines": {
+    "node": "18.x"
+  },
   "type": "commonjs"
 }
