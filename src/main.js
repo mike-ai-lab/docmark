@@ -2042,6 +2042,7 @@ let performBeautify = (content) => {
     const PREVIEW_CSS_LIGHT = 'css/github-markdown-light.css?v=1.12.0';
     const PREVIEW_CSS_DARK = 'css/github-markdown-dark_dimmed.css?v=1.12.0';
     const PREVIEW_CSS_DOCMARK = 'css/docmark-style.css?v=1.0.0';
+    const PREVIEW_CSS_DOCMARK_DECENT = 'css/docmark-decent-style.css?v=1.0.0';
     const PREVIEW_CSS_GITBOOK = 'css/gitbook-style.css?v=1.12.0';
     const PREVIEW_CSS_VSCODE = 'css/vscode-style.css?v=1.12.0';
     const PREVIEW_CSS_NOTION = 'css/notion-style.css?v=1.12.0';
@@ -2074,6 +2075,8 @@ let performBeautify = (content) => {
     let getStyleHref = (useDark, style) => {
         if (style === 'docmark') {
             return PREVIEW_CSS_DOCMARK;
+        } else if (style === 'docmarkdecent') {
+            return PREVIEW_CSS_DOCMARK_DECENT;
         } else if (style === 'gitbook') {
             return PREVIEW_CSS_GITBOOK;
         } else if (style === 'vscode') {
@@ -2145,22 +2148,22 @@ let performBeautify = (content) => {
         // Style information for tooltips
         const styleInfo = {
             docmark: {
-                name: 'DocMark Style',
+                name: 'DocMark /default',
                 description: 'Official DocMark branding style',
                 fonts: 'Plus Jakarta Sans',
                 textSize: '16px body, 48px H1',
                 features: 'Blue accents, premium typography, modern design',
                 bestFor: 'All content types - default DocMark experience'
             },
-            github: {
-                name: 'GitHub Style',
-                description: 'Traditional, balanced, professional',
+            docmarkdecent: {
+                name: 'DocMark /decent',
+                description: 'Professional black, white & orange theme',
                 fonts: 'System Sans-serif',
-                textSize: '16px body, 2em H1',
-                features: 'Full table borders, gray header backgrounds',
-                bestFor: 'Documentation, README files, general content'
+                textSize: '16px body, 36px H1',
+                features: 'Orange accents, neutral colors, clean design',
+                bestFor: 'Professional documentation, business content'
             },
-            gitbook: {
+            github: {
                 name: 'GitHub Style',
                 description: 'Traditional, balanced, professional',
                 fonts: 'System Sans-serif',
