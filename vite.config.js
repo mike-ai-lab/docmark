@@ -3,21 +3,12 @@ import { defineConfig } from 'vite';
 export default defineConfig({
   base: './',
   server: {
+    port: 8765,
+    strictPort: true,
     proxy: {
-      // Proxy /api requests to the PDF server on port 3000
+      // Proxy /api requests to the PDF server on port 8766
       '/api': {
-        target: 'http://localhost:3000',
-        changeOrigin: true,
-        secure: false
-      },
-      // Proxy PDF generation endpoints to the PDF server
-      '/generate-pdf': {
-        target: 'http://localhost:3000',
-        changeOrigin: true,
-        secure: false
-      },
-      '/health': {
-        target: 'http://localhost:3000',
+        target: 'http://localhost:8766',
         changeOrigin: true,
         secure: false
       }

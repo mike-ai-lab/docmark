@@ -1,4 +1,4 @@
-﻿import Storehouse from 'storehouse-js';
+import Storehouse from 'storehouse-js';
 import * as monaco from 'monaco-editor';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
@@ -2784,7 +2784,7 @@ let performBeautify = (content) => {
             
             // Check if server is running, if not, provide helpful instructions
             try {
-                const healthCheck = await fetch(serverUrl + '/health', { 
+                const healthCheck = await fetch(serverUrl + '/api/health', { 
                     method: 'GET',
                     signal: AbortSignal.timeout(2000) // 2 second timeout
                 });
@@ -2867,7 +2867,7 @@ let performBeautify = (content) => {
             const filename = `DocMark_${styleName}_${timestamp}.pdf`;
 
             // Send to Puppeteer server
-            const response = await fetch(serverUrl + '/generate-pdf', {
+            const response = await fetch(serverUrl + '/api/generate-pdf', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -4061,11 +4061,7 @@ ${fontLinkTags}
         const exportHtmlBtnShared = document.getElementById('export-html-button-shared');
         if (exportHtmlBtnShared) {
             exportHtmlBtnShared.addEventListener('click', () => {
-                // Trigger the original export HTML button
-                const originalBtn = document.getElementById('export-html-button');
-                if (originalBtn) {
-                    originalBtn.click();
-                }
+                exportHtml(); // Call the export function directly
             });
         }
         
@@ -4073,11 +4069,7 @@ ${fontLinkTags}
         const aiAssistantBtnShared = document.getElementById('ai-assistant-button-shared');
         if (aiAssistantBtnShared) {
             aiAssistantBtnShared.addEventListener('click', () => {
-                // Trigger the original AI assistant button
-                const originalBtn = document.getElementById('ai-assistant-button');
-                if (originalBtn) {
-                    originalBtn.click();
-                }
+                // Already handled by the main AI button setup
             });
         }
         
@@ -4085,11 +4077,7 @@ ${fontLinkTags}
         const settingsBtnShared = document.getElementById('settings-button-shared');
         if (settingsBtnShared) {
             settingsBtnShared.addEventListener('click', () => {
-                // Trigger the original settings button
-                const originalBtn = document.getElementById('settings-button');
-                if (originalBtn) {
-                    originalBtn.click();
-                }
+                // Already handled by the main settings button setup
             });
         }
         
@@ -6737,7 +6725,7 @@ ${fontLinkTags}
         aiChatUI = new AIChatUI(aiManager);
         
         // Setup AI Assistant button
-        const aiButton = document.getElementById('ai-assistant-button');
+        const aiButton = document.getElementById('ai-assistant-button-shared');
         if (aiButton) {
             aiButton.addEventListener('click', () => {
                 aiPanelUI.toggle();
@@ -8225,7 +8213,7 @@ ${fontLinkTags}
     // ============================================================================
     
     const settingsPanel = document.getElementById('settings-panel');
-    const settingsButton = document.getElementById('settings-button');
+    const settingsButton = document.getElementById('settings-button-shared');
     const settingsTabs = document.querySelectorAll('.settings-tab');
     const settingsTabContents = document.querySelectorAll('.settings-tab-content');
     

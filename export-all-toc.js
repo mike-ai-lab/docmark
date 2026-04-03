@@ -503,8 +503,8 @@ function sendPdfToServer(html, filename) {
 
         const options = {
             hostname: 'localhost',
-            port: 3000,
-            path: '/generate-pdf',
+            port: 8766,
+            path: '/api/generate-pdf',
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',

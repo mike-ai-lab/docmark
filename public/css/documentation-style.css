@@ -256,7 +256,7 @@
 
 .docs-page h1 {
     font-size: 48px;
-    color: #f7f7f7;
+    color: #1a1a1a;
     margin-bottom: 24px;
     font-weight: 300;
     line-height: 1.2;
@@ -351,7 +351,7 @@
 
 .docs-page pre {
     background: #f7f7f7;
-    color: #ecf0f1;
+    color: #1a1a1a;
     padding: 16px;
     border-radius: 8px;
     overflow-x: auto;
@@ -362,6 +362,36 @@
     background: transparent !important;
     color: inherit;
     border: none !important;
+}
+
+.docs-page table {
+    border-collapse: collapse;
+    width: auto;
+    max-width: 100%;
+    margin: 20px 0;
+    border: 1px solid #e0e0e0;
+    display: table;
+}
+
+.docs-page th {
+    background: #f5f5f5;
+    color: #1a1a1a;
+    font-weight: 600;
+    padding: 12px 16px;
+    text-align: left;
+    border: 1px solid #e0e0e0;
+    white-space: nowrap;
+}
+
+.docs-page td {
+    padding: 12px 16px;
+    border: 1px solid #e0e0e0;
+    color: #555;
+    white-space: nowrap;
+}
+
+.docs-page tr:hover {
+    background: #fafafa;
 }
 
 .docs-navigation-footer {
@@ -388,7 +418,7 @@
     cursor: pointer;
     transition: all 0.2s;
     text-decoration: none;
-    color: #f7f7f7;
+    color: #1a1a1a;
     font-size: 14px;
     white-space: nowrap;
     display: flex;
@@ -757,17 +787,21 @@
 
 [data-theme="dark"] .docs-page table {
     border-color: #3a3a3a;
+    width: auto;
+    max-width: 100%;
 }
 
 [data-theme="dark"] .docs-page th {
     background: #2a2a2a;
     color: #e0e0e0;
     border-color: #3a3a3a;
+    white-space: nowrap;
 }
 
 [data-theme="dark"] .docs-page td {
     border-color: #3a3a3a;
     color: #b0b0b0;
+    white-space: nowrap;
 }
 
 [data-theme="dark"] .docs-page tr:hover {
