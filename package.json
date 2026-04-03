@@ -62,7 +62,7 @@
     "storehouse-js": "github:tanabe/Storehouse-js"
   },
   "engines": {
-    "node": "18.x"
+    "node": "24.x"
   },
   "type": "commonjs"
 }

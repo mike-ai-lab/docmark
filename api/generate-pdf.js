@@ -47,10 +47,14 @@ module.exports = async (req, res) => {
       };
     }
 
+    const executablePath = await chromium.executablePath();
+    // Fix for Vercel missing shared libraries (e.g. libnss3.so)
+    process.env.LD_LIBRARY_PATH = `${process.env.LD_LIBRARY_PATH || ''}:${require('path').dirname(executablePath)}`;
+
     browser = await puppeteer.launch({
       args: chromium.args,
       defaultViewport: chromium.defaultViewport,
-      executablePath: await chromium.executablePath(),
+      executablePath: executablePath,
       headless: chromium.headless,
     });
 
