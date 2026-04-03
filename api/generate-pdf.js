@@ -1,3 +1,8 @@
+// Fix for @sparticuz/chromium not recognizing Node 24 as an AL2023 lambda
+// Must be set BEFORE importing `@sparticuz/chromium` so it loads missing libraries.
+process.env.AWS_EXECUTION_ENV = 'AWS_Lambda_nodejs20.x';
+process.env.AWS_LAMBDA_JS_RUNTIME = 'nodejs20.x';
+
 const chromium = require('@sparticuz/chromium');
 const puppeteer = require('puppeteer-core');
 
@@ -48,8 +53,6 @@ module.exports = async (req, res) => {
     }
 
     const executablePath = await chromium.executablePath();
-    // Fix for Vercel missing shared libraries (e.g. libnss3.so)
-    process.env.LD_LIBRARY_PATH = `${process.env.LD_LIBRARY_PATH || ''}:${require('path').dirname(executablePath)}`;
 
     browser = await puppeteer.launch({
       args: chromium.args,
