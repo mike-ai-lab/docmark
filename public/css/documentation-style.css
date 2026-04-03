@@ -79,7 +79,7 @@
 .docs-title {
     font-size: 20px;
     font-weight: 300;
-    color: #f7f7f7;
+    color: #2563eb !important;
     margin-bottom: 12px;
     letter-spacing: -0.01em;
 }
@@ -121,7 +121,7 @@
     font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif;
     font-weight: 700;
     font-size: 15px;
-    color: #f7f7f7;
+    color: #2563eb !important;
     transition: all 0.2s;
     user-select: none;
     position: relative;
@@ -130,6 +130,7 @@
 .nav-folder:hover {
     background: rgba(0, 0, 0, 0.02);
     border-color: rgba(37, 99, 235, 0.4);
+    color: #2563eb !important;
 }
 
 .nav-folder.active {
@@ -199,7 +200,7 @@
 .nav-file:hover {
     background: rgba(0, 0, 0, 0.02);
     border-color: rgba(37, 99, 235, 0.4);
-    color: #f7f7f7;
+    color: #2563eb !important;
 }
 
 .nav-file.active {
@@ -505,7 +506,7 @@
 }
 
 [data-theme="dark"] .docs-title {
-    color: #f7f7f7;
+    color: #60a5fa !important;
     font-weight: 300;
     font-size: 20px;
     letter-spacing: -0.01em;
@@ -529,7 +530,7 @@
 
 /* Dark Mode - Navigation */
 [data-theme="dark"] .nav-folder {
-    color: rgba(241, 245, 249, 0.7);
+    color: #60a5fa !important;
     font-weight: 700;
     font-size: 15px;
 }
@@ -1167,4 +1168,69 @@
 
 [data-theme="dark"] .docs-delete-modal-btn-cancel:hover {
     background: #475569;
+}
+
+/* ============================================================================
+   MODERN SCROLLBARS - Theme-aware
+   ============================================================================ */
+
+/* Scrollbar Styles - Matching Preview Column */
+.docs-layout ::-webkit-scrollbar,
+.docs-sidebar ::-webkit-scrollbar,
+.docs-content ::-webkit-scrollbar {
+    width: 8px;
+}
+
+.docs-layout ::-webkit-scrollbar-track,
+.docs-sidebar ::-webkit-scrollbar-track,
+.docs-content ::-webkit-scrollbar-track {
+    background: #e2e8f0;
+    border-radius: 8px;
+}
+
+.docs-layout ::-webkit-scrollbar-thumb,
+.docs-sidebar ::-webkit-scrollbar-thumb,
+.docs-content ::-webkit-scrollbar-thumb {
+    background-color: #9ca3af;
+    border-radius: 8px;
+}
+
+.docs-layout ::-webkit-scrollbar-thumb:hover,
+.docs-sidebar ::-webkit-scrollbar-thumb:hover,
+.docs-content ::-webkit-scrollbar-thumb:hover {
+    background-color: #6b7280;
+}
+
+/* Dark Theme Scrollbars */
+[data-theme="dark"] .docs-layout ::-webkit-scrollbar-track,
+[data-theme="dark"] .docs-sidebar ::-webkit-scrollbar-track,
+[data-theme="dark"] .docs-content ::-webkit-scrollbar-track {
+    background: #020405;
+}
+
+[data-theme="dark"] .docs-layout ::-webkit-scrollbar-thumb,
+[data-theme="dark"] .docs-sidebar ::-webkit-scrollbar-thumb,
+[data-theme="dark"] .docs-content ::-webkit-scrollbar-thumb {
+    background-color: #6b7280;
+    border: 3px solid #020405;
+}
+
+[data-theme="dark"] .docs-layout ::-webkit-scrollbar-thumb:hover,
+[data-theme="dark"] .docs-sidebar ::-webkit-scrollbar-thumb:hover,
+[data-theme="dark"] .docs-content ::-webkit-scrollbar-thumb:hover {
+    background-color: #9ca3af;
+}
+
+/* Firefox/Standard scrollbar support - Matching Preview Column */
+.docs-layout,
+.docs-sidebar,
+.docs-content {
+    scrollbar-width: auto;
+    scrollbar-color: #9ca3af #e2e8f0;
+}
+
+[data-theme="dark"] .docs-layout,
+[data-theme="dark"] .docs-sidebar,
+[data-theme="dark"] .docs-content {
+    scrollbar-color: #6b7280 #020405;
 }

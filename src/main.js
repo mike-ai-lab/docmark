@@ -3,6 +3,7 @@ import * as monaco from 'monaco-editor';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
 import { setupValidationWizard } from './validation-wizard.js';
+import { initCodeBlockEnhancer } from './code-block-enhancer.js';
 // AI Assistant imports
 import AIManager from './ai/ai-manager.js';
 import AIPanelUI from './ai/ai-panel-ui.js';
@@ -8526,9 +8527,6 @@ const renderPaperLayout = () => {
         position: absolute;
         visibility: hidden;
         width: ${pageWidth - actualLeftMargin - actualRightMargin}px;
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
-        font-size: 14px;
-        line-height: 1.6;
     `;
     document.body.appendChild(measureContainer);
     
@@ -8610,9 +8608,6 @@ const renderPaperLayout = () => {
             width: ${pageWidth - actualLeftMargin - actualRightMargin}px;
             height: ${contentHeight}px;
             overflow: hidden;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
-            font-size: 14px;
-            line-height: 1.6;
             text-align: ${settings.textAlign || 'left'};
         `;
         
@@ -8919,14 +8914,7 @@ const restoreWebLayout = () => {
         }
     };
     
-    // Hook into toggle function
-    const originalToggle = togglePaperLayout;
-    togglePaperLayout = () => {
-        originalToggle();
-        setTimeout(updateDebugVisibility, 100);
-    };
-    
-    console.log('âœ… Paper layout system initialized');
+    console.log('✅ Paper layout system initialized');
 };
 
 window.addEventListener("load", () => {
@@ -8934,4 +8922,7 @@ window.addEventListener("load", () => {
     
     // Initialize documentation mode
     documentationIntegration.initialize();
+    
+    // Initialize code block enhancer (syntax highlighting + copy buttons)
+    initCodeBlockEnhancer();
 });
