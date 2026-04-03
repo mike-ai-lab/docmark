@@ -86,7 +86,8 @@ module.exports = async (req, res) => {
 
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-    res.send(pdf);
+    // Ensure the Uint8Array is converted to a Buffer so Vercel does not serialize it as JSON
+    res.end(Buffer.from(pdf));
   } catch (error) {
     console.error('PDF generation error:', error);
     res.status(500).json({ error: error.message, stack: error.stack || 'No stack trace available' });
