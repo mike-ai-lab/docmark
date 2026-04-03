@@ -32,8 +32,12 @@ export default function EditorContainer() {
 
   // Sync local ref with shared context ref
   useEffect(() => {
+    console.log('🔍 [EDITOR SYNC] localEditorRef.current:', localEditorRef.current);
+    console.log('🔍 [EDITOR SYNC] sharedEditorRef before:', sharedEditorRef.current);
     if (localEditorRef.current) {
       sharedEditorRef.current = localEditorRef.current;
+      console.log('✅ [EDITOR SYNC] Synced! sharedEditorRef.current:', sharedEditorRef.current);
+      console.log('✅ [EDITOR SYNC] Available methods:', Object.keys(sharedEditorRef.current));
     }
   }, [localEditorRef.current, sharedEditorRef]);
 

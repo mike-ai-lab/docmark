@@ -1,0 +1,80 @@
+{
+  "name": "lexicode",
+  "version": "1.0.0",
+  "description": "LexiCode - Modern Code Editor with Live Preview",
+  "main": "electron-main.js",
+  "author": "LexiCode Team",
+  "license": "MIT",
+  "scripts": {
+    "start": "concurrently \"npm run start:backend\" \"npm run start:frontend\"",
+    "start:frontend": "cd frontend && npm run dev",
+    "start:backend": "cd server && npm start",
+    "build:frontend": "cd frontend && npm run build",
+    "electron:dev": "set NODE_ENV=development && electron .",
+    "electron:build": "npm run build:frontend && electron-builder",
+    "electron:build-win": "npm run build:frontend && electron-builder --win",
+    "electron:build-mac": "npm run build:frontend && electron-builder --mac",
+    "electron:build-linux": "npm run build:frontend && electron-builder --linux"
+  },
+  "build": {
+    "appId": "com.lexicode.app",
+    "productName": "LexiCode",
+    "directories": {
+      "output": "electron-dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "electron-main.js",
+      "electron-preload.js",
+      "frontend/dist/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.ico",
+      "artifactName": "${productName}-${version}-${arch}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "LexiCode"
+    },
+    "mac": {
+      "target": [
+        "dmg",
+        "zip"
+      ],
+      "icon": "build/icon.icns",
+      "category": "public.app-category.developer-tools"
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "icon": "build/icon.png",
+      "category": "Development"
+    }
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "electron": "^28.2.0",
+    "electron-builder": "^24.9.1"
+  },
+  "dependencies": {}
+}

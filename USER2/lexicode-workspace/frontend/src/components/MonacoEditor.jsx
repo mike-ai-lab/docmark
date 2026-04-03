@@ -58,7 +58,10 @@ const MonacoEditor = forwardRef(({ file, onContentChange }, ref) => {
       tabSize: 2,
       insertSpaces: true,
       formatOnPaste: true,
-      formatOnType: false
+      formatOnType: false,
+      // Undo/Redo configuration
+      undoStopDelay: 500,
+      maxUndoStackSize: 15
     });
 
     editorRef.current = editor;

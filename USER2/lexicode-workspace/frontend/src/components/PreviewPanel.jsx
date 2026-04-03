@@ -3,6 +3,8 @@ import { marked } from 'marked';
 import DOMPurify from 'dompurify';
 import { Maximize2, X, Smartphone, Monitor, RotateCw, ZoomIn, ZoomOut, Maximize } from 'lucide-react';
 import ReactComponentRenderer from '../utils/ReactComponentRenderer';
+import { MultiFileResolver } from '../utils/MultiFileResolver';
+import { useDemoStore } from '../store/useDemoStore';
 
 // Initialize renderer once
 const reactRenderer = new ReactComponentRenderer();
@@ -16,10 +18,18 @@ export default function PreviewPanel({ content, fileType, fileName }) {
     const [mobileZoom, setMobileZoom] = useState(0.75); // Default 75% zoom
     const [mobileOrientation, setMobileOrientation] = useState('portrait'); // 'portrait' or 'landscape'
     const iframeRef = useRef(null);
+    
+    // Get file tree and helper functions from store
+    const { fileTree, findNodeInTree, activeFileId } = useDemoStore();
+    
+    // Get current file path
+    const activeFile = activeFileId ? findNodeInTree(fileTree, activeFileId) : null;
+    const currentFilePath = activeFile?.path || fileName;
 
     console.log('🎨 [PREVIEW] === RENDER START ===');
     console.log('🎨 [PREVIEW] fileName:', fileName);
     console.log('🎨 [PREVIEW] fileType:', fileType);
+    console.log('🎨 [PREVIEW] currentFilePath:', currentFilePath);
     console.log('🎨 [PREVIEW] viewMode:', viewMode);
     console.log('🎨 [PREVIEW] mobileZoom:', mobileZoom);
     console.log('🎨 [PREVIEW] mobileOrientation:', mobileOrientation);
@@ -118,31 +128,53 @@ export default function PreviewPanel({ content, fileType, fileName }) {
                 try {
                     console.log('🔄 [IFRAME UPDATE] Starting update...');
                     
+                    // Initialize MultiFileResolver
+                    const resolver = new MultiFileResolver(fileTree, findNodeInTree);
+                    
                     // For React components
                     if ((fileType === 'jsx' || fileType === 'tsx') && isReactReady) {
                         console.log('⚛️ [IFRAME UPDATE] Rendering React component');
-                        const html = await reactRenderer.generateHTML(content || '');
+                        // Bundle React component with dependencies
+                        const bundled = resolver.bundleReactComponent(content || '', currentFilePath);
+                        console.log('⚛️ [IFRAME UPDATE] Bundled code length:', bundled.length);
+                        
+                        // Extract CSS imports from the original code and find CSS files
+                        const cssContent = resolver.extractCssForReact(content || '', currentFilePath);
+                        console.log('🎨 [IFRAME UPDATE] CSS content length:', cssContent.length);
+                        
+                        const html = await reactRenderer.generateHTML(bundled, cssContent);
                         iframe.srcdoc = html;
                         console.log('✅ [IFRAME UPDATE] React component rendered, srcdoc set');
                         return;
                     }
                     
-                    // For HTML/SVG
-                    const doc = iframe.contentDocument || iframe.contentWindow?.document;
-                    
-                    if (!doc) {
-                        console.error('❌ [IFRAME UPDATE] Cannot access iframe document');
+                    // For HTML - process with multi-file support
+                    if (fileType === 'html') {
+                        console.log('🌐 [IFRAME UPDATE] Processing HTML with dependencies');
+                        const processedHtml = resolver.processHtml(content || '', currentFilePath);
+                        
+                        const doc = iframe.contentDocument || iframe.contentWindow?.document;
+                        if (!doc) {
+                            console.error('❌ [IFRAME UPDATE] Cannot access iframe document');
+                            return;
+                        }
+                        
+                        doc.open();
+                        doc.write(processedHtml || '<html><body><p style="padding: 20px; color: #666;">No content</p></body></html>');
+                        doc.close();
+                        console.log('✅ [IFRAME UPDATE] HTML with dependencies written to iframe');
                         return;
                     }
                     
-                    console.log('🖼️ [IFRAME UPDATE] Writing to iframe document');
-                    
-                    if (fileType === 'html') {
-                        doc.open();
-                        doc.write(content || '<html><body><p style="padding: 20px; color: #666;">No content</p></body></html>');
-                        doc.close();
-                        console.log('✅ [IFRAME UPDATE] HTML written to iframe');
-                    } else if (fileType === 'svg') {
+                    // For SVG
+                    if (fileType === 'svg') {
+                        const doc = iframe.contentDocument || iframe.contentWindow?.document;
+                        if (!doc) {
+                            console.error('❌ [IFRAME UPDATE] Cannot access iframe document');
+                            return;
+                        }
+                        
+                        console.log('🖼️ [IFRAME UPDATE] Writing SVG to iframe');
                         doc.open();
                         doc.write(`
                             <!DOCTYPE html>
@@ -184,7 +216,7 @@ export default function PreviewPanel({ content, fileType, fileName }) {
         } else {
             console.log('⏭️ [IFRAME EFFECT] Skipping - conditions not met');
         }
-    }, [content, fileType, isReactReady, refreshKey]); // Added refreshKey
+    }, [content, fileType, isReactReady, refreshKey, fileTree, currentFilePath]); // Added fileTree and currentFilePath
 
     const canPreview = ['md', 'html', 'svg', 'xml', 'json', 'jsx', 'tsx'].includes(fileType);
     const isInteractive = ['html', 'jsx', 'tsx'].includes(fileType);

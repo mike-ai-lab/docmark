@@ -7,14 +7,18 @@ import {
     ChevronDown, 
     PanelLeftClose, 
     PanelLeftOpen,
-    RotateCcw,
-    RotateCw,
     Download,
     Eye,
     EyeOff,
     Table,
-    Type
+    Type,
+    Copy,
+    Clipboard,
+    Undo2,
+    Redo2,
+    Trash2
 } from 'lucide-react';
+import * as monaco from 'monaco-editor';
 import { useDemoStore } from '../store/useDemoStore';
 import { useEditor } from '../contexts/EditorContext';
 import { logOut } from '../lib/firebase';
@@ -48,65 +52,116 @@ export default function MainHeader() {
     const activeFile = activeFileId ? findNodeInTree(fileTree, activeFileId) : null;
     const canPreview = activeFile && ['md', 'html', 'svg', 'xml', 'json', 'jsx', 'tsx'].includes(activeFile.name?.split('.').pop());
 
+    // Editor action handlers
+    const handleCopy = async () => {
+        try {
+            console.log('🔍 [COPY DEBUG] editorRef:', editorRef);
+            console.log('🔍 [COPY DEBUG] editorRef.current:', editorRef?.current);
+            console.log('🔍 [COPY DEBUG] editorRef.current keys:', editorRef?.current ? Object.keys(editorRef.current) : 'null');
+            
+            const editor = editorRef?.current?.getEditor?.();
+            console.log('🔍 [COPY DEBUG] editor instance:', editor);
+            
+            if (!editor) {
+                console.error('❌ [COPY] Editor not available');
+                return;
+            }
+            const content = editor.getValue();
+            await navigator.clipboard.writeText(content);
+            console.log('✅ [COPY] Copied all content to clipboard');
+        } catch (error) {
+            console.error('❌ [COPY] Failed:', error);
+        }
+    };
+
+    const handlePaste = async () => {
+        try {
+            console.log('🔍 [PASTE DEBUG] editorRef:', editorRef);
+            console.log('🔍 [PASTE DEBUG] editorRef.current:', editorRef?.current);
+            
+            const editor = editorRef?.current?.getEditor?.();
+            console.log('🔍 [PASTE DEBUG] editor instance:', editor);
+            
+            if (!editor) {
+                console.error('❌ [PASTE] Editor not available');
+                return;
+            }
+            const text = await navigator.clipboard.readText();
+            const position = editor.getPosition();
+            editor.executeEdits('paste', [{
+                range: new monaco.Range(position.lineNumber, position.column, position.lineNumber, position.column),
+                text: text
+            }]);
+            console.log('✅ [PASTE] Pasted content at cursor position');
+        } catch (error) {
+            console.error('❌ [PASTE] Failed:', error);
+        }
+    };
+
+    const handleUndo = () => {
+        try {
+            console.log('🔍 [UNDO DEBUG] editorRef:', editorRef);
+            console.log('🔍 [UNDO DEBUG] editorRef.current:', editorRef?.current);
+            
+            const editor = editorRef?.current?.getEditor?.();
+            console.log('🔍 [UNDO DEBUG] editor instance:', editor);
+            
+            if (!editor) {
+                console.error('❌ [UNDO] Editor not available');
+                return;
+            }
+            editor.trigger('keyboard', 'undo', null);
+            console.log('✅ [UNDO] Executed');
+        } catch (error) {
+            console.error('❌ [UNDO] Failed:', error);
+        }
+    };
+
+    const handleRedo = () => {
+        try {
+            console.log('🔍 [REDO DEBUG] editorRef:', editorRef);
+            console.log('🔍 [REDO DEBUG] editorRef.current:', editorRef?.current);
+            
+            const editor = editorRef?.current?.getEditor?.();
+            console.log('🔍 [REDO DEBUG] editor instance:', editor);
+            
+            if (!editor) {
+                console.error('❌ [REDO] Editor not available');
+                return;
+            }
+            editor.trigger('keyboard', 'redo', null);
+            console.log('✅ [REDO] Executed');
+        } catch (error) {
+            console.error('❌ [REDO] Failed:', error);
+        }
+    };
+
+    const handleClear = () => {
+        try {
+            console.log('🔍 [CLEAR DEBUG] editorRef:', editorRef);
+            console.log('🔍 [CLEAR DEBUG] editorRef.current:', editorRef?.current);
+            
+            const editor = editorRef?.current?.getEditor?.();
+            console.log('🔍 [CLEAR DEBUG] editor instance:', editor);
+            
+            if (!editor) {
+                console.error('❌ [CLEAR] Editor not available');
+                return;
+            }
+            
+            editor.setValue('');
+            console.log('✅ [CLEAR] Editor content cleared');
+        } catch (error) {
+            console.error('❌ [CLEAR] Failed:', error);
+        }
+    };
+
     const handleLogout = async () => {
         try {
             await logOut();
             setShowUserMenu(false);
         } catch (error) {
             console.error('Logout error:', error);
-        }
-    };
-
-    const handleUndo = () => {
-        console.log('🔄 [UNDO] Button clicked');
-        console.log('🔄 [UNDO] editorRef.current:', editorRef.current);
-        if (editorRef.current) {
-            editorRef.current.trigger('keyboard', 'undo', null);
-            editorRef.current.focus();
-            console.log('✅ [UNDO] Triggered');
-        } else {
-            console.log('❌ [UNDO] No editor ref');
-        }
-    };
-
-    const handleRedo = () => {
-        console.log('🔄 [REDO] Button clicked');
-        console.log('🔄 [REDO] editorRef.current:', editorRef.current);
-        if (editorRef.current) {
-            editorRef.current.trigger('keyboard', 'redo', null);
-            editorRef.current.focus();
-            console.log('✅ [REDO] Triggered');
-        } else {
-            console.log('❌ [REDO] No editor ref');
-        }
-    };
-
-    const handleCopy = async () => {
-        if (editorRef.current) {
-            const selection = editorRef.current.getSelection();
-            const selectedText = editorRef.current.getModel().getValueInRange(selection);
-            try {
-                await navigator.clipboard.writeText(selectedText);
-                console.log('✅ [COPY] Text copied to clipboard');
-            } catch (err) {
-                console.error('❌ [COPY] Failed:', err);
-            }
-        }
-    };
-
-    const handlePaste = async () => {
-        if (editorRef.current) {
-            try {
-                const text = await navigator.clipboard.readText();
-                const selection = editorRef.current.getSelection();
-                editorRef.current.executeEdits('paste', [{
-                    range: selection,
-                    text: text
-                }]);
-                console.log('✅ [PASTE] Text pasted from clipboard');
-            } catch (err) {
-                console.error('❌ [PASTE] Failed:', err);
-            }
         }
     };
 
@@ -191,45 +246,46 @@ export default function MainHeader() {
                 {/* Editor Actions (only show when file is active) */}
                 {activeFile && (
                     <>
-                        {/* History Controls */}
-                        <div className="flex items-center bg-white/5 rounded-lg p-0.5 border border-white/5">
-                            <button 
-                                onClick={handleUndo} 
-                                title="Undo (Ctrl+Z)" 
-                                className="p-1.5 hover:bg-white/5 rounded text-white/40 hover:text-white transition-all active:scale-90"
+                        {/* Undo/Redo Group */}
+                        <div className="flex items-center gap-1 bg-white/5 rounded-lg p-1">
+                            <button
+                                onClick={handleUndo}
+                                className="p-1.5 rounded hover:bg-white/10 text-white/60 hover:text-white transition-all"
+                                title="Undo (Ctrl+Z)"
                             >
-                                <RotateCcw size={14}/>
+                                <Undo2 size={14} />
                             </button>
-                            <button 
-                                onClick={handleRedo} 
-                                title="Redo (Ctrl+Y)" 
-                                className="p-1.5 hover:bg-white/5 rounded text-white/40 hover:text-white transition-all active:scale-90"
+                            <button
+                                onClick={handleRedo}
+                                className="p-1.5 rounded hover:bg-white/10 text-white/60 hover:text-white transition-all"
+                                title="Redo (Ctrl+Y)"
                             >
-                                <RotateCw size={14}/>
+                                <Redo2 size={14} />
                             </button>
                         </div>
 
-                        {/* Copy/Paste Controls */}
-                        <div className="flex items-center bg-white/5 rounded-lg p-0.5 border border-white/5">
-                            <button 
-                                onClick={handleCopy} 
-                                title="Copy (Ctrl+C)" 
-                                className="p-1.5 hover:bg-white/5 rounded text-white/40 hover:text-white transition-all active:scale-90"
+                        {/* Copy/Paste Group */}
+                        <div className="flex items-center gap-1 bg-white/5 rounded-lg p-1">
+                            <button
+                                onClick={handleCopy}
+                                className="p-1.5 rounded hover:bg-white/10 text-white/60 hover:text-white transition-all"
+                                title="Copy All Content"
                             >
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-                                </svg>
+                                <Copy size={14} />
                             </button>
-                            <button 
-                                onClick={handlePaste} 
-                                title="Paste (Ctrl+V)" 
-                                className="p-1.5 hover:bg-white/5 rounded text-white/40 hover:text-white transition-all active:scale-90"
+                            <button
+                                onClick={handlePaste}
+                                className="p-1.5 rounded hover:bg-white/10 text-white/60 hover:text-white transition-all"
+                                title="Paste at Cursor"
                             >
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                    <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
-                                    <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
-                                </svg>
+                                <Clipboard size={14} />
+                            </button>
+                            <button
+                                onClick={handleClear}
+                                className="p-1.5 rounded hover:bg-red-500/20 text-white/60 hover:text-red-400 transition-all"
+                                title="Clear All Content"
+                            >
+                                <Trash2 size={14} />
                             </button>
                         </div>
 

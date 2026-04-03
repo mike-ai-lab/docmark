@@ -218,7 +218,7 @@ class ReactComponentRenderer {
     }
   }
 
-  async generateHTML(sourceCode) {
+  async generateHTML(sourceCode, customCSS = '') {
     const compileResult = await this.compile(sourceCode);
     
     if (!compileResult.success) {
@@ -227,6 +227,18 @@ class ReactComponentRenderer {
 
     const encoded = encodeURIComponent(compileResult.transpiledCode);
     
+    console.log('[React Renderer] Custom CSS length:', customCSS.length);
+    if (customCSS) {
+      console.log('[React Renderer] CSS preview:', customCSS.substring(0, 200));
+    }
+    
+    // Debug: Log if we're actually injecting CSS
+    if (customCSS.length > 0) {
+      console.log('✅ [React Renderer] CSS WILL BE INJECTED into <style> tag');
+    } else {
+      console.warn('⚠️ [React Renderer] NO CSS to inject!');
+    }
+    
     return `<!DOCTYPE html>
 <html>
 <head>
@@ -234,10 +246,12 @@ class ReactComponentRenderer {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <script crossorigin src="${this.options.reactCDN}"></script>
   <script crossorigin src="${this.options.reactDOMCDN}"></script>
-  <script src="${this.options.tailwindCDN}"></script>
   <style>
-    body { margin: 0; padding: 0; background: #f8fafc; }
+    /* Default styles */
+    body { margin: 0; padding: 0; }
     #root { min-height: 100vh; }
+    
+    /* Error overlay styles */
     .error-overlay {
       position: fixed;
       inset: 0;
@@ -264,6 +278,11 @@ class ReactComponentRenderer {
       overflow: auto;
     }
   </style>
+  <script src="${this.options.tailwindCDN}"></script>
+  <style id="custom-styles">
+    /* Custom CSS from imported files - MUST come after Tailwind to override its reset */
+    ${customCSS}
+  </style>
 </head>
 <body>
   <div id="root"></div>
@@ -285,6 +304,26 @@ class ReactComponentRenderer {
 
         const root = window.ReactDOM.createRoot(document.getElementById('root'));
         root.render(React.createElement(Component));
+        
+        // Debug: Log rendered DOM structure after a short delay
+        setTimeout(() => {
+          const rootEl = document.getElementById('root');
+          console.log('🔍 [Preview Debug] Root element:', rootEl);
+          console.log('🔍 [Preview Debug] Root innerHTML length:', rootEl.innerHTML.length);
+          console.log('🔍 [Preview Debug] First child:', rootEl.firstElementChild);
+          if (rootEl.firstElementChild) {
+            console.log('🔍 [Preview Debug] First child classes:', rootEl.firstElementChild.className);
+            console.log('🔍 [Preview Debug] First child computed style:', window.getComputedStyle(rootEl.firstElementChild).background);
+          }
+          
+          // Check if CSS is loaded
+          const styles = document.querySelectorAll('style');
+          console.log('🎨 [Preview Debug] Number of <style> tags:', styles.length);
+          styles.forEach((style, i) => {
+            console.log(\`🎨 [Preview Debug] Style tag \${i} length:\`, style.textContent.length);
+            console.log(\`🎨 [Preview Debug] Style tag \${i} preview:\`, style.textContent.substring(0, 200));
+          });
+        }, 100);
       } catch (e) {
         console.error('[Preview] Error:', e);
         const overlay = document.createElement('div');
