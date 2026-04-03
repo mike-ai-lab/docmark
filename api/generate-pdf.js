@@ -82,7 +82,7 @@ module.exports = async (req, res) => {
     res.send(pdf);
   } catch (error) {
     console.error('PDF generation error:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: error.message, stack: error.stack || 'No stack trace available' });
   } finally {
     if (browser) await browser.close();
   }

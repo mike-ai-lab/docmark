@@ -2786,7 +2786,7 @@ let performBeautify = (content) => {
             try {
                 const healthCheck = await fetch(serverUrl + '/api/health', { 
                     method: 'GET',
-                    signal: AbortSignal.timeout(2000) // 2 second timeout
+                    signal: AbortSignal.timeout(5000) // 5 second timeout for Vercel cold starts
                 });
                 if (!healthCheck.ok) throw new Error('Server not healthy');
             } catch (healthError) {
@@ -2878,7 +2878,15 @@ let performBeautify = (content) => {
             });
 
             if (!response.ok) {
-                throw new Error('PDF generation failed');
+                let errorDetails = '';
+                try {
+                    const errData = await response.json();
+                    errorDetails = errData.error || errData.message || JSON.stringify(errData);
+                    if (errData.stack) console.error('Server stack:', errData.stack);
+                } catch (e) {
+                    errorDetails = await response.text();
+                }
+                throw new Error(`PDF generation failed: ${response.status} - ${errorDetails}`);
             }
 
             // Download PDF
