@@ -12,10 +12,39 @@ module.exports = async (req, res) => {
 
   let browser;
   try {
-    const { html, filename, margins } = req.body;
+    const { html, filename, margins, documentTitle, showDocumentTitle, showPageNumbers, pageNumberPosition } = req.body;
 
     if (!html) {
       return res.status(400).json({ error: 'HTML content required' });
+    }
+
+    // Use provided margins or defaults
+    let pdfMargins = margins || {
+      top: '15mm',
+      right: '15mm',
+      bottom: '15mm',
+      left: '15mm'
+    };
+    
+    // CRITICAL: Puppeteer's displayHeaderFooter renders OUTSIDE the content area
+    // We need to ADD extra space to top/bottom margins when headers/footers are enabled
+    if (showDocumentTitle || showPageNumbers) {
+      const HEADER_SPACE = 12; // mm - space needed for header (slightly increased)
+      const FOOTER_SPACE = 12; // mm - space needed for footer (slightly increased)
+      
+      // Parse current margins (remove 'mm' and convert to number)
+      const topMargin = parseFloat(pdfMargins.top);
+      const bottomMargin = parseFloat(pdfMargins.bottom);
+      
+      // Add extra space for header/footer
+      const adjustedTop = showDocumentTitle ? topMargin + HEADER_SPACE : topMargin;
+      const adjustedBottom = showPageNumbers ? bottomMargin + FOOTER_SPACE : bottomMargin;
+      
+      pdfMargins = {
+        ...pdfMargins,
+        top: `${adjustedTop}mm`,
+        bottom: `${adjustedBottom}mm`
+      };
     }
 
     browser = await puppeteer.launch({
@@ -28,10 +57,24 @@ module.exports = async (req, res) => {
     const page = await browser.newPage();
     await page.setContent(html, { waitUntil: 'networkidle0' });
 
+    // Build header and footer templates
+    const alignment = pageNumberPosition || 'center';
+    
+    const headerTemplate = showDocumentTitle ? 
+      `<div style="font-size: 14px; color: #64748b; font-weight: 600; text-align: ${alignment}; width: 100%; padding: 8px 0;">${documentTitle || 'Document'}</div>` : 
+      '<div></div>';
+    
+    const footerTemplate = showPageNumbers ? 
+      `<div style="font-size: 12px; color: #94a3b8; font-weight: 500; text-align: ${alignment}; width: 100%; padding: 8px 0;"><span class="pageNumber"></span></div>` : 
+      '<div></div>';
+
     const pdf = await page.pdf({
       format: 'A4',
       printBackground: true,
-      margin: margins || { top: '0mm', right: '0mm', bottom: '0mm', left: '0mm' }
+      margin: pdfMargins,
+      displayHeaderFooter: showDocumentTitle || showPageNumbers,
+      headerTemplate: headerTemplate,
+      footerTemplate: footerTemplate
     });
 
     res.setHeader('Content-Type', 'application/pdf');

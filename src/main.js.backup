@@ -1,4 +1,4 @@
-﻿import Storehouse from 'storehouse-js';
+import Storehouse from 'storehouse-js';
 import * as monaco from 'monaco-editor';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
@@ -694,7 +694,7 @@ This web site is using ${"`"}markedjs/marked${"`"}.
         //     const iframeDocument = iframe.contentDocument || iframe.contentWindow.document;
         //     if (iframeDocument) {
         //         initializeInspector(iframeDocument);
-        //         console.log('âœ… Inspector initialized with full modular actions');
+        //         console.log('✅ Inspector initialized with full modular actions');
         //     }
         // };
     };
@@ -766,11 +766,11 @@ This web site is using ${"`"}markedjs/marked${"`"}.
             (match, style, hintContent) => {
                 // Map GitBook styles to appropriate icons and colors
                 const styleMap = {
-                    'info': { icon: 'â„¹ï¸', class: 'hint-info', color: '#3b82f6' },
-                    'warning': { icon: 'âš ï¸', class: 'hint-warning', color: '#f59e0b' },
-                    'danger': { icon: 'ðŸš«', class: 'hint-danger', color: '#ef4444' },
-                    'success': { icon: 'âœ…', class: 'hint-success', color: '#10b981' },
-                    'tip': { icon: 'ðŸ’¡', class: 'hint-tip', color: '#8b5cf6' }
+                    'info': { icon: 'ℹ️', class: 'hint-info', color: '#3b82f6' },
+                    'warning': { icon: '⚠️', class: 'hint-warning', color: '#f59e0b' },
+                    'danger': { icon: '🚫', class: 'hint-danger', color: '#ef4444' },
+                    'success': { icon: '✅', class: 'hint-success', color: '#10b981' },
+                    'tip': { icon: '💡', class: 'hint-tip', color: '#8b5cf6' }
                 };
                 
                 const styleInfo = styleMap[style] || styleMap['info'];
@@ -1021,7 +1021,7 @@ This web site is using ${"`"}markedjs/marked${"`"}.
                     MermaidRenderer.renderDebounced(outputElement);
                 }
             } catch (error) {
-                console.error('âŒ Mermaid rendering error:', error);
+                console.error('❌ Mermaid rendering error:', error);
             }
 
             // Apply edit mode if enabled
@@ -1896,7 +1896,7 @@ let performBeautify = (content) => {
                 <div class="paste-dialog">
                     <div class="paste-dialog-header">
                         <h3>Paste HTML Content</h3>
-                        <button class="paste-dialog-close" id="paste-dialog-close">Ã—</button>
+                        <button class="paste-dialog-close" id="paste-dialog-close">×</button>
                     </div>
                     <div class="paste-dialog-body">
                         <p>HTML content detected in clipboard. How would you like to paste it?</p>
@@ -2262,7 +2262,7 @@ let performBeautify = (content) => {
             tooltip.innerHTML = `
                 <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 8px;">
                     <strong style="font-size: 14px; color: ${textColor};">${info.name}</strong>
-                    <button id="close-style-tooltip" style="background: none; border: none; font-size: 18px; cursor: pointer; padding: 0; margin-left: 10px; color: ${textColor};">Ã—</button>
+                    <button id="close-style-tooltip" style="background: none; border: none; font-size: 18px; cursor: pointer; padding: 0; margin-left: 10px; color: ${textColor};">×</button>
                 </div>
                 <p style="margin: 4px 0; font-size: 12px; color: ${mutedColor};">${info.description}</p>
                 <div style="margin-top: 8px; font-size: 11px; line-height: 1.6; color: ${textColor};">
@@ -2766,7 +2766,7 @@ let performBeautify = (content) => {
     // ===== PDF EXPORT WITH PUPPETEER =====
     
     let exportPreviewToPdf = async () => {
-        console.log('ðŸš€ [PUPPETEER PDF EXPORT] Starting export...');
+        console.log('🚀 [PUPPETEER PDF EXPORT] Starting export...');
         
         const outputElement = document.querySelector('#output');
         if (!outputElement) {
@@ -2787,7 +2787,7 @@ let performBeautify = (content) => {
                 if (!healthCheck.ok) throw new Error('Server not healthy');
             } catch (healthError) {
                 const shouldContinue = confirm(
-                    'âš ï¸ PDF Server Not Running\n\n' +
+                    '⚠️ PDF Server Not Running\n\n' +
                     'The PDF export server needs to be started.\n\n' +
                     'Run this command in a terminal:\n' +
                     'node pdf-server.js\n\n' +
@@ -2834,20 +2834,32 @@ let performBeautify = (content) => {
             // Get page setup settings (includes margins from dropdown)
             const layoutSettings = loadPdfLayoutSettings();
             
-            // Use @page margins from CSS instead of Puppeteer margins
-            // This ensures margins are applied correctly without viewport issues
+            // CRITICAL: Apply safety margins to prevent content from overlapping headers/footers
+            const SAFETY_TOP = 8;     // mm - minimum top margin (protects header)
+            const SAFETY_BOTTOM = 8;  // mm - minimum bottom margin (protects page number)
+            const SAFETY_LEFT = 5;    // mm - minimum left margin
+            const SAFETY_RIGHT = 5;   // mm - minimum right margin
+            
+            const safeMargins = {
+                top: Math.max(layoutSettings.margins.top, SAFETY_TOP),
+                right: Math.max(layoutSettings.margins.right, SAFETY_RIGHT),
+                bottom: Math.max(layoutSettings.margins.bottom, SAFETY_BOTTOM),
+                left: Math.max(layoutSettings.margins.left, SAFETY_LEFT)
+            };
+            
+            console.log('[PDF Export] User margins:', layoutSettings.margins);
+            console.log('[PDF Export] Safe margins (with buffer):', safeMargins);
+            
+            // Pass safe margins to server for @page CSS
             const margins = {
-                top: '0mm',
-                right: '0mm',
-                bottom: '0mm',
-                left: '0mm'
+                top: `${safeMargins.top}mm`,
+                right: `${safeMargins.right}mm`,
+                bottom: `${safeMargins.bottom}mm`,
+                left: `${safeMargins.left}mm`
             };
 
-            console.log('[PDF Export] PDF engine margins set to 0 (margins applied via @page CSS)');
-            console.log('[PDF Export] User margins in @page rule:', layoutSettings.margins);
-
             // Collect HTML with all styles (async - fetches CSS)
-            const fullHtml = await collectHtmlForPuppeteer(cleanOutputElement);
+            const fullHtml = await collectHtmlForPuppeteer(cleanOutputElement, safeMargins);
             
             // Clean up temp div if created
             if (wasPaperLayout) {
@@ -2869,7 +2881,11 @@ let performBeautify = (content) => {
                 body: JSON.stringify({
                     html: fullHtml,
                     filename: filename,
-                    margins: margins
+                    margins: margins,
+                    documentTitle: layoutSettings.documentTitle || 'Document',
+                    showDocumentTitle: layoutSettings.showDocumentTitle !== false,
+                    showPageNumbers: layoutSettings.showPageNumbers !== false,
+                    pageNumberPosition: layoutSettings.pageNumberPosition || 'center'
                 })
             });
 
@@ -2879,18 +2895,18 @@ let performBeautify = (content) => {
 
             // Download PDF
             const blob = await response.blob();
-            console.log('â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•');
-            console.log('ðŸŽ‰ PDF EXPORT COMPLETE');
-            console.log('â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•');
-            console.log('ðŸ“¦ Blob received:', blob.size, 'bytes (', (blob.size / 1024).toFixed(2), 'KB )');
-            console.log('ðŸ“¦ Blob type:', blob.type);
+            console.log('═══════════════════════════════════════════════════════');
+            console.log('🎉 PDF EXPORT COMPLETE');
+            console.log('═══════════════════════════════════════════════════════');
+            console.log('📦 Blob received:', blob.size, 'bytes (', (blob.size / 1024).toFixed(2), 'KB )');
+            console.log('📦 Blob type:', blob.type);
             
             if (blob.size === 0) {
                 throw new Error('PDF blob is empty - server may have failed silently');
             }
             
             const url = window.URL.createObjectURL(blob);
-            console.log('ðŸ”— Blob URL created:', url);
+            console.log('🔗 Blob URL created:', url);
             
             const a = document.createElement('a');
             a.href = url;
@@ -2898,27 +2914,27 @@ let performBeautify = (content) => {
             
             // Force download by appending to body and clicking
             document.body.appendChild(a);
-            console.log('ðŸ–±ï¸  Triggering download...');
-            console.log('ðŸ“„ Filename:', filename);
+            console.log('🖱️  Triggering download...');
+            console.log('📄 Filename:', filename);
             
             // Add event listeners to track download
             let downloadStarted = false;
             a.addEventListener('click', () => {
                 downloadStarted = true;
-                console.log('âœ… Download click event fired!');
+                console.log('✅ Download click event fired!');
             });
             
             a.click();
             
             if (!downloadStarted) {
-                console.warn('âš ï¸  Download click may have been blocked!');
+                console.warn('⚠️  Download click may have been blocked!');
             }
             
             // Small delay before cleanup to ensure download starts
             setTimeout(() => {
                 document.body.removeChild(a);
                 window.URL.revokeObjectURL(url);
-                console.log('ðŸ§¹ Cleanup complete');
+                console.log('🧹 Cleanup complete');
             }, 100);
 
             hideLoadingIndicator();
@@ -2930,47 +2946,47 @@ let performBeautify = (content) => {
             const isMac = userAgent.includes('Mac');
             const isLinux = userAgent.includes('Linux');
             
-            console.log('â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•');
-            console.log('ðŸ’¾ DOWNLOAD LOCATION');
-            console.log('â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•');
-            console.log('ðŸ–¥ï¸  Platform:', platform);
-            console.log('ðŸŒ User Agent:', userAgent);
+            console.log('═══════════════════════════════════════════════════════');
+            console.log('💾 DOWNLOAD LOCATION');
+            console.log('═══════════════════════════════════════════════════════');
+            console.log('🖥️  Platform:', platform);
+            console.log('🌐 User Agent:', userAgent);
             
             if (isWindows) {
-                console.log('ðŸ“ DEFAULT DOWNLOAD FOLDER:');
+                console.log('📁 DEFAULT DOWNLOAD FOLDER:');
                 console.log('   C:\\Users\\YOUR_USERNAME\\Downloads\\');
-                console.log('ðŸ“„ FULL PATH (check your Downloads folder):');
+                console.log('📄 FULL PATH (check your Downloads folder):');
                 console.log('   C:\\Users\\YOUR_USERNAME\\Downloads\\' + filename);
                 console.log('');
-                console.log('ðŸ’¡ TIP: Press Win+E to open File Explorer');
-                console.log('ðŸ’¡ TIP: Click "Downloads" in the left sidebar');
-                console.log('ðŸ’¡ TIP: Sort by "Date modified" to find the newest file');
+                console.log('💡 TIP: Press Win+E to open File Explorer');
+                console.log('💡 TIP: Click "Downloads" in the left sidebar');
+                console.log('💡 TIP: Sort by "Date modified" to find the newest file');
             } else if (isMac) {
-                console.log('ðŸ“ DEFAULT DOWNLOAD FOLDER:');
+                console.log('📁 DEFAULT DOWNLOAD FOLDER:');
                 console.log('   /Users/YOUR_USERNAME/Downloads/');
-                console.log('ðŸ“„ FULL PATH:');
+                console.log('📄 FULL PATH:');
                 console.log('   /Users/YOUR_USERNAME/Downloads/' + filename);
                 console.log('');
-                console.log('ðŸ’¡ TIP: Press Cmd+Shift+L to open Downloads folder');
+                console.log('💡 TIP: Press Cmd+Shift+L to open Downloads folder');
             } else if (isLinux) {
-                console.log('ðŸ“ DEFAULT DOWNLOAD FOLDER:');
+                console.log('📁 DEFAULT DOWNLOAD FOLDER:');
                 console.log('   /home/YOUR_USERNAME/Downloads/');
-                console.log('ðŸ“„ FULL PATH:');
+                console.log('📄 FULL PATH:');
                 console.log('   /home/YOUR_USERNAME/Downloads/' + filename);
             } else {
-                console.log('ðŸ“ Check your browser\'s default download folder');
-                console.log('ðŸ“„ Filename:', filename);
+                console.log('📁 Check your browser\'s default download folder');
+                console.log('📄 Filename:', filename);
             }
             
-            console.log('â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•');
-            console.log('ðŸ” TROUBLESHOOTING');
-            console.log('â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•');
+            console.log('═══════════════════════════════════════════════════════');
+            console.log('🔍 TROUBLESHOOTING');
+            console.log('═══════════════════════════════════════════════════════');
             console.log('1. Check your browser\'s download bar (usually at bottom)');
             console.log('2. Check browser settings: chrome://settings/downloads');
             console.log('3. Look for download notification in system tray');
             console.log('4. Check if browser blocked the download (popup blocker)');
             console.log('5. File size:', (blob.size / 1024).toFixed(2), 'KB - download DID happen!');
-            console.log('â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•');
+            console.log('═══════════════════════════════════════════════════════');
             
             // Show success toast with file info
             showToast(`PDF exported successfully!\n${filename}\n${(blob.size / 1024).toFixed(2)} KB\n\nCheck your Downloads folder!`, 'success');
@@ -2988,7 +3004,7 @@ let performBeautify = (content) => {
     };
 
     // Helper function to collect HTML with inline styles for Puppeteer
-    let collectHtmlForPuppeteer = async (outputElement) => {
+    let collectHtmlForPuppeteer = async (outputElement, safeMargins) => {
         console.log('[PDF Export] Collecting HTML and CSS for Puppeteer...');
         
         // Load PDF layout settings
@@ -3305,7 +3321,7 @@ ${fontLinkTags}
             /* We apply margins manually using body padding */
             @page {
                 size: A4;
-                margin: ${layoutSettings.margins.top}mm ${layoutSettings.margins.right}mm ${layoutSettings.margins.bottom}mm ${layoutSettings.margins.left}mm;
+                margin: ${safeMargins.top}mm ${safeMargins.right}mm ${safeMargins.bottom}mm ${safeMargins.left}mm;
             }
             
             html {
@@ -3363,6 +3379,8 @@ ${fontLinkTags}
                 break-inside: avoid;
                 page-break-inside: avoid;
             }
+            
+            /* Puppeteer handles headers/footers via displayHeaderFooter option */
         }
     </style>
 </head>
@@ -3554,7 +3572,7 @@ ${fontLinkTags}
         panel.innerHTML = `
             <div style="position: sticky; top: 0; background: var(--bg-color, white); padding: 15px; border-bottom: 1px solid #ddd; display: flex; justify-content: space-between; align-items: center;">
                 <h3 style="margin: 0; font-size: 16px;">PDF Export Settings</h3>
-                <button id="pdf-close-panel" style="background: none; border: none; font-size: 20px; cursor: pointer; padding: 0; width: 24px; height: 24px;">Ã—</button>
+                <button id="pdf-close-panel" style="background: none; border: none; font-size: 20px; cursor: pointer; padding: 0; width: 24px; height: 24px;">×</button>
             </div>
             
             <div style="padding: 15px;">
@@ -3823,6 +3841,9 @@ ${fontLinkTags}
         const applyBtn = document.getElementById('pdf-apply-btn');
         const resetBtn = document.getElementById('pdf-reset-btn');
         const showGuidesCheckbox = document.getElementById('show-margin-guides');
+        const documentTitleInput = document.getElementById('pdf-document-title');
+        const showDocumentTitleCheckbox = document.getElementById('show-document-title');
+        const showPageNumbersCheckbox = document.getElementById('show-page-numbers');
         
         if (!modal || !openBtn) return;
         
@@ -3834,6 +3855,17 @@ ${fontLinkTags}
         document.getElementById('pdf-margin-right').value = savedSettings.margins.right;
         document.getElementById('pdf-margin-bottom').value = savedSettings.margins.bottom;
         document.getElementById('pdf-margin-left').value = savedSettings.margins.left;
+        
+        // Set document title and visibility
+        if (documentTitleInput) {
+            documentTitleInput.value = savedSettings.documentTitle || 'Document';
+        }
+        if (showDocumentTitleCheckbox) {
+            showDocumentTitleCheckbox.checked = savedSettings.showDocumentTitle !== false;
+        }
+        if (showPageNumbersCheckbox) {
+            showPageNumbersCheckbox.checked = savedSettings.showPageNumbers !== false;
+        }
         
         // Set margin guides checkbox
         if (showGuidesCheckbox) {
@@ -3868,6 +3900,17 @@ ${fontLinkTags}
             document.getElementById('pdf-margin-right').value = currentSettings.margins.right;
             document.getElementById('pdf-margin-bottom').value = currentSettings.margins.bottom;
             document.getElementById('pdf-margin-left').value = currentSettings.margins.left;
+            
+            // Update document title and visibility
+            if (documentTitleInput) {
+                documentTitleInput.value = currentSettings.documentTitle || 'Document';
+            }
+            if (showDocumentTitleCheckbox) {
+                showDocumentTitleCheckbox.checked = currentSettings.showDocumentTitle !== false;
+            }
+            if (showPageNumbersCheckbox) {
+                showPageNumbersCheckbox.checked = currentSettings.showPageNumbers !== false;
+            }
             
             // Update margin guides checkbox
             if (showGuidesCheckbox) {
@@ -3980,9 +4023,63 @@ ${fontLinkTags}
             });
         }
         
+        // Document title input
+        if (documentTitleInput) {
+            documentTitleInput.addEventListener('input', () => {
+                const settings = loadPdfLayoutSettings();
+                settings.documentTitle = documentTitleInput.value || 'Document';
+                savePdfLayoutSettings(settings);
+                
+                // Re-render paper layout immediately if active
+                if (paperLayoutActive) {
+                    renderPaperLayout();
+                }
+            });
+        }
+        
+        // Show document title checkbox
+        if (showDocumentTitleCheckbox) {
+            showDocumentTitleCheckbox.addEventListener('change', () => {
+                const settings = loadPdfLayoutSettings();
+                settings.showDocumentTitle = showDocumentTitleCheckbox.checked;
+                savePdfLayoutSettings(settings);
+                
+                // Re-render paper layout immediately if active
+                if (paperLayoutActive) {
+                    renderPaperLayout();
+                }
+                
+                showMofuHelper(showDocumentTitleCheckbox.checked ? 'Document title shown' : 'Document title hidden');
+            });
+        }
+        
+        // Show page numbers checkbox
+        if (showPageNumbersCheckbox) {
+            showPageNumbersCheckbox.addEventListener('change', () => {
+                const settings = loadPdfLayoutSettings();
+                settings.showPageNumbers = showPageNumbersCheckbox.checked;
+                savePdfLayoutSettings(settings);
+                
+                // Re-render paper layout immediately if active
+                if (paperLayoutActive) {
+                    renderPaperLayout();
+                }
+                
+                showMofuHelper(showPageNumbersCheckbox.checked ? 'Page numbers shown' : 'Page numbers hidden');
+            });
+        }
+        
         // Reset button
         resetBtn.addEventListener('click', () => {
-            const defaults = { textAlign: 'left', pageNumberPosition: 'center', margins: { top: 15, right: 15, bottom: 15, left: 15 }, showMarginGuides: true };
+            const defaults = { 
+                textAlign: 'left', 
+                pageNumberPosition: 'center', 
+                margins: { top: 15, right: 15, bottom: 15, left: 15 }, 
+                showMarginGuides: true,
+                documentTitle: 'Document',
+                showPageNumbers: true,
+                showDocumentTitle: true
+            };
             savePdfLayoutSettings(defaults);
             
             document.getElementById('pdf-margin-top').value = 15;
@@ -3990,6 +4087,15 @@ ${fontLinkTags}
             document.getElementById('pdf-margin-bottom').value = 15;
             document.getElementById('pdf-margin-left').value = 15;
             
+            if (documentTitleInput) {
+                documentTitleInput.value = 'Document';
+            }
+            if (showDocumentTitleCheckbox) {
+                showDocumentTitleCheckbox.checked = true;
+            }
+            if (showPageNumbersCheckbox) {
+                showPageNumbersCheckbox.checked = true;
+            }
             if (showGuidesCheckbox) {
                 showGuidesCheckbox.checked = true;
             }
@@ -4089,7 +4195,7 @@ ${fontLinkTags}
             });
         }
         
-        console.log('âœ… Shared buttons initialized');
+        console.log('✅ Shared buttons initialized');
     };
     
     // Apply PDF settings to paper layout preview
@@ -4101,7 +4207,7 @@ ${fontLinkTags}
         
         if (paperPages.length === 0) return;
         
-        // Convert mm to pixels: 1mm â‰ˆ 3.78px at 96 DPI
+        // Convert mm to pixels: 1mm ≈ 3.78px at 96 DPI
         const mmToPx = 3.78;
         
         paperPages.forEach(page => {
@@ -4147,7 +4253,7 @@ ${fontLinkTags}
             }
         });
         
-        console.log('âœ… Applied PDF settings to preview:', settings);
+        console.log('✅ Applied PDF settings to preview:', settings);
     };
     
     // Load PDF layout settings
@@ -4165,7 +4271,10 @@ ${fontLinkTags}
             textAlign: 'left',
             pageNumberPosition: 'center',
             margins: { top: 15, right: 15, bottom: 15, left: 15 },
-            showMarginGuides: true  // Default to shown
+            showMarginGuides: true,  // Default to shown
+            documentTitle: 'Document',  // NEW: Default document title
+            showPageNumbers: true,  // NEW: Show page numbers by default
+            showDocumentTitle: true  // NEW: Show document title by default
         };
     };
     
@@ -4968,17 +5077,17 @@ ${fontLinkTags}
         let selectedMedia = null;
         let selectedMediaContainer = null;
         
-        console.log('ðŸ” [MEDIA CONTEXT] Setup:', { 
+        console.log('🔍 [MEDIA CONTEXT] Setup:', { 
             contextMenu: contextMenu ? 'found' : 'NOT FOUND', 
             previewPane: previewPane ? 'found' : 'NOT FOUND' 
         });
         
         if (!contextMenu || !previewPane) {
-            console.error('âŒ [MEDIA CONTEXT] Setup failed - missing elements!');
+            console.error('❌ [MEDIA CONTEXT] Setup failed - missing elements!');
             return;
         }
         
-        console.log('âœ… [MEDIA CONTEXT] Setup complete - right-click on images to test');
+        console.log('✅ [MEDIA CONTEXT] Setup complete - right-click on images to test');
         
         // Show context menu on right-click on images/videos
         previewPane.addEventListener('contextmenu', (e) => {
@@ -4988,7 +5097,7 @@ ${fontLinkTags}
             if (target.tagName === 'IMG' || target.tagName === 'VIDEO') {
                 e.preventDefault();
                 
-                console.log('ðŸ” [MEDIA CONTEXT] Right-clicked on media:', target.tagName, target.src?.substring(0, 50));
+                console.log('🔍 [MEDIA CONTEXT] Right-clicked on media:', target.tagName, target.src?.substring(0, 50));
                 
                 // Remove previous selection
                 document.querySelectorAll('.media-selected').forEach(el => {
@@ -5018,24 +5127,24 @@ ${fontLinkTags}
                 }
                 
                 selectedMediaContainer = container;
-                console.log('ðŸ” [MEDIA CONTEXT] Container:', selectedMediaContainer?.tagName, 'line:', selectedMediaContainer?.getAttribute('data-source-line'));
+                console.log('🔍 [MEDIA CONTEXT] Container:', selectedMediaContainer?.tagName, 'line:', selectedMediaContainer?.getAttribute('data-source-line'));
                 
                 // Position context menu
                 contextMenu.style.left = e.pageX + 'px';
                 contextMenu.style.top = e.pageY + 'px';
                 contextMenu.classList.add('active');
                 
-                console.log('ðŸ” [MEDIA CONTEXT] Menu positioned at:', e.pageX, e.pageY);
-                console.log('ðŸ” [MEDIA CONTEXT] Menu display:', window.getComputedStyle(contextMenu).display);
+                console.log('🔍 [MEDIA CONTEXT] Menu positioned at:', e.pageX, e.pageY);
+                console.log('🔍 [MEDIA CONTEXT] Menu display:', window.getComputedStyle(contextMenu).display);
                 
                 // Check if can move up/down - find all media containers
                 const allMediaContainers = Array.from(previewPane.querySelectorAll('img, video'))
                     .map(media => media.closest('[data-source-line]') || media.parentElement)
                     .filter((container, index, self) => self.indexOf(container) === index); // Remove duplicates
                 
-                console.log('ðŸ” [MEDIA CONTEXT] All media containers:', allMediaContainers.length);
+                console.log('🔍 [MEDIA CONTEXT] All media containers:', allMediaContainers.length);
                 const currentIndex = allMediaContainers.indexOf(selectedMediaContainer);
-                console.log('ðŸ” [MEDIA CONTEXT] Current index:', currentIndex);
+                console.log('🔍 [MEDIA CONTEXT] Current index:', currentIndex);
                 
                 document.getElementById('media-move-up').classList.toggle('disabled', currentIndex <= 0);
                 document.getElementById('media-move-down').classList.toggle('disabled', currentIndex >= allMediaContainers.length - 1);
@@ -5304,15 +5413,15 @@ ${fontLinkTags}
             }
             
             // Trigger folding for the moved image specifically
-            console.log('ðŸ” [MEDIA MOVE] Triggering folding for line:', targetLine);
-            console.log('ðŸ” [MEDIA MOVE] Media was', (endLine - startLine + 1), 'line(s)');
+            console.log('🔍 [MEDIA MOVE] Triggering folding for line:', targetLine);
+            console.log('🔍 [MEDIA MOVE] Media was', (endLine - startLine + 1), 'line(s)');
             
             setTimeout(() => {
                 const model = editor.getModel();
                 if (model) {
                     // Force folding range update
                     model.deltaDecorations([], []);
-                    console.log('ðŸ” [MEDIA MOVE] Folding ranges refreshed');
+                    console.log('🔍 [MEDIA MOVE] Folding ranges refreshed');
                 }
                 
                 // Fold the moved image
@@ -5329,9 +5438,9 @@ ${fontLinkTags}
                         foldLineNumber = targetLine;
                     }
                     
-                    console.log('ðŸ” [MEDIA MOVE] Attempting to fold line:', foldLineNumber);
+                    console.log('🔍 [MEDIA MOVE] Attempting to fold line:', foldLineNumber);
                     editor.trigger('fold', 'editor.fold', { lineNumber: foldLineNumber });
-                    console.log('âœ… [MEDIA MOVE] Folded image at line:', foldLineNumber);
+                    console.log('✅ [MEDIA MOVE] Folded image at line:', foldLineNumber);
                 }, 100);
             }, 100);
             
@@ -6152,7 +6261,7 @@ ${fontLinkTags}
                     () => null
                 );
                 
-                console.log('âœ“ Bidirectional edit: Updated editor from preview');
+                console.log('✓ Bidirectional edit: Updated editor from preview');
             } finally {
                 // Reset flag after render completes
                 setTimeout(() => {
@@ -6169,14 +6278,14 @@ ${fontLinkTags}
         
         // Make block elements contenteditable
         const elements = output.querySelectorAll('h1, h2, h3, h4, h5, h6, p, li, blockquote');
-        console.log(`âœ“ Edit mode: Making ${elements.length} elements editable`);
+        console.log(`✓ Edit mode: Making ${elements.length} elements editable`);
         
         elements.forEach(el => {
             el.setAttribute('contenteditable', 'true');
             
             // Store handler reference for later removal
             const inputHandler = (e) => {
-                console.log('âœ“ Edit mode: Input detected on', e.target.tagName);
+                console.log('✓ Edit mode: Input detected on', e.target.tagName);
                 handleContentEditableInput(e.target);
             };
             el._editModeInputHandler = inputHandler;
@@ -6742,7 +6851,7 @@ ${fontLinkTags}
         
         // Initialize PDF Import UI
         const pdfImportUI = new PDFImportUI(editor);
-        console.log('âœ… PDF Import UI initialized');
+        console.log('✅ PDF Import UI initialized');
         
         // Keyboard shortcut: Ctrl+K to toggle AI panel
         document.addEventListener('keydown', (e) => {
@@ -6757,7 +6866,7 @@ ${fontLinkTags}
             }
         });
         
-        console.log('âœ… AI Assistant initialized');
+        console.log('✅ AI Assistant initialized');
     } catch (error) {
         console.error('Failed to initialize AI Assistant:', error);
     }
@@ -6941,7 +7050,7 @@ ${fontLinkTags}
     document.getElementById('status-pdf-estimate').addEventListener('click', () => {
         const words = parseInt(document.getElementById('status-word-count').textContent);
         const pages = Math.max(1, Math.ceil(words / 500));
-        const message = `PDF Page Estimate\n\nBased on approximately 500 words per page:\n${words} words â‰ˆ ${pages} page${pages !== 1 ? 's' : ''}\n\nNote: Actual page count may vary based on:\nâ€¢ Font size and family\nâ€¢ Line height\nâ€¢ Images and tables\nâ€¢ Margins and spacing`;
+        const message = `PDF Page Estimate\n\nBased on approximately 500 words per page:\n${words} words ≈ ${pages} page${pages !== 1 ? 's' : ''}\n\nNote: Actual page count may vary based on:\n• Font size and family\n• Line height\n• Images and tables\n• Margins and spacing`;
         alert(message);
     });
     
@@ -7234,7 +7343,7 @@ ${fontLinkTags}
                 modalTitle.innerHTML = `
                     <div style="font-size: 16px; font-weight: 600; color: inherit;">${versionName}</div>
                     <div style="font-size: 12px; color: #64748b; font-weight: normal; margin-top: 4px;">
-                        ${version.words} words â€¢ ${Math.ceil(version.words / 500)} pages â€¢ Saved ${formatTimestamp(version.timestamp)}
+                        ${version.words} words • ${Math.ceil(version.words / 500)} pages • Saved ${formatTimestamp(version.timestamp)}
                     </div>
                 `;
             }
@@ -7310,8 +7419,8 @@ ${fontLinkTags}
                 modalTitle.innerHTML = `
                     <div style="font-size: 16px; font-weight: 600; color: inherit;">Compare: ${versionName}</div>
                     <div style="display: flex; gap: 20px; font-size: 12px; color: #64748b; font-weight: normal; margin-top: 4px;">
-                        <span>Current: ${currentWords} words â€¢ ${Math.ceil(currentWords / 500)} pages</span>
-                        <span>Version: ${version.words} words â€¢ ${Math.ceil(version.words / 500)} pages â€¢ Saved ${formatTimestamp(version.timestamp)}</span>
+                        <span>Current: ${currentWords} words • ${Math.ceil(currentWords / 500)} pages</span>
+                        <span>Version: ${version.words} words • ${Math.ceil(version.words / 500)} pages • Saved ${formatTimestamp(version.timestamp)}</span>
                     </div>
                 `;
             }
@@ -7963,7 +8072,7 @@ ${fontLinkTags}
         let editorScrollFrame = null;
         let previewScrollFrame = null;
         
-        // Editor scroll â†’ Preview scroll (Element-based sync)
+        // Editor scroll → Preview scroll (Element-based sync)
         editor.onDidScrollChange((e) => {
             if (isPreviewScrolling || !scrollBarSync) return;
             
@@ -8018,7 +8127,7 @@ ${fontLinkTags}
             }, 200);
         });
         
-        // Preview scroll â†’ Editor scroll
+        // Preview scroll → Editor scroll
         previewElement.addEventListener('scroll', () => {
             if (isEditorScrolling || !scrollBarSync) return;
             
@@ -8439,250 +8548,349 @@ ${fontLinkTags}
     }
     
     // ============================================================================
-
-    // ============================================================================
-    // PAPER LAYOUT - SIMPLE VERSION (MATCHES PDF EXPORT)
+    // PAPER LAYOUT & LINE-BASED PAGINATION SYSTEM (NEW)
     // ============================================================================
     
-
-// Render content in paper layout - continuous flow with visual page breaks
-// PROPER ELEMENT-BASED PAGINATION
-// This version splits content into elements and distributes them across pages
-// based on actual measured height, respecting margins completely
-
-const renderPaperLayout = () => {
-    if (!paperLayoutActive) return;
-    
-    const outputDiv = document.querySelector('#output');
-    const previewWrapper = document.querySelector('#preview-wrapper');
-    
-    if (!outputDiv || !previewWrapper) return;
-    
-    const markdownSource = (typeof editor !== 'undefined' && editor && typeof editor.getValue === 'function') 
-        ? editor.getValue() 
-        : '';
-    
-    if (!markdownSource) {
-        outputDiv.innerHTML = '<div style="padding: 40px; text-align: center; color: #64748b;">No content</div>';
-        return;
-    }
-    
-    const settings = loadPdfLayoutSettings();
-    const PX_SCALE = 3.7795275591; // 1mm â‰ˆ 3.78px at 96 DPI
-    
-    const actualTopMargin = settings.margins.top * PX_SCALE;
-    const actualBottomMargin = settings.margins.bottom * PX_SCALE;
-    const actualLeftMargin = settings.margins.left * PX_SCALE;
-    const actualRightMargin = settings.margins.right * PX_SCALE;
-    
-    const pageWidth = 794;   // 210mm (A4 width)
-    const pageHeight = 1123; // 297mm (A4 height)
-    const contentHeight = pageHeight - actualTopMargin - actualBottomMargin;
-    
-    // Parse markdown
-    let htmlContent;
-    try {
-        htmlContent = marked.parse(markdownSource);
-        if (typeof DOMPurify !== 'undefined') {
-            htmlContent = DOMPurify.sanitize(htmlContent, {
-                ADD_TAGS: ['span', 'div', 'strong', 'em', 'code', 'a', 'img', 'table', 'thead', 'tbody', 'tr', 'th', 'td', 
-                           'ul', 'ol', 'li', 'p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'blockquote', 'pre', 'br', 'hr'],
-                ADD_ATTR: ['class', 'style', 'href', 'src', 'alt', 'title'],
-                KEEP_CONTENT: true
-            });
-        }
-    } catch (e) {
-        htmlContent = `<p>${markdownSource}</p>`;
-    }
-    
-    // Parse HTML into elements
-    const tempDiv = document.createElement('div');
-    tempDiv.innerHTML = htmlContent;
-    const elements = Array.from(tempDiv.children);
-    
-    // Split large lists into individual items for better pagination
-    const splitElements = [];
-    elements.forEach(el => {
-        if ((el.tagName === 'OL' || el.tagName === 'UL') && el.children.length > 1) {
-            // Split list into individual items
-            Array.from(el.children).forEach((item, idx) => {
-                const newList = document.createElement(el.tagName);
-                newList.className = el.className;
-                if (el.tagName === 'OL') {
-                    newList.start = idx + 1;
-                }
-                newList.appendChild(item.cloneNode(true));
-                splitElements.push(newList);
-            });
-        } else {
-            splitElements.push(el);
-        }
-    });
-    
-    // Create measurement container
-    const measureContainer = document.createElement('div');
-    measureContainer.className = 'markdown-body';
-    measureContainer.style.cssText = `
-        position: absolute;
-        visibility: hidden;
-        width: ${pageWidth - actualLeftMargin - actualRightMargin}px;
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
-        font-size: 14px;
-        line-height: 1.6;
-    `;
-    document.body.appendChild(measureContainer);
-    
-    // Paginate elements based on actual height
-    const pages = [];
-    let currentPage = [];
-    let currentHeight = 0;
-    
-    splitElements.forEach(element => {
-        measureContainer.appendChild(element.cloneNode(true));
-        const style = window.getComputedStyle(measureContainer.lastChild);
-        const marginTop = parseFloat(style.marginTop) || 0;
-        const marginBottom = parseFloat(style.marginBottom) || 0;
-        const elementHeight = measureContainer.lastChild.offsetHeight + marginTop + marginBottom;
-        measureContainer.removeChild(measureContainer.lastChild);
+    // Render content in paper layout with intelligent content flow
+    const renderPaperLayout = () => {
+        if (!paperLayoutActive) return;
         
-        // If adding this element exceeds page height, start new page
-        if (currentHeight + elementHeight > contentHeight && currentPage.length > 0) {
-            pages.push(currentPage);
-            currentPage = [];
-            currentHeight = 0;
+        const outputDiv = document.querySelector('#output');
+        const previewWrapper = document.querySelector('#preview-wrapper');
+        
+        if (!outputDiv || !previewWrapper) return;
+        
+        // Get markdown content
+        const markdownSource = (typeof editor !== 'undefined' && editor && typeof editor.getValue === 'function') 
+            ? editor.getValue() 
+            : '';
+        
+        if (!markdownSource) {
+            outputDiv.innerHTML = '<div class="paper-stack"><div class="paper-page"><div class="paper-content">No content</div></div></div>';
+            return;
         }
         
-        currentPage.push(element.cloneNode(true));
-        currentHeight += elementHeight;
-    });
-    
-    // Add last page if it has content
-    if (currentPage.length > 0) {
-        pages.push(currentPage);
-    }
-    
-    document.body.removeChild(measureContainer);
-    
-    // Clear and setup
-    outputDiv.innerHTML = '';
-    outputDiv.classList.add('paper-layout-active');
-    previewWrapper.classList.add('paper-layout-active');
-    
-    // Create paper stack container
-    const paperStack = document.createElement('div');
-    paperStack.style.cssText = `
-        display: flex;
-        flex-direction: column;
-        gap: 48px;
-        padding: 48px 0;
-        align-items: center;
-    `;
-    
-    // Create pages
-    pages.forEach((pageElements, pageIndex) => {
-        const page = document.createElement('div');
-        page.className = 'paper-page';
-        page.style.cssText = `
-            width: ${pageWidth}px;
-            height: ${pageHeight}px;
-            background: white;
-            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);
-            position: relative;
-            overflow: hidden;
-            --margin-top: ${actualTopMargin}px;
-            --margin-left: ${actualLeftMargin}px;
-            --margin-right: ${actualRightMargin}px;
-            --margin-bottom: ${actualBottomMargin}px;
-        `;
+        // Get PDF settings
+        const settings = loadPdfLayoutSettings();
+        const PX_SCALE = 3.7795275591; // 1mm ≈ 3.78px at 96 DPI
         
-        // Hide CSS margin guides if user disabled them
-        if (settings.showMarginGuides === false) {
-            page.classList.add('hide-margin-guides');
+        // SAFETY MARGINS: Minimum margins to prevent content from touching edges or overlapping headers/footers
+        const SAFETY_TOP = 8; // mm - space for document title
+        const SAFETY_BOTTOM = 8; // mm - space for page number (MUST match SAFETY_TOP)
+        const SAFETY_SIDES = 5; // mm - space from page edges
+        
+        // Apply safety margins (hidden from user, added to their configured margins)
+        const safeTopMargin = Math.max(settings.margins.top, SAFETY_TOP);
+        const safeBottomMargin = Math.max(settings.margins.bottom, SAFETY_BOTTOM);
+        const safeLeftMargin = Math.max(settings.margins.left, SAFETY_SIDES);
+        const safeRightMargin = Math.max(settings.margins.right, SAFETY_SIDES);
+        
+        // User margins (for display purposes - what they see)
+        const actualTopMargin = safeTopMargin * PX_SCALE;
+        const actualBottomMargin = safeBottomMargin * PX_SCALE;
+        const actualLeftMargin = safeLeftMargin * PX_SCALE;
+        const actualRightMargin = safeRightMargin * PX_SCALE;
+        
+        console.log(`[Pagination] User margins: top=${settings.margins.top}mm, bottom=${settings.margins.bottom}mm, left=${settings.margins.left}mm, right=${settings.margins.right}mm`);
+        console.log(`[Pagination] Safe margins: top=${safeTopMargin}mm, bottom=${safeBottomMargin}mm, left=${safeLeftMargin}mm, right=${safeRightMargin}mm`);
+        
+        // Page dimensions (A4 at 96 DPI)
+        const pageWidth = 794;   // 210mm in pixels
+        const pageHeight = 1123; // 297mm in pixels
+        
+        // Calculate content area
+        const contentWidth = pageWidth - actualLeftMargin - actualRightMargin;
+        const contentHeight = pageHeight - actualTopMargin - actualBottomMargin;
+        
+        console.log(`[Pagination] Content area: ${contentWidth}px × ${contentHeight}px`);
+        console.log(`[Pagination] Margins: top=${actualTopMargin}px, bottom=${actualBottomMargin}px, left=${actualLeftMargin}px, right=${actualRightMargin}px`);
+        
+        // Parse markdown to HTML first
+        let htmlContent;
+        try {
+            htmlContent = marked.parse(markdownSource);
+            if (typeof DOMPurify !== 'undefined') {
+                htmlContent = DOMPurify.sanitize(htmlContent, {
+                    ADD_TAGS: ['span', 'div', 'strong', 'em', 'code', 'a', 'img', 'table', 'thead', 'tbody', 'tr', 'th', 'td', 
+                               'ul', 'ol', 'li', 'p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'blockquote', 'pre', 'br', 'hr'],
+                    ADD_ATTR: ['class', 'style', 'href', 'src', 'alt', 'title'],
+                    KEEP_CONTENT: true
+                });
+            }
+        } catch (e) {
+            console.error('Markdown parsing error:', e);
+            htmlContent = `<p>${markdownSource}</p>`;
         }
         
-        // Content area - contains only elements for this page
-        const contentDiv = document.createElement('div');
-        contentDiv.className = 'markdown-body';
-        contentDiv.style.cssText = `
+        // Create measurement container with proper styling
+        const measurementContainer = document.createElement('div');
+        measurementContainer.className = 'markdown-body'; // Apply markdown styles
+        measurementContainer.style.cssText = `
             position: absolute;
-            top: ${actualTopMargin}px;
-            left: ${actualLeftMargin}px;
-            width: ${pageWidth - actualLeftMargin - actualRightMargin}px;
-            height: ${contentHeight}px;
-            overflow: hidden;
+            visibility: hidden;
+            top: -9999px;
+            left: -9999px;
+            width: ${contentWidth}px;
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
             font-size: 14px;
             line-height: 1.6;
-            text-align: ${settings.textAlign || 'left'};
+            padding: 0;
+            margin: 0;
+            box-sizing: border-box;
         `;
+        document.body.appendChild(measurementContainer);
         
-        // Add elements to this page
-        pageElements.forEach((el, idx) => {
-            const cloned = el.cloneNode(true);
-            // Remove top margin from first element
-            if (idx === 0) cloned.style.marginTop = '0';
-            contentDiv.appendChild(cloned);
-        });
+        // Parse HTML into elements
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = htmlContent;
         
-        page.appendChild(contentDiv);
+        // Get all block-level elements
+        let contentElements = Array.from(tempDiv.children);
         
-        // Page number
-        if (settings.showPageNumbers !== false && (actualBottomMargin >= 30 || actualTopMargin >= 30)) {
-            const pageNum = document.createElement('div');
-            pageNum.textContent = `${pageIndex + 1}`;
-            pageNum.style.cssText = `
-                position: absolute;
-                font-size: 11px;
-                color: #64748b;
-                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-                z-index: 1001;
-            `;
-            
-            if (actualBottomMargin >= 30) {
-                pageNum.style.bottom = `${Math.max(10, actualBottomMargin / 2)}px`;
+        // CRITICAL FIX: Break down lists into individual items for accurate pagination
+        const processedElements = [];
+        
+        for (const element of contentElements) {
+            if (element.tagName === 'OL' || element.tagName === 'UL') {
+                const listItems = Array.from(element.children);
+                console.log(`[Pagination] Found ${element.tagName} with ${listItems.length} items - breaking into individual items`);
+                
+                // Add each list item as a separate element for pagination
+                // This allows natural page breaks between items
+                listItems.forEach((item, index) => {
+                    const singleItemList = document.createElement(element.tagName);
+                    singleItemList.style.cssText = element.style.cssText;
+                    
+                    // Preserve list numbering for ordered lists
+                    if (element.tagName === 'OL') {
+                        singleItemList.start = index + 1;
+                    }
+                    
+                    singleItemList.appendChild(item.cloneNode(true));
+                    processedElements.push(singleItemList);
+                });
+            } else if (element.tagName === 'P') {
+                // Check if single paragraph has many line breaks
+                const text = element.textContent;
+                const lines = text.split('\n').filter(line => line.trim());
+                
+                if (lines.length > 10) {
+                    console.log(`[Pagination] Splitting paragraph with ${lines.length} lines`);
+                    lines.forEach(line => {
+                        const p = document.createElement('p');
+                        p.textContent = line;
+                        p.style.margin = '0 0 16px 0';
+                        processedElements.push(p);
+                    });
+                } else {
+                    processedElements.push(element);
+                }
             } else {
-                pageNum.style.top = `${Math.max(10, actualTopMargin / 2)}px`;
+                processedElements.push(element);
             }
-            
-            if (settings.pageNumberPosition === 'left') {
-                pageNum.style.left = `${actualLeftMargin}px`;
-            } else if (settings.pageNumberPosition === 'right') {
-                pageNum.style.right = `${actualRightMargin}px`;
-            } else {
-                pageNum.style.left = '50%';
-                pageNum.style.transform = 'translateX(-50%)';
-            }
-            
-            page.appendChild(pageNum);
         }
         
-        paperStack.appendChild(page);
-    });
+        contentElements = processedElements;
+        console.log(`[Pagination] Processing ${contentElements.length} content elements`);
+        
+        // Measure element height including margins
+        const measureElement = (element) => {
+            const clone = element.cloneNode(true);
+            clone.style.width = `${contentWidth}px`;
+            measurementContainer.appendChild(clone);
+            
+            // Get computed style to include margins
+            const computedStyle = window.getComputedStyle(clone);
+            const marginTop = parseFloat(computedStyle.marginTop) || 0;
+            const marginBottom = parseFloat(computedStyle.marginBottom) || 0;
+            const height = clone.offsetHeight + marginTop + marginBottom;
+            
+            measurementContainer.removeChild(clone);
+            return height;
+        };
+        
+        // Flow content across pages - NO safety margin for preview
+        const pages = [];
+        let currentPage = { elements: [], height: 0 };
+        
+        for (let i = 0; i < contentElements.length; i++) {
+            const element = contentElements[i];
+            const elementHeight = measureElement(element);
+            const availableHeight = contentHeight - currentPage.height; // No safety margin
+            
+            // Element fits on current page
+            if (elementHeight <= availableHeight) {
+                currentPage.elements.push(element.cloneNode(true));
+                currentPage.height += elementHeight;
+            } else {
+                // Element doesn't fit - start new page
+                if (currentPage.elements.length > 0) {
+                    pages.push(currentPage);
+                    currentPage = { elements: [], height: 0 };
+                }
+                // Add element to new page (even if it's larger than page height)
+                currentPage.elements.push(element.cloneNode(true));
+                currentPage.height += elementHeight;
+            }
+        }
+        
+        // Add last page
+        if (currentPage.elements.length > 0) {
+            pages.push(currentPage);
+        }
+        
+        // Clean up measurement container
+        document.body.removeChild(measurementContainer);
+        
+        console.log(`[Pagination] Generated ${pages.length} pages with safety margin`);
+        
+        // Clear and render
+        outputDiv.innerHTML = '';
+        outputDiv.classList.add('paper-layout-active');
+        previewWrapper.classList.add('paper-layout-active');
+        
+        const paperStack = document.createElement('div');
+        paperStack.className = 'paper-stack';
+        paperStack.id = 'paper-stack';
+        
+        pages.forEach((pageData, pageIndex) => {
+            const page = document.createElement('div');
+            page.className = 'paper-page';
+            page.style.width = `${pageWidth}px`;
+            page.style.height = `${pageHeight}px`;
+            
+            // Set CSS custom properties for margin guides
+            page.style.setProperty('--margin-top', `${actualTopMargin}px`);
+            page.style.setProperty('--margin-right', `${actualRightMargin}px`);
+            page.style.setProperty('--margin-bottom', `${actualBottomMargin}px`);
+            page.style.setProperty('--margin-left', `${actualLeftMargin}px`);
+            
+            // Show/hide margin guides based on settings
+            if (settings.showMarginGuides === false) {
+                page.classList.add('hide-margin-guides');
+            }
+            
+            // Page header (document title) - conditionally shown and aligned with page number
+            if (settings.showDocumentTitle !== false) {
+                const header = document.createElement('div');
+                header.className = 'paper-page-header';
+                header.textContent = settings.documentTitle || 'Document';
+                
+                // Base styles
+                let headerStyles = `
+                    position: absolute;
+                    top: ${Math.max(10, actualTopMargin / 2)}px;
+                    font-size: 10px;
+                    color: #64748b;
+                    font-weight: 500;
+                    white-space: nowrap;
+                    pointer-events: none;
+                `;
+                
+                // Position header to match page number alignment
+                if (settings.pageNumberPosition === 'left') {
+                    headerStyles += `
+                        left: ${actualLeftMargin}px;
+                        text-align: left;
+                    `;
+                } else if (settings.pageNumberPosition === 'right') {
+                    headerStyles += `
+                        right: ${actualRightMargin}px;
+                        text-align: right;
+                    `;
+                } else {
+                    headerStyles += `
+                        left: 50%;
+                        transform: translateX(-50%);
+                        text-align: center;
+                    `;
+                }
+                
+                header.style.cssText = headerStyles;
+                page.appendChild(header);
+            }
+            
+            // Content area
+            const contentClip = document.createElement('div');
+            contentClip.className = 'paper-content';
+            contentClip.style.cssText = `
+                position: absolute;
+                top: ${actualTopMargin}px;
+                left: ${actualLeftMargin}px;
+                width: ${contentWidth}px;
+                height: ${contentHeight}px;
+                max-height: ${contentHeight}px;
+                overflow: hidden;
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+                font-size: 14px;
+                line-height: 1.6;
+                text-align: ${settings.textAlign || 'left'};
+            `;
+            
+            // Add elements to page
+            pageData.elements.forEach(element => {
+                contentClip.appendChild(element);
+            });
+            
+            // Page number - conditionally shown
+            if (settings.showPageNumbers !== false) {
+                const pageNum = document.createElement('div');
+                pageNum.className = 'paper-page-number';
+                pageNum.textContent = `${pageIndex + 1}`;
+                pageNum.style.cssText = `
+                    position: absolute;
+                    bottom: ${Math.max(10, actualBottomMargin / 2)}px;
+                    font-size: 9px;
+                    color: #94a3b8;
+                    font-weight: 500;
+                    text-align: center;
+                    white-space: nowrap;
+                    pointer-events: none;
+                `;
+                
+                // Position page number based on settings
+                if (settings.pageNumberPosition === 'left') {
+                    pageNum.style.left = `${actualLeftMargin}px`;
+                    pageNum.style.textAlign = 'left';
+                } else if (settings.pageNumberPosition === 'right') {
+                    pageNum.style.right = `${actualRightMargin}px`;
+                    pageNum.style.textAlign = 'right';
+                } else {
+                    pageNum.style.left = '50%';
+                    pageNum.style.transform = 'translateX(-50%)';
+                }
+                
+                page.appendChild(pageNum);
+            }
+            
+            page.appendChild(contentClip);
+            paperStack.appendChild(page);
+        });
+        
+        outputDiv.appendChild(paperStack);
+        
+        console.log(`✅ Rendered ${pages.length} pages in paper layout`);
+    };
     
-    outputDiv.appendChild(paperStack);
+    // Restore normal web layout
+    const restoreWebLayout = () => {
+        const outputDiv = document.querySelector('#output');
+        const previewWrapper = document.querySelector('#preview-wrapper');
+        
+        if (!outputDiv || !previewWrapper) return;
+        
+        outputDiv.classList.remove('paper-layout-active');
+        previewWrapper.classList.remove('paper-layout-active');
+        
+        // Re-render markdown content
+        if (editor && typeof editor.getValue === 'function') {
+            const markdown = editor.getValue();
+            convert(markdown);
+        }
+        
+        console.log('✅ Restored web layout');
+    };
     
-    console.log(`âœ… Paper layout: ${pages.length} pages with proper element-based pagination`);
-};
-
-// Restore normal web layout
-const restoreWebLayout = () => {
-    const outputDiv = document.querySelector('#output');
-    const previewWrapper = document.querySelector('#preview-wrapper');
-    
-    if (!outputDiv || !previewWrapper) return;
-    
-    outputDiv.classList.remove('paper-layout-active');
-    previewWrapper.classList.remove('paper-layout-active');
-    
-    // Re-render markdown content
-    if (editor && typeof editor.getValue === 'function') {
-        const markdown = editor.getValue();
-        convert(markdown);
-    }
-    
-    console.log('âœ… Restored web layout');
-};
-
     // Toggle paper layout
     const togglePaperLayout = () => {
         paperLayoutActive = !paperLayoutActive;
@@ -8714,219 +8922,7 @@ const restoreWebLayout = () => {
         statusLayoutMode.addEventListener('click', togglePaperLayout);
     }
     
-    // ============================================================================
-    // PAGINATION DEBUG PANEL (Development Only)
-    // ============================================================================
-    
-    let paginationDebugSettings = {
-        heightAdjustment: 0,
-        marginAdjustment: 0
-    };
-    
-    const createPaginationDebugPanel = () => {
-        const panel = document.createElement('div');
-        panel.id = 'pagination-debug-panel';
-        panel.style.cssText = `
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            background: rgba(15, 23, 42, 0.95);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(148, 163, 184, 0.2);
-            border-radius: 12px;
-            padding: 16px;
-            z-index: 10000;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-            font-size: 12px;
-            color: #e2e8f0;
-            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3);
-            min-width: 280px;
-            display: none;
-        `;
-        
-        panel.innerHTML = `
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                <div style="font-weight: 600; font-size: 13px; color: #f1f5f9;">ðŸ“ Pagination Debug</div>
-                <button id="pagination-debug-close" style="background: none; border: none; color: #94a3b8; cursor: pointer; font-size: 18px; padding: 0; width: 24px; height: 24px;">Ã—</button>
-            </div>
-            
-            <div style="margin-bottom: 12px;">
-                <label style="display: block; margin-bottom: 6px; color: #cbd5e1; font-size: 11px;">
-                    Height Adjustment: <span id="height-adj-value" style="color: #60a5fa; font-weight: 600;">0px</span>
-                </label>
-                <input type="range" id="height-adjustment" min="-50" max="50" value="0" step="1" 
-                    style="width: 100%; height: 6px; border-radius: 3px; background: #334155; outline: none; -webkit-appearance: none;">
-            </div>
-            
-            <div style="margin-bottom: 12px;">
-                <label style="display: block; margin-bottom: 6px; color: #cbd5e1; font-size: 11px;">
-                    Margin Adjustment: <span id="margin-adj-value" style="color: #60a5fa; font-weight: 600;">0px</span>
-                </label>
-                <input type="range" id="margin-adjustment" min="-20" max="20" value="0" step="1" 
-                    style="width: 100%; height: 6px; border-radius: 3px; background: #334155; outline: none; -webkit-appearance: none;">
-            </div>
-            
-            <div style="display: flex; gap: 8px; margin-top: 12px;">
-                <button id="pagination-debug-reset" style="flex: 1; background: #1e293b; border: 1px solid #334155; color: #e2e8f0; padding: 8px; border-radius: 6px; cursor: pointer; font-size: 11px; font-weight: 500;">
-                    Reset
-                </button>
-                <button id="pagination-debug-apply" style="flex: 1; background: #3b82f6; border: none; color: white; padding: 8px; border-radius: 6px; cursor: pointer; font-size: 11px; font-weight: 500;">
-                    Apply
-                </button>
-            </div>
-            
-            <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(148, 163, 184, 0.2); font-size: 10px; color: #64748b;">
-                Adjust values to fine-tune content distribution
-            </div>
-        `;
-        
-        document.body.appendChild(panel);
-        
-        // Event listeners
-        const heightSlider = panel.querySelector('#height-adjustment');
-        const marginSlider = panel.querySelector('#margin-adjustment');
-        const heightValue = panel.querySelector('#height-adj-value');
-        const marginValue = panel.querySelector('#margin-adj-value');
-        const resetBtn = panel.querySelector('#pagination-debug-reset');
-        const applyBtn = panel.querySelector('#pagination-debug-apply');
-        const closeBtn = panel.querySelector('#pagination-debug-close');
-        
-        heightSlider.addEventListener('input', (e) => {
-            const val = parseInt(e.target.value);
-            heightValue.textContent = `${val}px`;
-            paginationDebugSettings.heightAdjustment = val;
-        });
-        
-        marginSlider.addEventListener('input', (e) => {
-            const val = parseInt(e.target.value);
-            marginValue.textContent = `${val}px`;
-            paginationDebugSettings.marginAdjustment = val;
-        });
-        
-        resetBtn.addEventListener('click', () => {
-            heightSlider.value = 0;
-            marginSlider.value = 0;
-            heightValue.textContent = '0px';
-            marginValue.textContent = '0px';
-            paginationDebugSettings.heightAdjustment = 0;
-            paginationDebugSettings.marginAdjustment = 0;
-            if (paperLayoutActive) {
-                renderPaperLayout();
-            }
-        });
-        
-        applyBtn.addEventListener('click', () => {
-            if (paperLayoutActive) {
-                renderPaperLayout();
-            }
-        });
-        
-        closeBtn.addEventListener('click', () => {
-            panel.style.display = 'none';
-            toggleBtn.style.display = 'block';
-        });
-        
-        // Add CSS for range slider styling
-        const style = document.createElement('style');
-        style.textContent = `
-            #pagination-debug-panel input[type="range"]::-webkit-slider-thumb {
-                -webkit-appearance: none;
-                appearance: none;
-                width: 16px;
-                height: 16px;
-                border-radius: 50%;
-                background: #3b82f6;
-                cursor: pointer;
-                border: 2px solid #1e293b;
-            }
-            
-            #pagination-debug-panel input[type="range"]::-moz-range-thumb {
-                width: 16px;
-                height: 16px;
-                border-radius: 50%;
-                background: #3b82f6;
-                cursor: pointer;
-                border: 2px solid #1e293b;
-            }
-            
-            #pagination-debug-panel button:hover {
-                opacity: 0.9;
-            }
-        `;
-        document.head.appendChild(style);
-        
-        return panel;
-    };
-    
-    // Create floating toggle button
-    const createDebugToggleButton = () => {
-        const toggleBtn = document.createElement('button');
-        toggleBtn.id = 'pagination-debug-toggle';
-        toggleBtn.textContent = 'ðŸ“';
-        toggleBtn.title = 'Pagination Debug';
-        toggleBtn.style.cssText = `
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            width: 48px;
-            height: 48px;
-            border-radius: 50%;
-            background: rgba(59, 130, 246, 0.95);
-            backdrop-filter: blur(10px);
-            border: none;
-            color: white;
-            font-size: 20px;
-            cursor: pointer;
-            z-index: 9999;
-            box-shadow: 0 10px 25px -5px rgba(59, 130, 246, 0.4);
-            transition: all 0.2s ease;
-            display: none;
-        `;
-        
-        toggleBtn.addEventListener('mouseenter', () => {
-            toggleBtn.style.transform = 'scale(1.1)';
-            toggleBtn.style.boxShadow = '0 15px 30px -5px rgba(59, 130, 246, 0.5)';
-        });
-        
-        toggleBtn.addEventListener('mouseleave', () => {
-            toggleBtn.style.transform = 'scale(1)';
-            toggleBtn.style.boxShadow = '0 10px 25px -5px rgba(59, 130, 246, 0.4)';
-        });
-        
-        toggleBtn.addEventListener('click', () => {
-            const panel = document.getElementById('pagination-debug-panel');
-            if (panel) {
-                panel.style.display = 'block';
-                toggleBtn.style.display = 'none';
-            }
-        });
-        
-        document.body.appendChild(toggleBtn);
-        return toggleBtn;
-    };
-    
-    // Initialize debug tools
-    const debugPanel = createPaginationDebugPanel();
-    const toggleBtn = createDebugToggleButton();
-    
-    // Show/hide based on paper layout mode
-    const updateDebugVisibility = () => {
-        if (paperLayoutActive) {
-            toggleBtn.style.display = 'block';
-        } else {
-            toggleBtn.style.display = 'none';
-            debugPanel.style.display = 'none';
-        }
-    };
-    
-    // Hook into toggle function
-    const originalToggle = togglePaperLayout;
-    togglePaperLayout = () => {
-        originalToggle();
-        setTimeout(updateDebugVisibility, 100);
-    };
-    
-    console.log('âœ… Paper layout system initialized');
+    console.log('✅ Paper layout system initialized');
 };
 
 window.addEventListener("load", () => {

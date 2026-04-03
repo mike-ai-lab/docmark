@@ -8446,10 +8446,6 @@ ${fontLinkTags}
     
 
 // Render content in paper layout - continuous flow with visual page breaks
-// PROPER ELEMENT-BASED PAGINATION
-// This version splits content into elements and distributes them across pages
-// based on actual measured height, respecting margins completely
-
 const renderPaperLayout = () => {
     if (!paperLayoutActive) return;
     
@@ -8477,7 +8473,6 @@ const renderPaperLayout = () => {
     
     const pageWidth = 794;   // 210mm (A4 width)
     const pageHeight = 1123; // 297mm (A4 height)
-    const contentHeight = pageHeight - actualTopMargin - actualBottomMargin;
     
     // Parse markdown
     let htmlContent;
@@ -8495,173 +8490,83 @@ const renderPaperLayout = () => {
         htmlContent = `<p>${markdownSource}</p>`;
     }
     
-    // Parse HTML into elements
-    const tempDiv = document.createElement('div');
-    tempDiv.innerHTML = htmlContent;
-    const elements = Array.from(tempDiv.children);
-    
-    // Split large lists into individual items for better pagination
-    const splitElements = [];
-    elements.forEach(el => {
-        if ((el.tagName === 'OL' || el.tagName === 'UL') && el.children.length > 1) {
-            // Split list into individual items
-            Array.from(el.children).forEach((item, idx) => {
-                const newList = document.createElement(el.tagName);
-                newList.className = el.className;
-                if (el.tagName === 'OL') {
-                    newList.start = idx + 1;
-                }
-                newList.appendChild(item.cloneNode(true));
-                splitElements.push(newList);
-            });
-        } else {
-            splitElements.push(el);
-        }
-    });
-    
-    // Create measurement container
-    const measureContainer = document.createElement('div');
-    measureContainer.className = 'markdown-body';
-    measureContainer.style.cssText = `
-        position: absolute;
-        visibility: hidden;
-        width: ${pageWidth - actualLeftMargin - actualRightMargin}px;
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
-        font-size: 14px;
-        line-height: 1.6;
-    `;
-    document.body.appendChild(measureContainer);
-    
-    // Paginate elements based on actual height
-    const pages = [];
-    let currentPage = [];
-    let currentHeight = 0;
-    
-    splitElements.forEach(element => {
-        measureContainer.appendChild(element.cloneNode(true));
-        const style = window.getComputedStyle(measureContainer.lastChild);
-        const marginTop = parseFloat(style.marginTop) || 0;
-        const marginBottom = parseFloat(style.marginBottom) || 0;
-        const elementHeight = measureContainer.lastChild.offsetHeight + marginTop + marginBottom;
-        measureContainer.removeChild(measureContainer.lastChild);
-        
-        // If adding this element exceeds page height, start new page
-        if (currentHeight + elementHeight > contentHeight && currentPage.length > 0) {
-            pages.push(currentPage);
-            currentPage = [];
-            currentHeight = 0;
-        }
-        
-        currentPage.push(element.cloneNode(true));
-        currentHeight += elementHeight;
-    });
-    
-    // Add last page if it has content
-    if (currentPage.length > 0) {
-        pages.push(currentPage);
-    }
-    
-    document.body.removeChild(measureContainer);
-    
     // Clear and setup
     outputDiv.innerHTML = '';
     outputDiv.classList.add('paper-layout-active');
     previewWrapper.classList.add('paper-layout-active');
     
-    // Create paper stack container
-    const paperStack = document.createElement('div');
-    paperStack.style.cssText = `
-        display: flex;
-        flex-direction: column;
-        gap: 48px;
-        padding: 48px 0;
-        align-items: center;
+    // Create paper container
+    const paperContainer = document.createElement('div');
+    paperContainer.style.cssText = `
+        width: ${pageWidth}px;
+        min-height: ${pageHeight * 3}px;
+        margin: 48px auto;
+        background: white;
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);
+        padding: ${actualTopMargin}px ${actualRightMargin}px ${actualBottomMargin}px ${actualLeftMargin}px;
+        box-sizing: border-box;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+        font-size: 14px;
+        line-height: 1.6;
+        text-align: ${settings.textAlign || 'left'};
+        position: relative;
     `;
     
-    // Create pages
-    pages.forEach((pageElements, pageIndex) => {
-        const page = document.createElement('div');
-        page.className = 'paper-page';
-        page.style.cssText = `
-            width: ${pageWidth}px;
-            height: ${pageHeight}px;
-            background: white;
-            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);
-            position: relative;
-            overflow: hidden;
-            --margin-top: ${actualTopMargin}px;
-            --margin-left: ${actualLeftMargin}px;
-            --margin-right: ${actualRightMargin}px;
-            --margin-bottom: ${actualBottomMargin}px;
+    // Add visual page break lines every pageHeight pixels
+    const pageLines = document.createElement('div');
+    pageLines.style.cssText = `
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        pointer-events: none;
+        z-index: 999;
+    `;
+    
+    for (let i = 1; i <= 50; i++) {
+        const line = document.createElement('div');
+        line.style.cssText = `
+            position: absolute;
+            top: ${i * pageHeight}px;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: rgba(148, 163, 184, 0.3);
         `;
-        
-        // Hide CSS margin guides if user disabled them
-        if (settings.showMarginGuides === false) {
-            page.classList.add('hide-margin-guides');
-        }
-        
-        // Content area - contains only elements for this page
-        const contentDiv = document.createElement('div');
-        contentDiv.className = 'markdown-body';
-        contentDiv.style.cssText = `
+        pageLines.appendChild(line);
+    }
+    paperContainer.appendChild(pageLines);
+    
+    // Add margin guides if enabled
+    if (settings.showMarginGuides !== false) {
+        const guides = document.createElement('div');
+        guides.style.cssText = `
             position: absolute;
             top: ${actualTopMargin}px;
             left: ${actualLeftMargin}px;
-            width: ${pageWidth - actualLeftMargin - actualRightMargin}px;
-            height: ${contentHeight}px;
-            overflow: hidden;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
-            font-size: 14px;
-            line-height: 1.6;
-            text-align: ${settings.textAlign || 'left'};
+            right: ${actualRightMargin}px;
+            bottom: ${actualBottomMargin}px;
+            border: 2px dashed rgba(239, 68, 68, 0.5);
+            pointer-events: none;
+            z-index: 1000;
         `;
-        
-        // Add elements to this page
-        pageElements.forEach((el, idx) => {
-            const cloned = el.cloneNode(true);
-            // Remove top margin from first element
-            if (idx === 0) cloned.style.marginTop = '0';
-            contentDiv.appendChild(cloned);
-        });
-        
-        page.appendChild(contentDiv);
-        
-        // Page number
-        if (settings.showPageNumbers !== false && (actualBottomMargin >= 30 || actualTopMargin >= 30)) {
-            const pageNum = document.createElement('div');
-            pageNum.textContent = `${pageIndex + 1}`;
-            pageNum.style.cssText = `
-                position: absolute;
-                font-size: 11px;
-                color: #64748b;
-                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-                z-index: 1001;
-            `;
-            
-            if (actualBottomMargin >= 30) {
-                pageNum.style.bottom = `${Math.max(10, actualBottomMargin / 2)}px`;
-            } else {
-                pageNum.style.top = `${Math.max(10, actualTopMargin / 2)}px`;
-            }
-            
-            if (settings.pageNumberPosition === 'left') {
-                pageNum.style.left = `${actualLeftMargin}px`;
-            } else if (settings.pageNumberPosition === 'right') {
-                pageNum.style.right = `${actualRightMargin}px`;
-            } else {
-                pageNum.style.left = '50%';
-                pageNum.style.transform = 'translateX(-50%)';
-            }
-            
-            page.appendChild(pageNum);
-        }
-        
-        paperStack.appendChild(page);
-    });
+        paperContainer.appendChild(guides);
+    }
     
-    outputDiv.appendChild(paperStack);
+    // Add content
+    const contentDiv = document.createElement('div');
+    contentDiv.className = 'markdown-body';
+    contentDiv.style.cssText = `
+        position: relative;
+        z-index: 1;
+    `;
+    contentDiv.innerHTML = htmlContent;
+    paperContainer.appendChild(contentDiv);
     
-    console.log(`âœ… Paper layout: ${pages.length} pages with proper element-based pagination`);
+    outputDiv.appendChild(paperContainer);
+    
+    console.log(`âœ… Paper layout rendered (continuous, matches PDF export)`);
 };
 
 // Restore normal web layout
@@ -8683,6 +8588,25 @@ const restoreWebLayout = () => {
     console.log('âœ… Restored web layout');
 };
 
+    // Restore normal web layout
+    const restoreWebLayout = () => {
+        const outputDiv = document.querySelector('#output');
+        const previewWrapper = document.querySelector('#preview-wrapper');
+        
+        if (!outputDiv || !previewWrapper) return;
+        
+        outputDiv.classList.remove('paper-layout-active');
+        previewWrapper.classList.remove('paper-layout-active');
+        
+        // Re-render markdown content
+        if (editor && typeof editor.getValue === 'function') {
+            const markdown = editor.getValue();
+            convert(markdown);
+        }
+        
+        console.log('âœ… Restored web layout');
+    };
+    
     // Toggle paper layout
     const togglePaperLayout = () => {
         paperLayoutActive = !paperLayoutActive;

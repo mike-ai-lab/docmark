@@ -8446,10 +8446,6 @@ ${fontLinkTags}
     
 
 // Render content in paper layout - continuous flow with visual page breaks
-// PROPER ELEMENT-BASED PAGINATION
-// This version splits content into elements and distributes them across pages
-// based on actual measured height, respecting margins completely
-
 const renderPaperLayout = () => {
     if (!paperLayoutActive) return;
     
@@ -8477,7 +8473,6 @@ const renderPaperLayout = () => {
     
     const pageWidth = 794;   // 210mm (A4 width)
     const pageHeight = 1123; // 297mm (A4 height)
-    const contentHeight = pageHeight - actualTopMargin - actualBottomMargin;
     
     // Parse markdown
     let htmlContent;
@@ -8495,34 +8490,15 @@ const renderPaperLayout = () => {
         htmlContent = `<p>${markdownSource}</p>`;
     }
     
-    // Parse HTML into elements
-    const tempDiv = document.createElement('div');
-    tempDiv.innerHTML = htmlContent;
-    const elements = Array.from(tempDiv.children);
+    // Clear and setup
+    outputDiv.innerHTML = '';
+    outputDiv.classList.add('paper-layout-active');
+    previewWrapper.classList.add('paper-layout-active');
     
-    // Split large lists into individual items for better pagination
-    const splitElements = [];
-    elements.forEach(el => {
-        if ((el.tagName === 'OL' || el.tagName === 'UL') && el.children.length > 1) {
-            // Split list into individual items
-            Array.from(el.children).forEach((item, idx) => {
-                const newList = document.createElement(el.tagName);
-                newList.className = el.className;
-                if (el.tagName === 'OL') {
-                    newList.start = idx + 1;
-                }
-                newList.appendChild(item.cloneNode(true));
-                splitElements.push(newList);
-            });
-        } else {
-            splitElements.push(el);
-        }
-    });
-    
-    // Create measurement container
-    const measureContainer = document.createElement('div');
-    measureContainer.className = 'markdown-body';
-    measureContainer.style.cssText = `
+    // Create a temporary container to measure content
+    const tempContainer = document.createElement('div');
+    tempContainer.className = 'markdown-body';
+    tempContainer.style.cssText = `
         position: absolute;
         visibility: hidden;
         width: ${pageWidth - actualLeftMargin - actualRightMargin}px;
@@ -8530,43 +8506,15 @@ const renderPaperLayout = () => {
         font-size: 14px;
         line-height: 1.6;
     `;
-    document.body.appendChild(measureContainer);
+    tempContainer.innerHTML = htmlContent;
+    document.body.appendChild(tempContainer);
     
-    // Paginate elements based on actual height
-    const pages = [];
-    let currentPage = [];
-    let currentHeight = 0;
+    // Calculate how many pages we need based on content height
+    const contentHeight = pageHeight - actualTopMargin - actualBottomMargin;
+    const totalContentHeight = tempContainer.scrollHeight;
+    const numPages = Math.ceil(totalContentHeight / contentHeight);
     
-    splitElements.forEach(element => {
-        measureContainer.appendChild(element.cloneNode(true));
-        const style = window.getComputedStyle(measureContainer.lastChild);
-        const marginTop = parseFloat(style.marginTop) || 0;
-        const marginBottom = parseFloat(style.marginBottom) || 0;
-        const elementHeight = measureContainer.lastChild.offsetHeight + marginTop + marginBottom;
-        measureContainer.removeChild(measureContainer.lastChild);
-        
-        // If adding this element exceeds page height, start new page
-        if (currentHeight + elementHeight > contentHeight && currentPage.length > 0) {
-            pages.push(currentPage);
-            currentPage = [];
-            currentHeight = 0;
-        }
-        
-        currentPage.push(element.cloneNode(true));
-        currentHeight += elementHeight;
-    });
-    
-    // Add last page if it has content
-    if (currentPage.length > 0) {
-        pages.push(currentPage);
-    }
-    
-    document.body.removeChild(measureContainer);
-    
-    // Clear and setup
-    outputDiv.innerHTML = '';
-    outputDiv.classList.add('paper-layout-active');
-    previewWrapper.classList.add('paper-layout-active');
+    document.body.removeChild(tempContainer);
     
     // Create paper stack container
     const paperStack = document.createElement('div');
@@ -8579,7 +8527,7 @@ const renderPaperLayout = () => {
     `;
     
     // Create pages
-    pages.forEach((pageElements, pageIndex) => {
+    for (let i = 0; i < numPages; i++) {
         const page = document.createElement('div');
         page.className = 'paper-page';
         page.style.cssText = `
@@ -8600,36 +8548,26 @@ const renderPaperLayout = () => {
             page.classList.add('hide-margin-guides');
         }
         
-        // Content area - contains only elements for this page
+        // Content area - positioned to show the correct slice of content
         const contentDiv = document.createElement('div');
         contentDiv.className = 'markdown-body';
         contentDiv.style.cssText = `
             position: absolute;
-            top: ${actualTopMargin}px;
+            top: ${actualTopMargin - (i * contentHeight)}px;
             left: ${actualLeftMargin}px;
             width: ${pageWidth - actualLeftMargin - actualRightMargin}px;
-            height: ${contentHeight}px;
-            overflow: hidden;
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
             font-size: 14px;
             line-height: 1.6;
             text-align: ${settings.textAlign || 'left'};
         `;
-        
-        // Add elements to this page
-        pageElements.forEach((el, idx) => {
-            const cloned = el.cloneNode(true);
-            // Remove top margin from first element
-            if (idx === 0) cloned.style.marginTop = '0';
-            contentDiv.appendChild(cloned);
-        });
-        
+        contentDiv.innerHTML = htmlContent;
         page.appendChild(contentDiv);
         
         // Page number
         if (settings.showPageNumbers !== false && (actualBottomMargin >= 30 || actualTopMargin >= 30)) {
             const pageNum = document.createElement('div');
-            pageNum.textContent = `${pageIndex + 1}`;
+            pageNum.textContent = `${i + 1}`;
             pageNum.style.cssText = `
                 position: absolute;
                 font-size: 11px;
@@ -8657,11 +8595,11 @@ const renderPaperLayout = () => {
         }
         
         paperStack.appendChild(page);
-    });
+    }
     
     outputDiv.appendChild(paperStack);
     
-    console.log(`âœ… Paper layout: ${pages.length} pages with proper element-based pagination`);
+    console.log(`✅ Paper layout rendered: ${numPages} pages (matches PDF export)`);
 };
 
 // Restore normal web layout
