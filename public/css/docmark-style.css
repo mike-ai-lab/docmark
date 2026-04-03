@@ -167,8 +167,10 @@
     overflow: visible;
     line-height: inherit;
     word-wrap: normal;
+    background: transparent !important;
     background-color: transparent;
     border: 0;
+    border: none !important;
     color: #24292f !important;
     font-weight: 400;
 }
@@ -241,7 +243,7 @@
 
 [data-theme="dark"] .markdown-body {
     color: rgba(241, 245, 249, 0.9);
-    background-color: #040608;
+    background-color: transparent;
 }
 
 [data-theme="dark"] .markdown-body h1,
@@ -274,6 +276,8 @@
 
 [data-theme="dark"] .markdown-body pre code {
     color: #f1f5f9 !important;
+    background: transparent !important;
+    border: none !important;
 }
 
 [data-theme="dark"] .markdown-body blockquote {

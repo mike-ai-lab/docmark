@@ -8,7 +8,7 @@
     display: flex;
     flex-direction: column;
     width: 100%;
-    height: calc(100% - 28px); /* Account for status bar (28px) */
+    height: calc(100vh - 60px - 28px); /* Account for header (60px) and status bar (28px) */
     background: #fafafa;
     font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', 'Roboto', sans-serif;
 }
@@ -359,9 +359,9 @@
 }
 
 .docs-page pre code {
-    background: transparent;
+    background: transparent !important;
     color: inherit;
-    padding: 0;
+    border: none !important;
 }
 
 .docs-navigation-footer {
@@ -369,7 +369,6 @@
     background: #ffffff;
     border-top: 1px solid #e0e0e0;
     flex: 0 0 auto; /* Don't flex, just take natural height */
-    margin-bottom: 60px; /* Space above status bar */
 }
 
 .nav-links {
@@ -577,7 +576,7 @@
 }
 
 [data-theme="dark"] .docs-breadcrumb {
-    background: #040608;
+    background: #020405;
     border-bottom-color: rgba(255, 255, 255, 0.05);
     color: rgba(241, 245, 249, 0.4);
     font-size: 11px;
@@ -747,11 +746,8 @@
 }
 
 [data-theme="dark"] .docs-page pre code {
-    background: transparent;
-    border: none;
-    padding: 0;
-    color: #f7f7f7;
-    font-weight: 400;
+    background: transparent !important;
+    border: none !important;
 }
 
 [data-theme="dark"] .docs-page blockquote {

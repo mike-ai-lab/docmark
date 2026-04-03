@@ -3092,6 +3092,23 @@ footer {
     color: #24292f !important; /* Dark text on white paper */
 }
 
+/* Code blocks in paper layout dark mode - better contrast */
+[data-theme="dark"] #output.paper-layout-active .markdown-body pre {
+    background-color: #f0f0f0 !important; /* Very light grey background */
+    border: 1px solid #d0d0d0 !important;
+}
+
+[data-theme="dark"] #output.paper-layout-active .markdown-body pre code {
+    color: #1a1a1a !important; /* Very dark text for contrast */
+    background: transparent !important;
+}
+
+[data-theme="dark"] #output.paper-layout-active .markdown-body code {
+    background-color: #f0f0f0 !important; /* Very light grey for inline code */
+    color: #1a1a1a !important;
+    border: 1px solid #d0d0d0 !important;
+}
+
 /* Paper Page Pagination */
 .paper-page {
     width: var(--paper-width, 21cm);

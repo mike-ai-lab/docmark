@@ -199,7 +199,7 @@
 /* Dark Theme */
 [data-theme="dark"] .markdown-body {
   color: #e4e4e7;
-  background-color: #18181b;
+  background-color: transparent;
 }
 
 [data-theme="dark"] .markdown-body h1,

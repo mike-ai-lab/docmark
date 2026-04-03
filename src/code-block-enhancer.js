@@ -44,19 +44,25 @@ export function enhanceCodeBlocks() {
             position: absolute;
             top: 8px;
             right: 8px;
-            background: rgba(255, 255, 255, 0.9);
-            border: 1px solid rgba(0, 0, 0, 0.1);
+            background: transparent;
+            border: none;
             border-radius: 4px;
-            padding: 6px 8px;
+            padding: 6px;
             cursor: pointer;
             opacity: 0;
-            transition: opacity 0.2s, background 0.2s;
+            transition: opacity 0.2s;
             display: flex;
             align-items: center;
             justify-content: center;
-            color: #64748b;
+            color: #94a3b8;
             z-index: 10;
         `;
+        
+        // Adapt to theme
+        const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+        if (isDark) {
+            copyBtn.style.color = '#cbd5e1';
+        }
         
         // Show button on hover
         wrapper.addEventListener('mouseenter', () => {
@@ -110,7 +116,7 @@ export function initCodeBlockEnhancer() {
         enhanceCodeBlocks();
     });
     
-    // Observe the preview area
+    // Observe the preview area (single file mode)
     const previewArea = document.querySelector('#output');
     if (previewArea) {
         observer.observe(previewArea, {
@@ -118,6 +124,19 @@ export function initCodeBlockEnhancer() {
             subtree: true
         });
     }
+    
+    // Observe the documentation content area (documentation mode)
+    const docsContent = document.querySelector('.docs-content');
+    if (docsContent) {
+        observer.observe(docsContent, {
+            childList: true,
+            subtree: true
+        });
+    }
+    
+    // Re-enhance when switching modes or themes
+    document.addEventListener('themeChanged', enhanceCodeBlocks);
+    document.addEventListener('documentationModeChanged', enhanceCodeBlocks);
     
     console.log('✅ Code block enhancer initialized');
 }
